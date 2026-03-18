@@ -2,6 +2,7 @@ import { useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
+import { LogoSidebar } from './components/LogoSidebar';
 import { PreviewCard } from './components/PreviewCard';
 import { SettingsSection } from './components/SettingsSection';
 import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
@@ -21,13 +22,7 @@ export default function App() {
 
   return (
     <div className="page-shell">
-      {logoUrl ? (
-        <aside className="logo-sidebar" aria-label="Логотип компании">
-          <div className="logo-sidebar__frame">
-            <img className="logo-sidebar__image" src={logoUrl} alt="Логотип компании" />
-          </div>
-        </aside>
-      ) : null}
+      {logoUrl ? <LogoSidebar logoUrl={logoUrl} /> : null}
       <div className="app-shell">
         <Header />
         <main className="workspace-grid">
