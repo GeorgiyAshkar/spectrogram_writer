@@ -8,7 +8,7 @@ import type { GenerationFormData } from './types/config';
 import './styles/app.css';
 
 const initialState: GenerationFormData = {
-  text: 'CQ CQ DE SPECTROGRAM',
+  text: 'ПОЗЫВНОЙ DE SPECTROGRAM',
   fmin: 2000,
   fmax: 12000,
   signal_duration: 10,
@@ -32,7 +32,7 @@ const initialState: GenerationFormData = {
 
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
-  const { preview, error, summary, isLoadingPreview, isDownloading, generatePreview, exportWav } =
+  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
     useSpectrogramGenerator(formData);
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
@@ -41,74 +41,84 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Header />
+      <Header logoUrl={logoUrl} />
       <main className="layout-grid">
         <div className="layout-grid__main">
-          <SettingsSection title="Message" description="Введите текст и базовые параметры генерации сигнала.">
+          <SettingsSection title="Текст и длительность" description="Введите сообщение и задайте базовые параметры итогового сигнала.">
             <div className="fields-grid fields-grid--wide">
-              <FormField label="Text">
+              <FormField label="Текст" hint="Именно эта строка будет нарисована в спектрограмме.">
                 <textarea value={formData.text} onChange={(e) => updateField('text', e.target.value)} rows={3} />
               </FormField>
-              <FormField label="Signal duration, s">
+              <FormField label="Длительность сигнала, сек" hint="Время только для полезной части с надписью.">
                 <input type="number" value={formData.signal_duration} onChange={(e) => updateField('signal_duration', Number(e.target.value))} />
               </FormField>
-              <FormField label="Leading silence, s">
+              <FormField label="Тишина до, сек" hint="Пауза перед началом надписи.">
                 <input type="number" value={formData.leading_silence} onChange={(e) => updateField('leading_silence', Number(e.target.value))} />
               </FormField>
-              <FormField label="Trailing silence, s">
+              <FormField label="Тишина после, сек" hint="Пауза после окончания надписи.">
                 <input type="number" value={formData.trailing_silence} onChange={(e) => updateField('trailing_silence', Number(e.target.value))} />
               </FormField>
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Spectral layout" description="Настройка частотного диапазона и ориентации watermark на waterfall.">
+          <SettingsSection title="Частоты и ориентация" description="Настройте, в каком диапазоне и как именно будет отображаться надпись.">
             <div className="fields-grid">
-              <FormField label="Fmin, Hz"><input type="number" value={formData.fmin} onChange={(e) => updateField('fmin', Number(e.target.value))} /></FormField>
-              <FormField label="Fmax, Hz"><input type="number" value={formData.fmax} onChange={(e) => updateField('fmax', Number(e.target.value))} /></FormField>
-              <FormField label="Sample rate"><input type="number" value={formData.samplerate} onChange={(e) => updateField('samplerate', Number(e.target.value))} /></FormField>
-              <FormField label="Orientation">
+              <FormField label="Нижняя частота, Гц" hint="Минимальная частота отображения текста."><input type="number" value={formData.fmin} onChange={(e) => updateField('fmin', Number(e.target.value))} /></FormField>
+              <FormField label="Верхняя частота, Гц" hint="Максимальная частота отображения текста."><input type="number" value={formData.fmax} onChange={(e) => updateField('fmax', Number(e.target.value))} /></FormField>
+              <FormField label="Частота дискретизации, Гц" hint="Должна быть выше удвоенной верхней частоты."><input type="number" value={formData.samplerate} onChange={(e) => updateField('samplerate', Number(e.target.value))} /></FormField>
+              <FormField label="Ориентация" hint="Выберите, что будет по оси X: время или частота.">
                 <select value={formData.orientation} onChange={(e) => updateField('orientation', e.target.value as GenerationFormData['orientation'])}>
-                  <option value="time-x">time-x</option>
-                  <option value="freq-x">freq-x</option>
+                  <option value="time-x">Время по X</option>
+                  <option value="freq-x">Частота по X</option>
                 </select>
               </FormField>
-              <FormField label="freq-x rotation">
+              <FormField label="Поворот для режима «Частота по X»" hint="Используется только в режиме частоты по горизонтали.">
                 <select value={formData.freq_x_rotation} onChange={(e) => updateField('freq_x_rotation', e.target.value as GenerationFormData['freq_x_rotation'])}>
-                  <option value="ccw">ccw</option>
-                  <option value="cw">cw</option>
+                  <option value="ccw">Против часовой стрелки</option>
+                  <option value="cw">По часовой стрелке</option>
                 </select>
               </FormField>
-              <FormField label="Edge pad cols"><input type="number" value={formData.edge_pad_cols} onChange={(e) => updateField('edge_pad_cols', Number(e.target.value))} /></FormField>
+              <FormField label="Внутренние поля" hint="-1 — подобрать автоматически, иначе укажите число колонок."><input type="number" value={formData.edge_pad_cols} onChange={(e) => updateField('edge_pad_cols', Number(e.target.value))} /></FormField>
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Bitmap tuning" description="Тонкая настройка рендера текста и спектрального сглаживания.">
+          <SettingsSection title="Настройка изображения" description="Тонкая подстройка рендера текста и сглаживания перед синтезом аудио.">
             <div className="fields-grid">
-              <FormField label="Image width"><input type="number" value={formData.img_width} onChange={(e) => updateField('img_width', Number(e.target.value))} /></FormField>
-              <FormField label="Image height"><input type="number" value={formData.img_height} onChange={(e) => updateField('img_height', Number(e.target.value))} /></FormField>
-              <FormField label="Font size"><input type="number" value={formData.font_size} onChange={(e) => updateField('font_size', Number(e.target.value))} /></FormField>
-              <FormField label="Margin"><input type="number" value={formData.margin} onChange={(e) => updateField('margin', Number(e.target.value))} /></FormField>
-              <FormField label="Vertical margin"><input type="number" value={formData.vertical_margin} onChange={(e) => updateField('vertical_margin', Number(e.target.value))} /></FormField>
-              <FormField label="Smooth freq"><input type="number" value={formData.smooth_freq} onChange={(e) => updateField('smooth_freq', Number(e.target.value))} /></FormField>
-              <FormField label="Smooth sigma"><input type="number" value={formData.smooth_sigma} onChange={(e) => updateField('smooth_sigma', Number(e.target.value))} /></FormField>
-              <FormField label="Contrast"><input type="number" step="0.1" value={formData.contrast} onChange={(e) => updateField('contrast', Number(e.target.value))} /></FormField>
-              <FormField label="Invert"><input type="checkbox" checked={formData.invert} onChange={(e) => updateField('invert', e.target.checked)} /></FormField>
-              <FormField label="Fixed phase"><input type="checkbox" checked={formData.fixed_phase} onChange={(e) => updateField('fixed_phase', e.target.checked)} /></FormField>
+              <FormField label="Ширина bitmap, px" hint="Влияет на горизонтальную детализацию."><input type="number" value={formData.img_width} onChange={(e) => updateField('img_width', Number(e.target.value))} /></FormField>
+              <FormField label="Высота bitmap, px" hint="Влияет на количество частотных линий."><input type="number" value={formData.img_height} onChange={(e) => updateField('img_height', Number(e.target.value))} /></FormField>
+              <FormField label="Размер шрифта" hint="Начальный размер для подбора вписывания текста."><input type="number" value={formData.font_size} onChange={(e) => updateField('font_size', Number(e.target.value))} /></FormField>
+              <FormField label="Горизонтальные поля" hint="Отступ текста от краёв слева и справа."><input type="number" value={formData.margin} onChange={(e) => updateField('margin', Number(e.target.value))} /></FormField>
+              <FormField label="Вертикальные поля" hint="Отступ текста от верхней и нижней границы."><input type="number" value={formData.vertical_margin} onChange={(e) => updateField('vertical_margin', Number(e.target.value))} /></FormField>
+              <FormField label="Сглаживание по частоте" hint="Размер ядра сглаживания по вертикали."><input type="number" value={formData.smooth_freq} onChange={(e) => updateField('smooth_freq', Number(e.target.value))} /></FormField>
+              <FormField label="Sigma сглаживания" hint="Чем выше значение, тем мягче переходы."><input type="number" value={formData.smooth_sigma} onChange={(e) => updateField('smooth_sigma', Number(e.target.value))} /></FormField>
+              <FormField label="Контраст" hint="Значение больше 1 усиливает яркость текста."><input type="number" step="0.1" value={formData.contrast} onChange={(e) => updateField('contrast', Number(e.target.value))} /></FormField>
+              <FormField label="Инвертировать bitmap" hint="Полезно для нестандартного визуального результата.">
+                <label className="toggle">
+                  <input type="checkbox" checked={formData.invert} onChange={(e) => updateField('invert', e.target.checked)} />
+                  <span>Включить инверсию</span>
+                </label>
+              </FormField>
+              <FormField label="Фиксированная фаза" hint="Даёт более повторяемый результат без случайных фаз.">
+                <label className="toggle">
+                  <input type="checkbox" checked={formData.fixed_phase} onChange={(e) => updateField('fixed_phase', e.target.checked)} />
+                  <span>Использовать фиксированные фазы</span>
+                </label>
+              </FormField>
             </div>
           </SettingsSection>
         </div>
 
         <aside className="layout-grid__sidebar">
           <section className="panel action-card">
-            <h2>Output</h2>
+            <h2>Результат</h2>
+            <p className="action-card__text">Предпросмотр обновляется автоматически. Когда результат вас устроит, скачайте готовый WAV-файл.</p>
             <ul className="summary-list">
               {summary.map((item) => (
                 <li key={item.label}><span>{item.label}</span><strong>{item.value}</strong></li>
               ))}
             </ul>
             <div className="actions-row">
-              <button onClick={() => void generatePreview()} disabled={isLoadingPreview}>{isLoadingPreview ? 'Generating…' : 'Generate preview'}</button>
-              <button className="button-secondary" onClick={() => void exportWav()} disabled={isDownloading}>{isDownloading ? 'Exporting…' : 'Download WAV'}</button>
+              <button className="button-secondary" onClick={() => void exportWav()} disabled={isDownloading}>{isDownloading ? 'Подготовка файла…' : 'Скачать WAV'}</button>
             </div>
             {error ? <p className="error-banner">{error}</p> : null}
           </section>

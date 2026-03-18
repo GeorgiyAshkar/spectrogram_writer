@@ -1,16 +1,27 @@
-export function Header() {
+interface HeaderProps {
+  logoUrl: string | null;
+}
+
+export function Header({ logoUrl }: HeaderProps) {
   return (
     <header className="hero panel">
-      <div>
-        <span className="badge">React + FastAPI</span>
-        <h1>Spectrogram Writer Studio</h1>
-        <p>
-          UI-оболочка для генерации waterfall / spectrogram текста с разделением на независимые frontend и backend сервисы.
-        </p>
+      <div className="hero__brand">
+        {logoUrl ? (
+          <div className="hero__logo-wrap">
+            <img className="hero__logo" src={logoUrl} alt="Логотип компании" />
+          </div>
+        ) : null}
+        <div>
+          <h1>Студия спектрограмм</h1>
+          <p>
+            Удобный интерфейс для генерации текста, который отображается на waterfall / spectrogram, с быстрым
+            предпросмотром и экспортом WAV-файла.
+          </p>
+        </div>
       </div>
       <div className="hero__note">
-        <strong>Microservice-ready</strong>
-        <span>Фронтенд работает как самостоятельный клиент, а Python-ядро вынесено в API-слой для дальнейшего масштабирования.</span>
+        <strong>Предпросмотр обновляется автоматически</strong>
+        <span>Изменяйте параметры — изображение спектрограммы будет пересчитываться без ручного запуска.</span>
       </div>
     </header>
   );

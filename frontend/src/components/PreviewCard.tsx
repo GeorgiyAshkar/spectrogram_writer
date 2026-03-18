@@ -9,23 +9,23 @@ export function PreviewCard({ preview, isLoading }: PreviewCardProps) {
   return (
     <section className="panel preview-card">
       <div className="section__header">
-        <h2>Live preview</h2>
-        <p>Сначала проверьте визуальный отпечаток текста в спектрограмме, затем экспортируйте WAV.</p>
+        <h2>Живой предпросмотр</h2>
+        <p>Проверьте, как надпись будет выглядеть на спектрограмме, прежде чем скачивать итоговый WAV.</p>
       </div>
       <div className="preview-card__body">
-        {isLoading ? <div className="empty-state">Generating preview…</div> : null}
+        {isLoading ? <div className="empty-state">Предпросмотр обновляется…</div> : null}
         {!isLoading && preview ? (
           <>
-            <img className="preview-card__image" src={preview.previewImage} alt="Spectrogram preview" />
+            <img className="preview-card__image" src={preview.previewImage} alt="Предпросмотр спектрограммы" />
             <dl className="stats-grid">
-              <div><dt>Freq bins</dt><dd>{preview.bitmapShape.freqBins}</dd></div>
-              <div><dt>Time bins</dt><dd>{preview.bitmapShape.timeBins}</dd></div>
-              <div><dt>Total duration</dt><dd>{preview.totalDuration.toFixed(2)}s</dd></div>
-              <div><dt>Auto edge pad</dt><dd>{preview.autoEdgePad}</dd></div>
+              <div><dt>Частотных линий</dt><dd>{preview.bitmapShape.freqBins}</dd></div>
+              <div><dt>Временных шагов</dt><dd>{preview.bitmapShape.timeBins}</dd></div>
+              <div><dt>Полная длина</dt><dd>{preview.totalDuration.toFixed(2)} c</dd></div>
+              <div><dt>Автополя</dt><dd>{preview.autoEdgePad}</dd></div>
             </dl>
           </>
         ) : null}
-        {!isLoading && !preview ? <div className="empty-state">Нажмите Generate preview, чтобы увидеть результат.</div> : null}
+        {!isLoading && !preview ? <div className="empty-state">Введите параметры — предпросмотр появится автоматически.</div> : null}
       </div>
     </section>
   );

@@ -1,13 +1,23 @@
 import type { GenerationFormData, PreviewResponse } from '../types/config';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/api';
+const LOGO_URL = `${API_BASE}/branding/logo`;
 
 async function parseError(response: Response): Promise<string> {
   try {
     const data = await response.json();
-    return data.detail ?? 'Request failed';
+    return data.detail ?? 'Ошибка запроса';
   } catch {
-    return `Request failed with status ${response.status}`;
+    return `Ошибка запроса: ${response.status}`;
+  }
+}
+
+export async function resolveLogoUrl(): Promise<string | null> {
+  try {
+    const response = await fetch(LOGO_URL, { method: 'GET' });
+    return response.ok ? LOGO_URL : null;
+  } catch {
+    return null;
   }
 }
 

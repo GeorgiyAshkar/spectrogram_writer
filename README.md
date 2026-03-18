@@ -60,3 +60,7 @@ npm run dev
   --output out.wav \
   --preview-png out.png
 ```
+
+## Логотип компании
+
+Если в корень проекта положить файл `logo.png`, backend автоматически начнёт отдавать его на `GET /api/branding/logo`, а интерфейс покажет логотип в шапке приложения.
