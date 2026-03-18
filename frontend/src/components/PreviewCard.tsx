@@ -3,16 +3,17 @@ import type { PreviewResponse } from '../types/config';
 interface PreviewCardProps {
   preview: PreviewResponse | null;
   isLoading: boolean;
+  className?: string;
 }
 
-export function PreviewCard({ preview, isLoading }: PreviewCardProps) {
+export function PreviewCard({ preview, isLoading, className = '' }: PreviewCardProps) {
   return (
-    <section className="panel preview-card panel--compact">
+    <section className={`panel preview-card panel--compact panel--fill ${className}`.trim()}>
       <div className="section__header section__header--compact">
         <h2>Живой предпросмотр</h2>
-        <p>Изображение имеет фиксированную область отображения и не растягивает страницу.</p>
+        <p>Изображение отображается в фиксированной рамке и не растягивает страницу.</p>
       </div>
-      <div className="preview-card__body">
+      <div className="preview-card__body preview-card__body--fill">
         {isLoading ? <div className="empty-state preview-frame">Предпросмотр обновляется…</div> : null}
         {!isLoading && preview ? (
           <>

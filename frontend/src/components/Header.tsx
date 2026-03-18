@@ -5,23 +5,25 @@ interface HeaderProps {
 export function Header({ logoUrl }: HeaderProps) {
   return (
     <header className="hero panel">
-      <div className="hero__brand">
-        {logoUrl ? (
-          <div className="hero__logo-wrap">
-            <img className="hero__logo" src={logoUrl} alt="Логотип компании" />
+      {logoUrl ? (
+        <div className="hero__logo-rail">
+          <div className="hero__logo-wrap hero__logo-wrap--vertical">
+            <img className="hero__logo hero__logo--rotated" src={logoUrl} alt="Логотип компании" />
           </div>
-        ) : null}
-        <div>
-          <h1>Студия спектрограмм</h1>
+        </div>
+      ) : null}
+      <div className="hero__content">
+        <div className="hero__brand-copy">
+          <h1>Спектральный след</h1>
           <p>
-            Удобный интерфейс для генерации текста, который отображается на waterfall / spectrogram, с быстрым
-            предпросмотром и экспортом WAV-файла.
+            Светлый и аккуратный интерфейс для генерации текста, отображаемого на waterfall / spectrogram, с
+            автоматическим предпросмотром и экспортом WAV-файла.
           </p>
         </div>
-      </div>
-      <div className="hero__note">
-        <strong>Предпросмотр обновляется автоматически</strong>
-        <span>Изменяйте параметры — изображение спектрограммы будет пересчитываться без ручного запуска.</span>
+        <div className="hero__note">
+          <strong>Предпросмотр обновляется автоматически</strong>
+          <span>Изменяйте параметры — изображение пересчитывается сразу, без ручного запуска.</span>
+        </div>
       </div>
     </header>
   );

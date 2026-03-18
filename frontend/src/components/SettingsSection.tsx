@@ -4,11 +4,12 @@ interface SettingsSectionProps {
   title: string;
   description: string;
   children: ReactNode;
+  className?: string;
 }
 
-export function SettingsSection({ title, description, children }: SettingsSectionProps) {
+export function SettingsSection({ title, description, children, className = '' }: SettingsSectionProps) {
   return (
-    <section className="panel section">
+    <section className={`panel section ${className}`.trim()}>
       <div className="section__header">
         <h2>{title}</h2>
         <p>{description}</p>
