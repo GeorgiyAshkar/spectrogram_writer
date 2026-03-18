@@ -72,7 +72,7 @@ button:disabled {
   margin: 0 auto;
   padding: 16px 18px 20px;
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 14vw) minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
 }
@@ -80,7 +80,7 @@ button:disabled {
 .logo-sidebar {
   height: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
   align-items: stretch;
 }
 
@@ -387,7 +387,8 @@ button:disabled {
   }
 
   .logo-sidebar__frame {
-    width: 220px;
+    width: 100%;
+    max-width: 220px;
     height: 84px;
   }
 
