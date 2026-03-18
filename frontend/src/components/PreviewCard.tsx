@@ -16,7 +16,6 @@ const AXIS_RIGHT = 28;
 const AXIS_TOP = 24;
 const AXIS_BOTTOM = 68;
 const TICK_FONT = '12px Inter, system-ui, sans-serif';
-const LABEL_FONT = '600 13px Inter, system-ui, sans-serif';
 
 function formatSeconds(value: number): string {
   if (value >= 10) return `${value.toFixed(0)} c`;
@@ -61,12 +60,10 @@ function drawSpectrogramChart(
   const chartWidth = CHART_WIDTH - FRAME_PADDING * 2 - AXIS_LEFT - AXIS_RIGHT;
   const chartHeight = CHART_HEIGHT - FRAME_PADDING * 2 - AXIS_TOP - AXIS_BOTTOM;
 
-  const imageAspect = image.naturalWidth / image.naturalHeight;
-  const chartAspect = chartWidth / chartHeight;
-  const plotWidth = imageAspect > chartAspect ? chartWidth : chartHeight * imageAspect;
-  const plotHeight = imageAspect > chartAspect ? chartWidth / imageAspect : chartHeight;
-  const plotLeft = chartLeft + (chartWidth - plotWidth) / 2;
-  const plotTop = chartTop + (chartHeight - plotHeight) / 2;
+  const plotWidth = chartWidth;
+  const plotHeight = chartHeight;
+  const plotLeft = chartLeft;
+  const plotTop = chartTop;
 
   context.fillStyle = '#f1ede6';
   context.fillRect(chartLeft, chartTop, chartWidth, chartHeight);
@@ -141,38 +138,6 @@ function drawSpectrogramChart(
   context.lineTo(plotLeft + 0.5, plotTop + plotHeight);
   context.stroke();
 
-  context.fillStyle = '#5f4633';
-  context.font = LABEL_FONT;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(
-    formData.orientation === 'time-x' ? 'Время' : 'Частота',
-    plotLeft + plotWidth / 2,
-    CHART_HEIGHT - FRAME_PADDING - 18,
-  );
-
-  context.save();
-  context.translate(FRAME_PADDING + 22, plotTop + plotHeight / 2);
-  context.rotate(-Math.PI / 2);
-  context.fillText(
-    formData.orientation === 'time-x' ? 'Частота' : 'Время',
-    0,
-    0,
-  );
-  context.restore();
-
-  context.fillStyle = 'rgba(95, 70, 51, 0.92)';
-  context.font = '600 12px Inter, system-ui, sans-serif';
-  context.textAlign = 'left';
-  context.textBaseline = 'top';
-  context.fillText(
-    formData.orientation === 'time-x'
-      ? 'Ожидаемый вид спектрограммы (время →, частота ↑)'
-      : `Ожидаемый вид спектрограммы (частота →, время ${formData.freq_x_rotation === 'ccw' ? '↑' : '↓'})`,
-    chartLeft,
-    8,
-  );
-
   if (isLoading) {
     context.fillStyle = 'rgba(250, 248, 244, 0.72)';
     context.fillRect(plotLeft, plotTop, plotWidth, plotHeight);
@@ -189,8 +154,8 @@ export function PreviewCard({ preview, formData, isLoading, className = '' }: Pr
 
   const orientationLabel = useMemo(() => (
     formData.orientation === 'time-x'
-      ? 'Ось X — время, ось Y — частота'
-      : `Ось X — частота, ось Y — время (${formData.freq_x_rotation === 'ccw' ? 'время снизу вверх' : 'время сверху вниз'})`
+      ? 'X — время, Y — частота'
+      : 'X — частота, Y — время'
   ), [formData.orientation, formData.freq_x_rotation]);
 
   useEffect(() => {
