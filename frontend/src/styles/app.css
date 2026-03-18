@@ -87,17 +87,20 @@ button:disabled {
 .logo-sidebar__frame {
   width: 100%;
   height: 100%;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
 .logo-sidebar__image {
-  width: 100%;
+  width: auto;
   height: 100%;
   max-width: none;
-  transform: rotate(-90deg) scale(1.45);
-  object-fit: cover;
+  max-height: none;
+  transform: rotate(-90deg);
+  transform-origin: center center;
+  object-fit: contain;
 }
 
 .app-shell {

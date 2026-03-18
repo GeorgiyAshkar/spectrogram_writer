@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import defaults from './config/defaults.json';
+import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
 import { PreviewCard } from './components/PreviewCard';
