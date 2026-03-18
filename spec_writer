@@ -1,573 +1,66 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-text_to_waterfall_wav.py
-
-Генерация WAV-файла, который отображается как текст на spectrogram / waterfall.
-
-Поддерживаемые режимы отображения:
-1) orientation = time-x
-   X = время, Y = частота
-
-2) orientation = freq-x
-   X = частота, Y = время
-
-Основные возможности:
-- text: текст надписи
-- fmin/fmax: нижняя и верхняя частоты отображения
-- signal_duration: длительность именно полезного сигнала с надписью
-- leading_silence / trailing_silence: тишина до и после
-- поддержка длинных фраз без обрезания по краям
-- поворот текста под разные waterfall-ориентации
-- защита от тусклых крайних букв в режиме freq-x
-- preview PNG
-
-Зависимости:
-    pip install numpy pillow
-
-Примеры:
-    python text_to_waterfall_wav.py \
-        --text "T8 DAS" \
-        --fmin 2000 \
-        --fmax 12000 \
-        --signal-duration 10 \
-        --orientation time-x \
-        --output t8_das.wav \
-        --preview-png t8_das.png
-"""
-
 import argparse
-import os
-import wave
-from typing import Optional
+from pathlib import Path
 
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from backend.spectrogram_writer.core import GenerationConfig, generate_artifacts
 
 
-# =========================
-# Fonts
-# =========================
-
-def find_font(user_font_path: Optional[str] = None, font_size: int = 120):
-    """
-    Ищет шрифт:
-    1. если указан путь пользователем - использует его;
-    2. иначе пытается найти типовые системные шрифты;
-    3. в крайнем случае использует встроенный PIL-шрифт.
-    """
-    if user_font_path:
-        if not os.path.exists(user_font_path):
-            raise FileNotFoundError(f"Шрифт не найден: {user_font_path}")
-        return ImageFont.truetype(user_font_path, font_size)
-
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-        "/Library/Fonts/Arial.ttf",
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-    ]
-
-    for path in candidates:
-        if os.path.exists(path):
-            return ImageFont.truetype(path, font_size)
-
-    return ImageFont.load_default()
-
-
-# =========================
-# Bitmap rendering
-# =========================
-
-def render_text_bitmap_stretched(
-    text: str,
-    width: int,
-    height: int,
-    font_size: int,
-    font_path: Optional[str] = None,
-    margin_px: int = 12,
-    vertical_margin_px: int = 8,
-    invert: bool = False,
-) -> np.ndarray:
-    """
-    Рендерит текст в bitmap без преждевременной обрезки длинных строк.
-
-    Возвращает массив shape [height, width], значения 0..1.
-
-    ВАЖНО:
-    - это пока просто изображение текста;
-    - интерпретация осей как время/частота делается позже.
-    """
-    if width <= 2 * margin_px:
-        raise ValueError("width слишком мал относительно margin_px")
-    if height <= 2 * vertical_margin_px:
-        raise ValueError("height слишком мал относительно vertical_margin_px")
-
-    bg = 0 if not invert else 255
-    fg = 255 if not invert else 0
-
-    target_w = max(1, width - 2 * margin_px)
-    target_h = max(1, height - 2 * vertical_margin_px)
-
-    # Служебный canvas только для измерения bbox
-    measure_img = Image.new("L", (10, 10), color=bg)
-    measure_draw = ImageDraw.Draw(measure_img)
-
-    test_font_size = max(8, font_size)
-
-    while True:
-        font = find_font(font_path, test_font_size)
-        bbox = measure_draw.textbbox((0, 0), text, font=font, stroke_width=0)
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
-
-        if text_w <= target_w and text_h <= target_h:
-            break
-
-        test_font_size -= 2
-        if test_font_size < 8:
-            font = find_font(font_path, 8)
-            bbox = measure_draw.textbbox((0, 0), text, font=font, stroke_width=0)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
-            break
-
-    # Рисуем текст на canvas точного размера bbox (+ запас)
-    pad = 4
-    text_img_w = max(1, text_w + 2 * pad)
-    text_img_h = max(1, text_h + 2 * pad)
-
-    text_img = Image.new("L", (text_img_w, text_img_h), color=bg)
-    text_draw = ImageDraw.Draw(text_img)
-
-    x = pad - bbox[0]
-    y = pad - bbox[1]
-    text_draw.text((x, y), text, fill=fg, font=font)
-
-    # Crop по реальным непустым пикселям
-    arr = np.asarray(text_img, dtype=np.uint8)
-    if not invert:
-        ys, xs = np.where(arr > 10)
-    else:
-        ys, xs = np.where(arr < 245)
-
-    if len(xs) == 0 or len(ys) == 0:
-        raise ValueError("Не удалось отрендерить текст.")
-
-    x0, x1 = xs.min(), xs.max() + 1
-    y0, y1 = ys.min(), ys.max() + 1
-    cropped = text_img.crop((x0, y0, x1, y1))
-
-    src_w, src_h = cropped.size
-
-    # Дополнительная защита: если всё ещё не влезает, масштабируем
-    scale = min(target_w / src_w, target_h / src_h, 1.0)
-    new_w = max(1, int(round(src_w * scale)))
-    new_h = max(1, int(round(src_h * scale)))
-
-    if (new_w, new_h) != (src_w, src_h):
-        cropped = cropped.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-    final_img = Image.new("L", (width, height), color=bg)
-    paste_x = (width - cropped.size[0]) // 2
-    paste_y = (height - cropped.size[1]) // 2
-    final_img.paste(cropped, (paste_x, paste_y))
-
-    arr = np.asarray(final_img, dtype=np.float32) / 255.0
-    return arr
-
-
-def pad_bitmap_time_axis(bitmap: np.ndarray, left_cols: int = 0, right_cols: int = 0) -> np.ndarray:
-    """
-    Добавляет пустые столбцы по временной оси.
-    Входной bitmap должен быть формата [freq_bins, time_bins].
-    """
-    if left_cols < 0 or right_cols < 0:
-        raise ValueError("left_cols/right_cols не могут быть отрицательными")
-
-    if left_cols == 0 and right_cols == 0:
-        return bitmap
-
-    freq_bins = bitmap.shape[0]
-    left = np.zeros((freq_bins, left_cols), dtype=bitmap.dtype)
-    right = np.zeros((freq_bins, right_cols), dtype=bitmap.dtype)
-    return np.concatenate([left, bitmap, right], axis=1)
-
-
-def orient_bitmap_for_synthesis(
-    bitmap_img: np.ndarray,
-    orientation: str,
-    edge_pad_cols: int = 0,
-    freq_x_rotation: str = "ccw",
-) -> np.ndarray:
-    """
-    Преобразует bitmap изображения в рабочий bitmap формата:
-
-        [freq_bins, time_bins]
-
-    orientation:
-    - time-x : X=время, Y=частота
-    - freq-x : X=частота, Y=время
-
-    freq_x_rotation:
-    - ccw : поворот на 90° против часовой
-    - cw  : поворот на 90° по часовой
-
-    edge_pad_cols:
-    - число пустых столбцов по времени слева и справа после ориентации.
-    """
-    if orientation == "time-x":
-        # Было [height, width] = [Y, X]
-        # Делаем низкие частоты снизу, значит переворачиваем по вертикали.
-        bitmap = np.flipud(bitmap_img)
-
-    elif orientation == "freq-x":
-        # При X=частота, Y=время надо повернуть текст.
-        if freq_x_rotation == "ccw":
-            rotated = np.rot90(bitmap_img, k=1)
-        elif freq_x_rotation == "cw":
-            rotated = np.rot90(bitmap_img, k=3)
-        else:
-            raise ValueError("freq_x_rotation должен быть 'ccw' или 'cw'")
-
-        bitmap = np.flipud(rotated)
-
-    else:
-        raise ValueError(f"Неизвестная orientation: {orientation}")
-
-    bitmap = bitmap.astype(np.float32)
-
-    if edge_pad_cols > 0:
-        bitmap = pad_bitmap_time_axis(bitmap, left_cols=edge_pad_cols, right_cols=edge_pad_cols)
-
-    return bitmap
-
-
-# =========================
-# Preview helpers
-# =========================
-
-def save_bitmap_preview_png(bitmap: np.ndarray, filename: str):
-    """
-    Сохраняет рабочий bitmap [freq_bins, time_bins] в PNG.
-    Для удобного просмотра:
-    - ось Y визуально будет направлена вверх по частоте;
-    - значит перед сохранением переворачиваем обратно для картинки.
-    """
-    preview = np.flipud(bitmap)
-    preview = np.clip(preview, 0.0, 1.0)
-    img = Image.fromarray((preview * 255.0).astype(np.uint8), mode="L")
-    img.save(filename)
-
-
-# =========================
-# Smoothing
-# =========================
-
-def gaussian_kernel(size: int, sigma: float) -> np.ndarray:
-    if size <= 1:
-        return np.array([1.0], dtype=np.float32)
-
-    radius = size // 2
-    x = np.arange(-radius, radius + 1, dtype=np.float32)
-    kernel = np.exp(-(x ** 2) / (2 * sigma ** 2))
-    kernel /= np.sum(kernel)
-    return kernel.astype(np.float32)
-
-
-def smooth_along_frequency(bitmap: np.ndarray, kernel_size: int = 5, sigma: float = 1.0) -> np.ndarray:
-    """
-    Сглаживание по оси частоты.
-    bitmap имеет shape [freq_bins, time_bins]
-    """
-    if kernel_size <= 1:
-        return bitmap.copy()
-
-    kernel = gaussian_kernel(kernel_size, sigma)
-    pad = kernel_size // 2
-    padded = np.pad(bitmap, ((pad, pad), (0, 0)), mode="edge")
-    out = np.zeros_like(bitmap)
-
-    for r in range(bitmap.shape[0]):
-        window = padded[r:r + kernel_size, :]
-        out[r, :] = np.sum(window * kernel[:, None], axis=0)
-
-    return np.clip(out, 0.0, 1.0)
-
-
-# =========================
-# Signal synthesis
-# =========================
-
-def synthesize_waterfall_signal(
-    bitmap: np.ndarray,
-    fmin: float,
-    fmax: float,
-    signal_duration: float,
-    samplerate: int,
-    contrast_power: float = 1.0,
-    random_phase: bool = True,
-    fade_ratio: float = 0.02,
-) -> np.ndarray:
-    """
-    Генерирует аудиосигнал по bitmap.
-
-    bitmap shape = [freq_bins, time_bins]
-
-    signal_duration — длительность именно полезного сигнала с надписью.
-    """
-    freq_bins, time_bins = bitmap.shape
-
-    if fmin <= 0:
-        raise ValueError("fmin должен быть > 0.")
-    if fmax <= fmin:
-        raise ValueError("fmax должен быть больше fmin.")
-    if fmax >= samplerate / 2:
-        raise ValueError(
-            f"fmax={fmax} Гц должен быть меньше Nyquist={samplerate / 2:.1f} Гц."
-        )
-    if signal_duration <= 0:
-        raise ValueError("signal_duration должен быть > 0.")
-
-    total_samples = int(round(signal_duration * samplerate))
-    if total_samples < time_bins:
-        raise ValueError(
-            "Слишком малая signal_duration: на временной столбец приходится меньше 1 сэмпла. "
-            "Увеличь signal_duration или уменьши img-width / edge-pad-cols."
-        )
-
-    freqs = np.linspace(fmin, fmax, freq_bins, dtype=np.float64)
-
-    samples_per_col = total_samples // time_bins
-    remainder = total_samples - samples_per_col * time_bins
-
-    if random_phase:
-        phases = np.random.uniform(0, 2 * np.pi, size=freq_bins)
-    else:
-        phases = np.zeros(freq_bins, dtype=np.float64)
-
-    parts = []
-
-    for col in range(time_bins):
-        seg_len = samples_per_col + (1 if col < remainder else 0)
-        t = np.arange(seg_len, dtype=np.float64) / samplerate
-
-        amplitudes = bitmap[:, col].astype(np.float64)
-
-        if contrast_power != 1.0:
-            amplitudes = amplitudes ** contrast_power
-
-        active = amplitudes > 1e-4
-
-        if not np.any(active):
-            segment = np.zeros(seg_len, dtype=np.float64)
-        else:
-            f_active = freqs[active]
-            a_active = amplitudes[active]
-            p_active = phases[active]
-
-            phase_matrix = 2 * np.pi * f_active[:, None] * t[None, :] + p_active[:, None]
-            tones = a_active[:, None] * np.sin(phase_matrix)
-            segment = np.sum(tones, axis=0)
-
-            # Нормировка по числу активных тонов
-            segment /= max(np.sqrt(np.sum(active)), 1.0)
-
-        # Лёгкое затухание только внутри каждого сегмента,
-        # чтобы уменьшить щелчки, но не "съедать" края фразы.
-        fade_len = int(seg_len * fade_ratio)
-        fade_len = min(fade_len, seg_len // 2)
-
-        if fade_len > 1:
-            envelope = np.ones(seg_len, dtype=np.float64)
-            envelope[:fade_len] *= np.linspace(0.0, 1.0, fade_len)
-            envelope[-fade_len:] *= np.linspace(1.0, 0.0, fade_len)
-            segment *= envelope
-
-        parts.append(segment)
-
-    signal = np.concatenate(parts)
-
-    peak = np.max(np.abs(signal))
-    if peak > 0:
-        signal = signal / peak * 0.95
-
-    return signal.astype(np.float32)
-
-
-# =========================
-# WAV IO
-# =========================
-
-def save_wav_mono_16bit(filename: str, signal: np.ndarray, samplerate: int):
-    """
-    Сохраняет сигнал как mono 16-bit PCM WAV.
-    """
-    signal = np.clip(signal, -1.0, 1.0)
-    pcm = (signal * 32767.0).astype(np.int16)
-
-    with wave.open(filename, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(samplerate)
-        wf.writeframes(pcm.tobytes())
-
-
-# =========================
-# Main
-# =========================
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Генерация WAV-файла с текстом для spectrogram / waterfall."
-    )
-
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Генерация WAV-файла с текстом для spectrogram / waterfall.")
     parser.add_argument("--text", type=str, required=True, help="Текст надписи")
     parser.add_argument("--fmin", type=float, required=True, help="Нижняя частота, Гц")
     parser.add_argument("--fmax", type=float, required=True, help="Верхняя частота, Гц")
-
-    parser.add_argument(
-        "--signal-duration",
-        type=float,
-        required=True,
-        help="Длительность именно полезного сигнала с надписью, сек",
-    )
-    parser.add_argument(
-        "--leading-silence",
-        type=float,
-        default=0.0,
-        help="Тишина перед надписью, сек",
-    )
-    parser.add_argument(
-        "--trailing-silence",
-        type=float,
-        default=0.0,
-        help="Тишина после надписи, сек",
-    )
-
-    parser.add_argument("--samplerate", type=int, default=48000, help="Частота дискретизации WAV")
-    parser.add_argument("--output", type=str, default="waterfall_text.wav", help="Выходной WAV")
-
-    parser.add_argument(
-        "--orientation",
-        type=str,
-        default="time-x",
-        choices=["time-x", "freq-x"],
-        help="Ориентация отображения: time-x или freq-x",
-    )
-    parser.add_argument(
-        "--freq-x-rotation",
-        type=str,
-        default="ccw",
-        choices=["ccw", "cw"],
-        help="Направление поворота текста для режима freq-x",
-    )
-
-    parser.add_argument(
-        "--edge-pad-cols",
-        type=int,
-        default=-1,
-        help=(
-            "Число пустых столбцов по времени слева/справа после ориентации. "
-            "Если -1, для freq-x подбирается автоматически."
-        ),
-    )
-
-    parser.add_argument(
-        "--img-width",
-        type=int,
-        default=1000,
-        help="Ширина bitmap до преобразования ориентации",
-    )
-    parser.add_argument(
-        "--img-height",
-        type=int,
-        default=160,
-        help="Высота bitmap до преобразования ориентации",
-    )
-
-    parser.add_argument("--font-size", type=int, default=180, help="Начальный размер шрифта")
-    parser.add_argument("--font-path", type=str, default=None, help="Путь к TTF/OTF шрифту")
-
-    parser.add_argument("--margin", type=int, default=12, help="Горизонтальные поля, px")
-    parser.add_argument("--vertical-margin", type=int, default=8, help="Вертикальные поля, px")
-
-    parser.add_argument("--smooth-freq", type=int, default=5, help="Сглаживание по частоте")
-    parser.add_argument("--smooth-sigma", type=float, default=1.0, help="Sigma для сглаживания")
-    parser.add_argument("--contrast", type=float, default=1.0, help="Контраст текста (>1 сильнее)")
-    parser.add_argument("--invert", action="store_true", help="Инвертировать bitmap")
-    parser.add_argument("--fixed-phase", action="store_true", help="Использовать фиксированные фазы")
-
-    parser.add_argument(
-        "--preview-png",
-        type=str,
-        default=None,
-        help="Сохранить PNG-превью рабочего bitmap",
-    )
-
+    parser.add_argument("--signal-duration", type=float, required=True, help="Длительность полезного сигнала, сек")
+    parser.add_argument("--leading-silence", type=float, default=0.0)
+    parser.add_argument("--trailing-silence", type=float, default=0.0)
+    parser.add_argument("--samplerate", type=int, default=48000)
+    parser.add_argument("--output", type=str, default="waterfall_text.wav")
+    parser.add_argument("--preview-png", type=str, default=None)
+    parser.add_argument("--orientation", type=str, default="time-x", choices=["time-x", "freq-x"])
+    parser.add_argument("--freq-x-rotation", type=str, default="ccw", choices=["ccw", "cw"])
+    parser.add_argument("--edge-pad-cols", type=int, default=-1)
+    parser.add_argument("--img-width", type=int, default=1000)
+    parser.add_argument("--img-height", type=int, default=160)
+    parser.add_argument("--font-size", type=int, default=180)
+    parser.add_argument("--font-path", type=str, default=None)
+    parser.add_argument("--margin", type=int, default=12)
+    parser.add_argument("--vertical-margin", type=int, default=8)
+    parser.add_argument("--smooth-freq", type=int, default=5)
+    parser.add_argument("--smooth-sigma", type=float, default=1.0)
+    parser.add_argument("--contrast", type=float, default=1.0)
+    parser.add_argument("--invert", action="store_true")
+    parser.add_argument("--fixed-phase", action="store_true")
     args = parser.parse_args()
 
-    if args.leading_silence < 0 or args.trailing_silence < 0:
-        raise ValueError("Тишина не может быть отрицательной.")
-
-    if args.img_width < 8 or args.img_height < 8:
-        raise ValueError("img-width и img-height должны быть не меньше 8.")
-
-    bitmap_img = render_text_bitmap_stretched(
+    config = GenerationConfig(
         text=args.text,
-        width=args.img_width,
-        height=args.img_height,
-        font_size=args.font_size,
-        font_path=args.font_path,
-        margin_px=args.margin,
-        vertical_margin_px=args.vertical_margin,
-        invert=args.invert,
-    )
-
-    if args.edge_pad_cols == -1:
-        if args.orientation == "freq-x":
-            auto_edge_pad = max(6, int(round(0.06 * max(args.img_width, args.img_height))))
-        else:
-            auto_edge_pad = 0
-    else:
-        auto_edge_pad = args.edge_pad_cols
-
-    bitmap = orient_bitmap_for_synthesis(
-        bitmap_img=bitmap_img,
-        orientation=args.orientation,
-        edge_pad_cols=auto_edge_pad,
-        freq_x_rotation=args.freq_x_rotation,
-    )
-
-    bitmap = smooth_along_frequency(
-        bitmap,
-        kernel_size=args.smooth_freq,
-        sigma=args.smooth_sigma,
-    )
-
-    if args.preview_png:
-        save_bitmap_preview_png(bitmap, args.preview_png)
-
-    useful_signal = synthesize_waterfall_signal(
-        bitmap=bitmap,
         fmin=args.fmin,
         fmax=args.fmax,
         signal_duration=args.signal_duration,
+        leading_silence=args.leading_silence,
+        trailing_silence=args.trailing_silence,
         samplerate=args.samplerate,
-        contrast_power=args.contrast,
-        random_phase=not args.fixed_phase,
-        fade_ratio=0.02,
+        orientation=args.orientation,
+        freq_x_rotation=args.freq_x_rotation,
+        edge_pad_cols=args.edge_pad_cols,
+        img_width=args.img_width,
+        img_height=args.img_height,
+        font_size=args.font_size,
+        font_path=args.font_path,
+        margin=args.margin,
+        vertical_margin=args.vertical_margin,
+        smooth_freq=args.smooth_freq,
+        smooth_sigma=args.smooth_sigma,
+        contrast=args.contrast,
+        invert=args.invert,
+        fixed_phase=args.fixed_phase,
     )
-
-    lead = np.zeros(int(round(args.leading_silence * args.samplerate)), dtype=np.float32)
-    trail = np.zeros(int(round(args.trailing_silence * args.samplerate)), dtype=np.float32)
-    full_signal = np.concatenate([lead, useful_signal, trail])
-
-    save_wav_mono_16bit(args.output, full_signal, args.samplerate)
+    artifacts = generate_artifacts(config)
+    Path(args.output).write_bytes(artifacts.wav_bytes)
+    if args.preview_png:
+        Path(args.preview_png).write_bytes(artifacts.preview_png)
 
     print("Готово.")
     print(f"Файл: {args.output}")
@@ -575,19 +68,10 @@ def main():
         print(f"Preview PNG: {args.preview_png}")
     print(f"Текст: {args.text}")
     print(f"Ориентация: {args.orientation}")
-    if args.orientation == 'freq-x':
-        print(f"Поворот freq-x: {args.freq_x_rotation}")
-        print(f"Внутренние поля по времени: {auto_edge_pad} столбцов слева и справа")
-    print(f"Полезный сигнал: {args.signal_duration:.3f} с")
-    print(f"Тишина до: {args.leading_silence:.3f} с")
-    print(f"Тишина после: {args.trailing_silence:.3f} с")
-    print(f"Итоговая длина файла: {len(full_signal) / args.samplerate:.3f} с")
     print(f"Частоты: {args.fmin} .. {args.fmax} Гц")
-    print(f"Sample rate: {args.samplerate} Гц")
-    print(f"Bitmap до ориентации: {bitmap_img.shape[1]} x {bitmap_img.shape[0]} (width x height)")
-    print(f"Рабочий bitmap [freq_bins, time_bins]: {bitmap.shape[0]} x {bitmap.shape[1]}")
+    print(f"Итоговая длина файла: {artifacts.total_duration:.3f} с")
+    print(f"Рабочий bitmap [freq_bins, time_bins]: {artifacts.bitmap.shape[0]} x {artifacts.bitmap.shape[1]}")
 
 
 if __name__ == "__main__":
     main()
-
