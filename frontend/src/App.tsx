@@ -94,7 +94,7 @@ export default function App() {
             </div>
           </SettingsSection>
 
-          <PreviewCard preview={preview} isLoading={isLoadingPreview} className="panel--fill" />
+          <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="panel--fill" />
         </main>
       </div>
     </div>
