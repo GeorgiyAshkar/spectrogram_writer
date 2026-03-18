@@ -11,7 +11,6 @@ export function PreviewCard({ preview, isLoading, className = '' }: PreviewCardP
     <section className={`panel preview-card panel--compact panel--fill ${className}`.trim()}>
       <div className="section__header section__header--compact">
         <h2>Живой предпросмотр</h2>
-        <p>Изображение отображается в фиксированной рамке и не растягивает страницу.</p>
       </div>
       <div className="preview-card__body preview-card__body--fill">
         {isLoading ? <div className="empty-state preview-frame">Предпросмотр обновляется…</div> : null}
