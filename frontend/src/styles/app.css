@@ -67,11 +67,45 @@ button:disabled {
   color: #6c4f3d;
 }
 
+.page-shell {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 16px 18px 20px;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.logo-sidebar {
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10px;
+}
+
+.logo-sidebar__frame {
+  width: 84px;
+  min-height: 240px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #f4ece2, #ebe1d3);
+  border: 1px solid #dccdb8;
+  box-shadow: 0 12px 30px rgba(91, 74, 56, 0.08);
+  overflow: hidden;
+}
+
+.logo-sidebar__image {
+  width: 220px;
+  max-width: none;
+  transform: rotate(-90deg);
+  object-fit: contain;
+}
+
 .app-shell {
   width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 16px 18px 20px;
 }
 
 .workspace-grid {
@@ -113,42 +147,8 @@ button:disabled {
 }
 
 .hero {
-  flex-direction: row;
-  align-items: stretch;
-  gap: 18px;
   margin-bottom: 16px;
   min-height: 130px;
-}
-
-.hero__logo-rail {
-  width: 92px;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-}
-
-.hero__logo-wrap {
-  width: 100%;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(180deg, #f4ece2, #ebe1d3);
-  border: 1px solid #dccdb8;
-  overflow: hidden;
-}
-
-.hero__logo-wrap--vertical {
-  min-height: 100%;
-}
-
-.hero__logo {
-  max-width: 88%;
-  max-height: 88%;
-  object-fit: contain;
-}
-
-.hero__logo--rotated {
-  transform: rotate(-90deg);
 }
 
 .hero__content {
@@ -378,6 +378,26 @@ button:disabled {
 }
 
 @media (max-width: 1280px) {
+  .page-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .logo-sidebar {
+    order: -1;
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+
+  .logo-sidebar__frame {
+    width: 220px;
+    min-height: 84px;
+  }
+
+  .logo-sidebar__image {
+    width: 84px;
+    transform: rotate(0deg);
+  }
+
   .workspace-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -389,18 +409,8 @@ button:disabled {
 }
 
 @media (max-width: 1024px) {
-  .hero,
   .hero__content {
     flex-direction: column;
-  }
-
-  .hero__logo-rail {
-    width: 100%;
-    height: 90px;
-  }
-
-  .hero__logo-wrap--vertical {
-    min-height: 90px;
   }
 
   .fields-grid--wide,
@@ -410,7 +420,7 @@ button:disabled {
 }
 
 @media (max-width: 720px) {
-  .app-shell {
+  .page-shell {
     padding: 12px;
   }
 

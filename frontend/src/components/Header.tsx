@@ -1,17 +1,6 @@
-interface HeaderProps {
-  logoUrl: string | null;
-}
-
-export function Header({ logoUrl }: HeaderProps) {
+export function Header() {
   return (
     <header className="hero panel">
-      {logoUrl ? (
-        <div className="hero__logo-rail">
-          <div className="hero__logo-wrap hero__logo-wrap--vertical">
-            <img className="hero__logo hero__logo--rotated" src={logoUrl} alt="Логотип компании" />
-          </div>
-        </div>
-      ) : null}
       <div className="hero__content">
         <div className="hero__brand-copy">
           <h1>Спектральный след</h1>
