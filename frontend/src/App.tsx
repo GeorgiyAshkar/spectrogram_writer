@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import defaults from './config/defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
 import { PreviewCard } from './components/PreviewCard';
@@ -7,28 +8,7 @@ import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
 import './styles/app.css';
 
-const initialState: GenerationFormData = {
-  text: 'ПОЗЫВНОЙ DE SPECTROGRAM',
-  fmin: 2000,
-  fmax: 12000,
-  signal_duration: 10,
-  leading_silence: 0.5,
-  trailing_silence: 0.5,
-  samplerate: 48000,
-  orientation: 'time-x',
-  freq_x_rotation: 'ccw',
-  edge_pad_cols: -1,
-  img_width: 1000,
-  img_height: 160,
-  font_size: 180,
-  margin: 12,
-  vertical_margin: 8,
-  smooth_freq: 5,
-  smooth_sigma: 1,
-  contrast: 1,
-  invert: false,
-  fixed_phase: false,
-};
+const initialState: GenerationFormData = defaults as GenerationFormData;
 
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
