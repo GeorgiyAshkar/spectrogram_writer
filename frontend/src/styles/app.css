@@ -72,7 +72,7 @@ button:disabled {
   margin: 0 auto;
   padding: 16px 18px 20px;
   display: grid;
-  grid-template-columns: minmax(180px, 14vw) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 18vw) minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
 }
