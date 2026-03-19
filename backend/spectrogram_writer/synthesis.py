@@ -6,9 +6,16 @@ import numpy as np
 
 
 PRESET_HARMONICS: dict[str, list[float]] = {
-    "piano": [1.0, 0.5, 0.25, 0.1],
-    "guitar": [1.0, 0.7, 0.5, 0.3, 0.2],
-    "synth": [1.0, 1.0, 0.8, 0.6, 0.4],
+    "piano": [1.0, 0.65, 0.36, 0.16, 0.08],
+    "guitar": [1.0, 0.85, 0.6, 0.34, 0.18, 0.1],
+    "synth": [1.0, 1.0, 0.9, 0.72, 0.55, 0.4, 0.28],
+}
+
+INSTRUMENT_TRANSIENT_STRENGTH: dict[str, float] = {
+    "piano": 0.42,
+    "guitar": 0.55,
+    "synth": 0.75,
+    "custom": 0.35,
 }
 
 
@@ -102,6 +109,30 @@ def adsr_envelope(length: int, attack: float, decay: float, sustain: float, rele
     return env[:length]
 
 
+def edge_fade_envelope(length: int, fade_ratio: float = 0.02) -> np.ndarray:
+    """Create a short fade-only envelope for the pure mode."""
+    if length <= 0:
+        return np.zeros(0, dtype=np.float64)
+    fade_n = max(1, min(length // 2, int(round(length * max(fade_ratio, 0.0)))))
+    env = np.ones(length, dtype=np.float64)
+    if fade_n > 1:
+        env[:fade_n] = np.linspace(0.0, 1.0, fade_n, endpoint=True, dtype=np.float64)
+        env[-fade_n:] *= np.linspace(1.0, 0.0, fade_n, endpoint=True, dtype=np.float64)
+    return env
+
+
+def harmonic_transient_envelope(length: int, harmonic_idx: int, instrument_type: str) -> np.ndarray:
+    """Emphasize upper partials at note onset to make harmonic mode audibly distinct."""
+    if length <= 0:
+        return np.zeros(0, dtype=np.float64)
+    strength = INSTRUMENT_TRANSIENT_STRENGTH.get(instrument_type, INSTRUMENT_TRANSIENT_STRENGTH["custom"])
+    if harmonic_idx <= 1 or strength <= 0:
+        return np.ones(length, dtype=np.float64)
+    x = np.linspace(0.0, 1.0, length, endpoint=True, dtype=np.float64)
+    onset = np.exp(-6.0 * x)
+    return 1.0 + strength * (harmonic_idx - 1) * 0.18 * onset
+
+
 def _phases(count: int, fixed_phase: bool) -> np.ndarray:
     if fixed_phase:
         return np.zeros(count, dtype=np.float64)
@@ -145,6 +176,7 @@ def _synthesize_column_harmonic(
     envelope: np.ndarray,
     weights: np.ndarray,
     fmax: float,
+    instrument_type: str,
 ) -> np.ndarray:
     active = amplitudes > 1e-4
     if not np.any(active):
@@ -162,8 +194,9 @@ def _synthesize_column_harmonic(
             if harmonic_freq > fmax or harmonic_freq >= nyquist or weight <= 0:
                 continue
             phase = 0.0 if fixed_phase else float(np.random.uniform(0.0, 2 * np.pi))
-            partial += weight * np.sin(2 * np.pi * harmonic_freq * t + phase)
-            partial_norm += weight**2
+            transient = harmonic_transient_envelope(seg_len, harmonic_idx, instrument_type)
+            partial += weight * transient * np.sin(2 * np.pi * harmonic_freq * t + phase)
+            partial_norm += float(np.mean(transient**2)) * weight**2
         if partial_norm > 0:
             signal += amp * partial / np.sqrt(partial_norm)
             norm += 1.0
@@ -213,9 +246,9 @@ def synthesize_signal(
 
     parts: list[np.ndarray] = []
     for col, seg_len in enumerate(seg_lengths):
-        envelope = adsr_envelope(seg_len, adsr_attack, adsr_decay, adsr_sustain, adsr_release)
         amplitudes = bitmap[:, col].astype(np.float64)
         if timbre_mode == "harmonic":
+            envelope = adsr_envelope(seg_len, adsr_attack, adsr_decay, adsr_sustain, adsr_release)
             segment = _synthesize_column_harmonic(
                 amplitudes,
                 freqs,
@@ -225,8 +258,10 @@ def synthesize_signal(
                 envelope,
                 harmonic_profile,
                 fmax,
+                instrument_type,
             )
         else:
+            envelope = edge_fade_envelope(seg_len)
             segment = _synthesize_column_pure(amplitudes, freqs, seg_len, samplerate, fixed_phase, envelope)
         parts.append(segment)
 

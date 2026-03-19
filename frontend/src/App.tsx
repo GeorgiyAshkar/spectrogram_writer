@@ -121,14 +121,14 @@ export default function App() {
                 <p>Выберите режим синтеза и настройте профиль гармоник для piano, guitar, synth или custom.</p>
               </div>
               <div className="fields-grid fields-grid--compact">
-                <FormField label="Режим тембра">
+                <FormField label="Режим тембра" hint="Pure даёт максимально читаемый waterfall, Harmonic добавляет инструментальный тембр и ADSR-огибающую.">
                   <select value={formData.timbre_mode} onChange={(e) => updateField('timbre_mode', e.target.value as GenerationFormData['timbre_mode'])}>
                     <option value="pure">Pure</option>
                     <option value="harmonic">Harmonic</option>
                     <option value="sample_masked" disabled>Sample masked (позже)</option>
                   </select>
                 </FormField>
-                <FormField label="Инструмент">
+                <FormField label="Инструмент" hint="Preset задаёт готовый характер гармоник: piano, guitar или synth. Custom использует ваши веса.">
                   <select value={formData.instrument_type} onChange={(e) => updateField('instrument_type', e.target.value as GenerationFormData['instrument_type'])} disabled={!showHarmonicControls}>
                     <option value="piano">Piano</option>
                     <option value="guitar">Guitar</option>
@@ -139,7 +139,7 @@ export default function App() {
                 <FormField label="Число гармоник" hint="Для preset-профилей можно ограничить число используемых гармоник.">
                   <input type="number" min={1} value={formData.num_harmonics} onChange={(e) => updateField('num_harmonics', Number(e.target.value))} disabled={!showHarmonicControls} />
                 </FormField>
-                <FormField label="Закон затухания">
+                <FormField label="Закон затухания" hint="Определяет, как быстро ослабляются верхние гармоники. Для preset-профилей влияет только custom_list.">
                   <select value={formData.harmonic_decay_mode} onChange={(e) => updateField('harmonic_decay_mode', e.target.value as GenerationFormData['harmonic_decay_mode'])} disabled={!showHarmonicControls}>
                     <option value="1/n">1/n</option>
                     <option value="1/n^2">1/n²</option>
@@ -151,9 +151,9 @@ export default function App() {
               {showHarmonicControls ? (
                 <>
                   <div className="preset-notes">
-                    <span><strong>Piano:</strong> 1.0, 0.5, 0.25, 0.1</span>
-                    <span><strong>Guitar:</strong> 1.0, 0.7, 0.5, 0.3, 0.2</span>
-                    <span><strong>Synth:</strong> 1.0, 1.0, 0.8, 0.6, 0.4</span>
+                    <span><strong>Piano:</strong> 1.0, 0.65, 0.36, 0.16, 0.08</span>
+                    <span><strong>Guitar:</strong> 1.0, 0.85, 0.6, 0.34, 0.18, 0.1</span>
+                    <span><strong>Synth:</strong> 1.0, 1.0, 0.9, 0.72, 0.55, 0.4, 0.28</span>
                   </div>
                   <div className="fields-grid fields-grid--single fields-grid--tight">
                     <FormField
@@ -170,10 +170,10 @@ export default function App() {
                     </FormField>
                   </div>
                   <div className="fields-grid fields-grid--compact">
-                    <FormField label="ADSR Attack"><input type="number" min={0} step="0.01" value={formData.adsr_attack} onChange={(e) => updateField('adsr_attack', Number(e.target.value))} /></FormField>
-                    <FormField label="ADSR Decay"><input type="number" min={0} step="0.01" value={formData.adsr_decay} onChange={(e) => updateField('adsr_decay', Number(e.target.value))} /></FormField>
-                    <FormField label="ADSR Sustain"><input type="number" min={0} max={1} step="0.05" value={formData.adsr_sustain} onChange={(e) => updateField('adsr_sustain', Number(e.target.value))} /></FormField>
-                    <FormField label="ADSR Release"><input type="number" min={0} step="0.01" value={formData.adsr_release} onChange={(e) => updateField('adsr_release', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Attack" hint="Доля сегмента, за которую звук набирает громкость."><input type="number" min={0} step="0.01" value={formData.adsr_attack} onChange={(e) => updateField('adsr_attack', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Decay" hint="Переход от пика к уровню sustain после атаки."><input type="number" min={0} step="0.01" value={formData.adsr_decay} onChange={(e) => updateField('adsr_decay', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Sustain" hint="Уровень удержания после decay, от 0 до 1."><input type="number" min={0} max={1} step="0.05" value={formData.adsr_sustain} onChange={(e) => updateField('adsr_sustain', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Release" hint="Доля сегмента, в течение которой звук затухает к нулю."><input type="number" min={0} step="0.01" value={formData.adsr_release} onChange={(e) => updateField('adsr_release', Number(e.target.value))} /></FormField>
                   </div>
                 </>
               ) : null}

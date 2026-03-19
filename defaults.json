@@ -23,7 +23,7 @@
   "instrument_type": "piano",
   "num_harmonics": 5,
   "harmonic_decay_mode": "1/n",
-  "harmonic_weights": [1, 0.5, 0.25, 0.1],
+  "harmonic_weights": [1, 0.65, 0.36, 0.16, 0.08],
   "adsr_attack": 0.02,
   "adsr_decay": 0.08,
   "adsr_sustain": 0.9,
