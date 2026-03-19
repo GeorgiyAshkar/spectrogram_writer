@@ -18,6 +18,7 @@ export function useSpectrogramGenerator(formData: GenerationFormData) {
       { label: 'Длительность сигнала', value: `${formData.signal_duration} c` },
       { label: 'Частота дискретизации', value: `${formData.samplerate} Гц` },
       { label: 'Ориентация', value: formData.orientation === 'time-x' ? 'Время по X' : 'Частота по X' },
+      { label: 'Режим тембра', value: formData.timbre_mode === 'pure' ? 'Pure' : formData.timbre_mode === 'harmonic' ? `Harmonic · ${formData.instrument_type}` : 'Sample masked' },
     ],
     [formData],
   );

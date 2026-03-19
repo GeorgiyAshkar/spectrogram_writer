@@ -18,5 +18,15 @@
   "smooth_sigma": 1,
   "contrast": 1,
   "invert": false,
-  "fixed_phase": false
+  "fixed_phase": false,
+  "timbre_mode": "pure",
+  "instrument_type": "piano",
+  "num_harmonics": 5,
+  "harmonic_decay_mode": "1/n",
+  "harmonic_weights": [1, 0.5, 0.25, 0.1],
+  "adsr_attack": 0.02,
+  "adsr_decay": 0.08,
+  "adsr_sustain": 0.9,
+  "adsr_release": 0.05,
+  "sample_masked": false
 }

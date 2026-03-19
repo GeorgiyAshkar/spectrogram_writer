@@ -379,6 +379,43 @@ button:disabled {
   color: #5f4633;
 }
 
+
+.section-subblock {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #efe7dc;
+  display: grid;
+  gap: 14px;
+}
+
+.section-subblock__header {
+  display: grid;
+  gap: 4px;
+}
+
+.section-subblock__header h3 {
+  margin: 0;
+  color: #5f4633;
+  font-size: 1rem;
+}
+
+.section-subblock__header p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.preset-notes {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e9dfd2;
+  border-radius: 14px;
+  background: #faf5ef;
+  color: #6c4f3d;
+  font-size: 0.88rem;
+}
+
 .toggle {
   display: flex;
   align-items: center;

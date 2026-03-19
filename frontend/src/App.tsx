@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
@@ -11,10 +11,29 @@ import './styles/app.css';
 
 const initialState: GenerationFormData = defaults as GenerationFormData;
 
+function parseWeights(value: string): number[] | null {
+  const weights = value
+    .split(/[;,\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map(Number)
+    .filter((item) => Number.isFinite(item));
+  return weights.length > 0 ? weights : null;
+}
+
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
   const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
     useSpectrogramGenerator(formData);
+
+  const harmonicWeightsText = useMemo(
+    () => (formData.harmonic_weights?.length ? formData.harmonic_weights.join(', ') : ''),
+    [formData.harmonic_weights],
+  );
+
+  const showHarmonicControls = formData.timbre_mode === 'harmonic';
+  const showCustomWeights =
+    formData.instrument_type === 'custom' || formData.harmonic_decay_mode === 'custom_list';
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
     setFormData((current) => ({ ...current, [key]: value }));
@@ -39,7 +58,10 @@ export default function App() {
             <p className="action-card__text">Параметры генерации</p>
             <ul className="summary-list summary-list--compact">
               {summary.map((item) => (
-                <li key={item.label}><span>{item.label}</span><strong>{item.value}</strong></li>
+                <li key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </li>
               ))}
             </ul>
             <div className="actions-row actions-row--push">
@@ -91,6 +113,70 @@ export default function App() {
                   <span>Включить</span>
                 </label>
               </FormField>
+            </div>
+
+            <div className="section-subblock">
+              <div className="section-subblock__header">
+                <h3>Инструментальный режим</h3>
+                <p>Выберите режим синтеза и настройте профиль гармоник для piano, guitar, synth или custom.</p>
+              </div>
+              <div className="fields-grid fields-grid--compact">
+                <FormField label="Режим тембра">
+                  <select value={formData.timbre_mode} onChange={(e) => updateField('timbre_mode', e.target.value as GenerationFormData['timbre_mode'])}>
+                    <option value="pure">Pure</option>
+                    <option value="harmonic">Harmonic</option>
+                    <option value="sample_masked" disabled>Sample masked (позже)</option>
+                  </select>
+                </FormField>
+                <FormField label="Инструмент">
+                  <select value={formData.instrument_type} onChange={(e) => updateField('instrument_type', e.target.value as GenerationFormData['instrument_type'])} disabled={!showHarmonicControls}>
+                    <option value="piano">Piano</option>
+                    <option value="guitar">Guitar</option>
+                    <option value="synth">Synth</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </FormField>
+                <FormField label="Число гармоник" hint="Для preset-профилей можно ограничить число используемых гармоник.">
+                  <input type="number" min={1} value={formData.num_harmonics} onChange={(e) => updateField('num_harmonics', Number(e.target.value))} disabled={!showHarmonicControls} />
+                </FormField>
+                <FormField label="Закон затухания">
+                  <select value={formData.harmonic_decay_mode} onChange={(e) => updateField('harmonic_decay_mode', e.target.value as GenerationFormData['harmonic_decay_mode'])} disabled={!showHarmonicControls}>
+                    <option value="1/n">1/n</option>
+                    <option value="1/n^2">1/n²</option>
+                    <option value="custom_list">Custom list</option>
+                  </select>
+                </FormField>
+              </div>
+
+              {showHarmonicControls ? (
+                <>
+                  <div className="preset-notes">
+                    <span><strong>Piano:</strong> 1.0, 0.5, 0.25, 0.1</span>
+                    <span><strong>Guitar:</strong> 1.0, 0.7, 0.5, 0.3, 0.2</span>
+                    <span><strong>Synth:</strong> 1.0, 1.0, 0.8, 0.6, 0.4</span>
+                  </div>
+                  <div className="fields-grid fields-grid--single fields-grid--tight">
+                    <FormField
+                      label="Пользовательские веса гармоник"
+                      hint="Используются для instrument_type=custom или harmonic_decay_mode=custom_list. Введите числа через запятую или пробел."
+                    >
+                      <textarea
+                        value={harmonicWeightsText}
+                        onChange={(e) => updateField('harmonic_weights', parseWeights(e.target.value))}
+                        rows={2}
+                        placeholder="Например: 1, 0.7, 0.5, 0.3"
+                        disabled={!showCustomWeights}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="fields-grid fields-grid--compact">
+                    <FormField label="ADSR Attack"><input type="number" min={0} step="0.01" value={formData.adsr_attack} onChange={(e) => updateField('adsr_attack', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Decay"><input type="number" min={0} step="0.01" value={formData.adsr_decay} onChange={(e) => updateField('adsr_decay', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Sustain"><input type="number" min={0} max={1} step="0.05" value={formData.adsr_sustain} onChange={(e) => updateField('adsr_sustain', Number(e.target.value))} /></FormField>
+                    <FormField label="ADSR Release"><input type="number" min={0} step="0.01" value={formData.adsr_release} onChange={(e) => updateField('adsr_release', Number(e.target.value))} /></FormField>
+                  </div>
+                </>
+              ) : null}
             </div>
           </SettingsSection>
 
