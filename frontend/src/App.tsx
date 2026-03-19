@@ -128,7 +128,7 @@ export default function App() {
                     <option value="sample_masked" disabled>Sample masked (позже)</option>
                   </select>
                 </FormField>
-                <FormField label="Инструмент" hint="Preset задаёт готовый характер гармоник: piano, guitar или synth. Custom использует ваши веса.">
+                <FormField label="Инструмент" hint="Preset задаёт готовый тембр и собственную модуляцию: piano мягче, guitar более щипковый, synth наиболее насыщенный. Custom использует ваши веса.">
                   <select value={formData.instrument_type} onChange={(e) => updateField('instrument_type', e.target.value as GenerationFormData['instrument_type'])} disabled={!showHarmonicControls}>
                     <option value="piano">Piano</option>
                     <option value="guitar">Guitar</option>

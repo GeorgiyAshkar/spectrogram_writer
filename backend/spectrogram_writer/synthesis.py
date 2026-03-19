@@ -18,6 +18,13 @@ INSTRUMENT_TRANSIENT_STRENGTH: dict[str, float] = {
     "custom": 0.35,
 }
 
+INSTRUMENT_MODULATION: dict[str, tuple[float, float, bool]] = {
+    "piano": (0.025, 5.0, True),
+    "guitar": (0.08, 4.2, False),
+    "synth": (0.14, 6.4, False),
+    "custom": (0.05, 5.2, False),
+}
+
 
 def gaussian_kernel(size: int, sigma: float) -> np.ndarray:
     """Build a normalized Gaussian kernel."""
@@ -65,10 +72,7 @@ def harmonic_weights(
         weights = np.asarray(list(custom_weights), dtype=np.float64)
     else:
         base = np.arange(1, num_harmonics + 1, dtype=np.float64)
-        if decay_mode == "1/n^2":
-            weights = 1.0 / (base**2)
-        else:
-            weights = 1.0 / base
+        weights = 1.0 / (base**2) if decay_mode == "1/n^2" else 1.0 / base
 
     if weights.size == 0:
         raise ValueError("Список гармоник не должен быть пустым.")
@@ -133,6 +137,55 @@ def harmonic_transient_envelope(length: int, harmonic_idx: int, instrument_type:
     return 1.0 + strength * (harmonic_idx - 1) * 0.18 * onset
 
 
+def instrument_modulation_envelope(length: int, samplerate: int, instrument_type: str) -> np.ndarray:
+    """Add subtle instrument-specific loudness movement that survives band-limiting."""
+    if length <= 0:
+        return np.zeros(0, dtype=np.float64)
+    depth, rate_hz, decay = INSTRUMENT_MODULATION.get(instrument_type, INSTRUMENT_MODULATION["custom"])
+    if depth <= 0:
+        return np.ones(length, dtype=np.float64)
+    t = np.arange(length, dtype=np.float64) / max(samplerate, 1)
+    modulation = 1.0 + depth * np.sin(2 * np.pi * rate_hz * t)
+    if decay:
+        modulation *= 1.0 - 0.2 * (1.0 - np.exp(-5.0 * np.linspace(0.0, 1.0, length, endpoint=True, dtype=np.float64)))
+    return modulation
+
+
+def bandpass_filter(signal: np.ndarray, samplerate: int, fmin: float, fmax: float, order: int = 5) -> np.ndarray:
+    """Band-limit the waveform to the requested frequency range before WAV export."""
+    nyquist = samplerate / 2.0
+    if not (0 < fmin < fmax < nyquist):
+        raise ValueError("Некорректный диапазон полосового фильтра.")
+    if signal.size == 0:
+        return signal
+
+    try:
+        from scipy.signal import butter, sosfiltfilt  # type: ignore
+
+        sos = butter(order, [fmin, fmax], btype="bandpass", fs=samplerate, output="sos")
+        return sosfiltfilt(sos, signal).astype(np.float32)
+    except Exception:
+        freqs = np.fft.rfftfreq(signal.size, d=1.0 / samplerate)
+        spectrum = np.fft.rfft(signal)
+        transition = max(10.0, min(0.08 * (fmax - fmin), 80.0))
+        gain = np.zeros_like(freqs, dtype=np.float64)
+        passband = (freqs >= fmin) & (freqs <= fmax)
+        gain[passband] = 1.0
+
+        low_ramp = (freqs >= max(0.0, fmin - transition)) & (freqs < fmin)
+        if np.any(low_ramp):
+            x = (freqs[low_ramp] - (fmin - transition)) / transition
+            gain[low_ramp] = 0.5 - 0.5 * np.cos(np.pi * x)
+
+        high_ramp = (freqs > fmax) & (freqs <= min(nyquist, fmax + transition))
+        if np.any(high_ramp):
+            x = (freqs[high_ramp] - fmax) / transition
+            gain[high_ramp] = 0.5 + 0.5 * np.cos(np.pi * x)
+
+        filtered = np.fft.irfft(spectrum * gain, n=signal.size)
+        return filtered.astype(np.float32)
+
+
 def _phases(count: int, fixed_phase: bool) -> np.ndarray:
     if fixed_phase:
         return np.zeros(count, dtype=np.float64)
@@ -186,6 +239,7 @@ def _synthesize_column_harmonic(
     signal = np.zeros(seg_len, dtype=np.float64)
     nyquist = samplerate / 2.0
     norm = 0.0
+    modulation = instrument_modulation_envelope(seg_len, samplerate, instrument_type)
     for amp, base_freq in zip(amplitudes[active], freqs[active], strict=False):
         partial = np.zeros(seg_len, dtype=np.float64)
         partial_norm = 0.0
@@ -200,6 +254,7 @@ def _synthesize_column_harmonic(
         if partial_norm > 0:
             signal += amp * partial / np.sqrt(partial_norm)
             norm += 1.0
+    signal *= modulation
     signal *= envelope
     signal /= max(np.sqrt(norm), 1.0)
     return signal

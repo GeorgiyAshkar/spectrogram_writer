@@ -7,7 +7,7 @@ import numpy as np
 
 from .io_utils import save_wav_mono_16bit
 from .rendering import build_bitmap, save_preview_png
-from .synthesis import smooth_along_frequency, synthesize_signal
+from .synthesis import bandpass_filter, smooth_along_frequency, synthesize_signal
 
 
 @dataclass(slots=True)
@@ -144,6 +144,10 @@ def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
         adsr_sustain=config.adsr_sustain,
         adsr_release=config.adsr_release,
     )
+    useful_signal = bandpass_filter(useful_signal, config.samplerate, config.fmin, config.fmax, order=5)
+    useful_peak = float(np.max(np.abs(useful_signal))) if useful_signal.size else 0.0
+    if useful_peak > 0:
+        useful_signal = useful_signal / useful_peak * 0.95
     lead = np.zeros(int(round(config.leading_silence * config.samplerate)), dtype=np.float32)
     trail = np.zeros(int(round(config.trailing_silence * config.samplerate)), dtype=np.float32)
     full_signal = np.concatenate([lead, useful_signal, trail])
