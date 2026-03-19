@@ -1,5 +1,8 @@
 export type Orientation = 'time-x' | 'freq-x';
 export type Rotation = 'ccw' | 'cw';
+export type TimbreMode = 'pure' | 'harmonic' | 'sample_masked';
+export type InstrumentType = 'piano' | 'guitar' | 'synth' | 'custom';
+export type HarmonicDecayMode = '1/n' | '1/n^2' | 'custom_list';
 
 export interface GenerationFormData {
   text: string;
@@ -22,6 +25,16 @@ export interface GenerationFormData {
   contrast: number;
   invert: boolean;
   fixed_phase: boolean;
+  timbre_mode: TimbreMode;
+  instrument_type: InstrumentType;
+  num_harmonics: number;
+  harmonic_decay_mode: HarmonicDecayMode;
+  harmonic_weights: number[] | null;
+  adsr_attack: number;
+  adsr_decay: number;
+  adsr_sustain: number;
+  adsr_release: number;
+  sample_masked: boolean;
 }
 
 export interface PreviewResponse {
