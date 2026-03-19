@@ -172,7 +172,7 @@ def auto_edge_pad_cols(img_width: int, img_height: int, orientation: str, edge_p
     return max(6, int(round(0.06 * max(img_width, img_height))))
 
 
-def _split_text_units(text: str, scrolling_text: bool, word_per_line: bool) -> list[str]:
+def split_text_units(text: str, scrolling_text: bool, word_per_line: bool) -> list[str]:
     normalized = " ".join(text.split())
     if word_per_line:
         return [word for word in normalized.split(" ") if word]
@@ -195,13 +195,12 @@ def _render_freq_x_units(
     scrolling_text: bool,
     word_per_line: bool,
 ) -> np.ndarray:
-    units = _split_text_units(text, scrolling_text, word_per_line)
+    units = split_text_units(text, scrolling_text, word_per_line)
     if not units:
         raise ValueError("Не удалось разбить текст на элементы для freq-x.")
 
-    gap_cols = max(2, int(round(img_width * 0.04)))
     parts: list[np.ndarray] = []
-    for index, unit in enumerate(units):
+    for unit in units:
         if unit.strip():
             unit_img = render_text_bitmap(
                 text=unit,
@@ -217,8 +216,6 @@ def _render_freq_x_units(
         else:
             unit_bitmap = np.zeros((img_width, img_height), dtype=np.float32)
         parts.append(unit_bitmap)
-        if index != len(units) - 1:
-            parts.append(np.zeros((unit_bitmap.shape[0], gap_cols), dtype=np.float32))
     return np.concatenate(parts, axis=1)
 
 
@@ -237,7 +234,7 @@ def build_bitmap(
     edge_pad_cols: int,
     scrolling_text: bool,
     word_per_line: bool,
-) -> tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int, float]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
     if orientation == "freq-x" and (scrolling_text or word_per_line):
         bitmap = _render_freq_x_units(
@@ -266,8 +263,12 @@ def build_bitmap(
         )
         bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
+    duration_multiplier = 1.0
+    if orientation == "freq-x" and (scrolling_text or word_per_line):
+        units = split_text_units(text, scrolling_text, word_per_line)
+        duration_multiplier = float(len(units)) if units else 1.0
     bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
-    return bitmap, resolved_pad
+    return bitmap, resolved_pad, duration_multiplier
 
 
 def save_preview_png(bitmap: np.ndarray) -> bytes:

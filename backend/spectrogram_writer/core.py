@@ -118,7 +118,7 @@ class GeneratedArtifacts:
 def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
     """Generate bitmap preview and synthesized WAV payloads."""
     config.validate()
-    bitmap, auto_edge_pad = build_bitmap(
+    bitmap, auto_edge_pad, duration_multiplier = build_bitmap(
         text=config.text,
         img_width=config.img_width,
         img_height=config.img_height,
@@ -138,7 +138,7 @@ def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
         bitmap=bitmap,
         fmin=config.fmin,
         fmax=config.fmax,
-        signal_duration=config.signal_duration,
+        signal_duration=config.signal_duration * duration_multiplier,
         samplerate=config.samplerate,
         contrast_power=config.contrast,
         fixed_phase=config.fixed_phase,
