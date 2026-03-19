@@ -40,6 +40,108 @@ def _measure_text(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont)
     return bbox[2] - bbox[0], bbox[3] - bbox[1], bbox
 
 
+def _emoji_aliases() -> dict[str, str]:
+    return {
+        "❤": "❤️",
+        "♥": "❤️",
+        ":heart:": "❤️",
+        ":joy:": "😊",
+        ":sad:": "😢",
+        ":angry:": "😡",
+        ":star:": "⭐",
+        ":sun:": "☀️",
+        ":moon:": "🌙",
+        ":cloud:": "☁️",
+        ":lightning:": "⚡",
+        ":music:": "🎵",
+    }
+
+
+def _normalize_symbol(symbol: str) -> str:
+    normalized = symbol.strip()
+    return _emoji_aliases().get(normalized, normalized)
+
+
+def _draw_supported_emoji(draw: ImageDraw.ImageDraw, symbol: str, width: int, height: int, fg: int, bg: int) -> bool:
+    symbol = _normalize_symbol(symbol)
+    left = int(width * 0.18)
+    right = int(width * 0.82)
+    top = int(height * 0.18)
+    bottom = int(height * 0.82)
+    cx = width // 2
+    cy = height // 2
+    stroke = max(2, min(width, height) // 18)
+
+    if symbol == "❤️":
+        r = min(width, height) * 0.17
+        draw.ellipse((cx - 2.1 * r, top, cx - 0.1 * r, top + 2 * r), fill=fg)
+        draw.ellipse((cx + 0.1 * r, top, cx + 2.1 * r, top + 2 * r), fill=fg)
+        draw.polygon([(left, top + int(1.3 * r)), (right, top + int(1.3 * r)), (cx, bottom)], fill=fg)
+        return True
+    if symbol in {"😊", "😢", "😡"}:
+        draw.ellipse((left, top, right, bottom), outline=fg, width=stroke)
+        eye_r = max(3, stroke)
+        eye_y = int(height * 0.42)
+        draw.ellipse((int(width * 0.35) - eye_r, eye_y - eye_r, int(width * 0.35) + eye_r, eye_y + eye_r), fill=fg)
+        draw.ellipse((int(width * 0.65) - eye_r, eye_y - eye_r, int(width * 0.65) + eye_r, eye_y + eye_r), fill=fg)
+        if symbol == "😊":
+            draw.arc((int(width * 0.3), int(height * 0.42), int(width * 0.7), int(height * 0.76)), start=10, end=170, fill=fg, width=stroke)
+        elif symbol == "😢":
+            draw.arc((int(width * 0.3), int(height * 0.58), int(width * 0.7), int(height * 0.78)), start=190, end=350, fill=fg, width=stroke)
+            draw.ellipse((int(width * 0.62), int(height * 0.46), int(width * 0.7), int(height * 0.62)), fill=fg)
+        else:
+            draw.line((int(width * 0.28), int(height * 0.34), int(width * 0.4), int(height * 0.38)), fill=fg, width=stroke)
+            draw.line((int(width * 0.6), int(height * 0.38), int(width * 0.72), int(height * 0.34)), fill=fg, width=stroke)
+            draw.arc((int(width * 0.3), int(height * 0.58), int(width * 0.7), int(height * 0.78)), start=190, end=350, fill=fg, width=stroke)
+        return True
+    if symbol == "⭐":
+        points = []
+        outer = min(width, height) * 0.32
+        inner = outer * 0.42
+        import math
+        for i in range(10):
+            angle = -math.pi / 2 + i * math.pi / 5
+            radius = outer if i % 2 == 0 else inner
+            points.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
+        draw.polygon(points, fill=fg)
+        return True
+    if symbol == "☀️":
+        import math
+        core = min(width, height) * 0.18
+        draw.ellipse((cx - core, cy - core, cx + core, cy + core), fill=fg)
+        for i in range(8):
+            angle = i * math.pi / 4
+            x1 = cx + math.cos(angle) * core * 1.5
+            y1 = cy + math.sin(angle) * core * 1.5
+            x2 = cx + math.cos(angle) * core * 2.4
+            y2 = cy + math.sin(angle) * core * 2.4
+            draw.line((x1, y1, x2, y2), fill=fg, width=stroke)
+        return True
+    if symbol == "🌙":
+        r = min(width, height) * 0.28
+        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=fg)
+        cut = int(r * 0.7)
+        draw.ellipse((cx - r + cut, cy - r * 1.05, cx + r + cut, cy + r * 0.95), fill=bg)
+        return True
+    if symbol == "☁️":
+        draw.ellipse((int(width * 0.22), int(height * 0.42), int(width * 0.5), int(height * 0.72)), fill=fg)
+        draw.ellipse((int(width * 0.4), int(height * 0.3), int(width * 0.72), int(height * 0.68)), fill=fg)
+        draw.ellipse((int(width * 0.56), int(height * 0.42), int(width * 0.82), int(height * 0.72)), fill=fg)
+        draw.rounded_rectangle((int(width * 0.24), int(height * 0.52), int(width * 0.8), int(height * 0.76)), radius=stroke * 2, fill=fg)
+        return True
+    if symbol == "⚡":
+        draw.polygon([(int(width * 0.56), top), (int(width * 0.4), int(height * 0.47)), (int(width * 0.58), int(height * 0.47)), (int(width * 0.42), bottom), (int(width * 0.64), int(height * 0.58)), (int(width * 0.48), int(height * 0.58))], fill=fg)
+        return True
+    if symbol == "🎵":
+        draw.line((int(width * 0.42), int(height * 0.28), int(width * 0.42), int(height * 0.72)), fill=fg, width=stroke)
+        draw.line((int(width * 0.42), int(height * 0.3), int(width * 0.72), int(height * 0.22)), fill=fg, width=stroke)
+        draw.line((int(width * 0.72), int(height * 0.22), int(width * 0.72), int(height * 0.58)), fill=fg, width=stroke)
+        draw.ellipse((int(width * 0.28), int(height * 0.62), int(width * 0.48), int(height * 0.82)), fill=fg)
+        draw.ellipse((int(width * 0.58), int(height * 0.48), int(width * 0.78), int(height * 0.68)), fill=fg)
+        return True
+    return False
+
+
 def _normalize_bitmap_intensity(bitmap: np.ndarray, invert: bool) -> np.ndarray:
     threshold = 0.04
     if invert:
@@ -73,6 +175,21 @@ def render_text_bitmap(
     fg = 0 if invert else 255
     target_w = width - 2 * margin_px
     target_h = height - 2 * vertical_margin_px
+
+    normalized_text = _normalize_symbol(text)
+    supported_emojis = set(_emoji_aliases().values())
+    if normalized_text in supported_emojis:
+        final_img = Image.new("L", (width, height), color=bg)
+        icon_w = max(1, target_w)
+        icon_h = max(1, target_h)
+        icon = Image.new("L", (icon_w, icon_h), color=bg)
+        icon_draw = ImageDraw.Draw(icon)
+        if _draw_supported_emoji(icon_draw, normalized_text, icon_w, icon_h, fg, bg):
+            offset_x = margin_px + max(0, (target_w - icon_w) // 2)
+            offset_y = vertical_margin_px + max(0, (target_h - icon_h) // 2)
+            final_img.paste(icon, (offset_x, offset_y))
+            bitmap = np.asarray(final_img, dtype=np.float32) / 255.0
+            return _normalize_bitmap_intensity(bitmap, invert)
 
     chosen_font = None
     chosen_bbox = None
@@ -178,7 +295,7 @@ def build_bitmap(
     freq_x_marquee: bool,
     freq_x_word_rows: bool,
     edge_pad_cols: int,
-) -> tuple[np.ndarray, int, int]:
+) -> tuple[np.ndarray, int, float]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
     segments = _split_freq_x_segments(text, freq_x_marquee if orientation == "freq-x" else False, freq_x_word_rows if orientation == "freq-x" else False)
@@ -196,14 +313,25 @@ def build_bitmap(
             invert=invert,
         )
         bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
-        bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
         rendered_segments.append(bitmap)
 
     if len(rendered_segments) == 1:
-        return rendered_segments[0], resolved_pad, 1
+        bitmap = pad_bitmap_time_axis(rendered_segments[0], resolved_pad, resolved_pad)
+        return bitmap, resolved_pad, 1
 
-    bitmap = np.concatenate(rendered_segments, axis=1)
-    return bitmap, resolved_pad, len(rendered_segments)
+    inter_segment_gap = max(1, resolved_pad // 5)
+    gap_bitmap = np.zeros((rendered_segments[0].shape[0], inter_segment_gap), dtype=np.float32)
+    composite: list[np.ndarray] = []
+    for index, segment_bitmap in enumerate(rendered_segments):
+        if index > 0:
+            composite.append(gap_bitmap)
+        composite.append(segment_bitmap)
+
+    bitmap = np.concatenate(composite, axis=1)
+    bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
+    baseline_segment = rendered_segments[0].shape[1] + 2 * resolved_pad
+    duration_multiplier = max(1.0, bitmap.shape[1] / baseline_segment)
+    return bitmap, resolved_pad, duration_multiplier
 
 
 def save_preview_png(bitmap: np.ndarray) -> bytes:

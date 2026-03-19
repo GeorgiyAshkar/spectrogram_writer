@@ -9,6 +9,8 @@ import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
 import './styles/app.css';
 
+const EMOJI_OPTIONS = ['❤️', '😊', '😢', '😡', '⭐', '☀️', '🌙', '☁️', '⚡', '🎵'];
+
 const initialState: GenerationFormData = defaults as GenerationFormData;
 
 function parseWeights(value: string): number[] | null {
@@ -56,6 +58,13 @@ export default function App() {
     }));
   };
 
+  const appendEmoji = (emoji: string) => {
+    setFormData((current) => ({
+      ...current,
+      text: current.text.trim() ? `${current.text.trim()} ${emoji}` : emoji,
+    }));
+  };
+
   return (
     <div className="page-shell">
       <LogoSidebar logoUrl={logoUrl} />
@@ -67,6 +76,13 @@ export default function App() {
               <FormField label="Текст">
                 <textarea value={formData.text} onChange={(e) => updateField('text', e.target.value)} rows={2} />
               </FormField>
+              <div className="emoji-toolbar" aria-label="Базовые эмоди">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <button key={emoji} type="button" className="emoji-chip" onClick={() => appendEmoji(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </SettingsSection>
 
@@ -109,13 +125,13 @@ export default function App() {
                   <option value="cw">По часовой</option>
                 </select>
               </FormField>
-              <FormField label="Бегущая строка" hint="Для Частоты по X каждая буква будет генерироваться отдельно по времени; ширина, высота bitmap и длительность применяются к каждой букве.">
+              <FormField label="Бегущая строка">
                 <label className="toggle toggle--compact">
                   <input type="checkbox" checked={formData.freq_x_marquee} onChange={(e) => updateFreqXMarquee(e.target.checked)} disabled={!showFreqXFlowModes} />
                   <span>{showFreqXFlowModes ? 'Включить' : 'Доступно только для Частоты по X'}</span>
                 </label>
               </FormField>
-              <FormField label="Слова с новой строки" hint="Для Частоты по X каждое слово будет отдельным блоком по времени; ширина, высота bitmap и длительность применяются к каждому слову.">
+              <FormField label="Слова с новой строки">
                 <label className="toggle toggle--compact">
                   <input type="checkbox" checked={formData.freq_x_word_rows} onChange={(e) => updateFreqXWordRows(e.target.checked)} disabled={!showFreqXFlowModes} />
                   <span>{showFreqXFlowModes ? 'Включить' : 'Доступно только для Частоты по X'}</span>

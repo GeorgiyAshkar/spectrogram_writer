@@ -264,6 +264,30 @@ button:disabled {
   line-height: 1.25;
 }
 
+
+.emoji-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emoji-chip {
+  width: auto;
+  min-width: 48px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #d6d3d1;
+  background: #fffaf4;
+  color: #5f4633;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.emoji-chip:hover {
+  border-color: #b08968;
+  box-shadow: 0 0 0 3px rgba(176, 137, 104, 0.12);
+}
+
 .summary-list {
   list-style: none;
   padding: 0;
