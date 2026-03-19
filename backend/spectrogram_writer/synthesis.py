@@ -6,16 +6,30 @@ import numpy as np
 
 
 PRESET_HARMONICS: dict[str, list[float]] = {
-    "piano": [1.0, 0.65, 0.36, 0.16, 0.08],
-    "guitar": [1.0, 0.85, 0.6, 0.34, 0.18, 0.1],
-    "synth": [1.0, 1.0, 0.9, 0.72, 0.55, 0.4, 0.28],
+    "piano": [1.0, 0.52, 0.24, 0.11, 0.05, 0.025],
+    "guitar": [1.0, 0.95, 0.48, 0.34, 0.16, 0.08, 0.04],
+    "synth": [1.0, 0.88, 0.92, 0.8, 0.62, 0.48, 0.38, 0.28],
 }
 
 INSTRUMENT_TRANSIENT_STRENGTH: dict[str, float] = {
-    "piano": 0.42,
-    "guitar": 0.55,
-    "synth": 0.75,
+    "piano": 0.58,
+    "guitar": 0.9,
+    "synth": 0.2,
     "custom": 0.35,
+}
+
+INSTRUMENT_INHARMONICITY: dict[str, float] = {
+    "piano": 0.0009,
+    "guitar": 0.0002,
+    "synth": 0.0,
+    "custom": 0.0,
+}
+
+INSTRUMENT_DETUNE_CENTS: dict[str, float] = {
+    "piano": 0.6,
+    "guitar": 1.5,
+    "synth": 4.5,
+    "custom": 0.0,
 }
 
 
@@ -73,7 +87,15 @@ def harmonic_weights(
     if weights.size == 0:
         raise ValueError("Список гармоник не должен быть пустым.")
     if num_harmonics > 0:
+        if weights.size < num_harmonics:
+            weights = np.pad(weights, (0, num_harmonics - weights.size))
         weights = weights[:num_harmonics]
+    if decay_mode == "custom_list" and custom_weights:
+        weights = np.asarray(list(custom_weights), dtype=np.float64)
+        if num_harmonics > 0:
+            if weights.size < num_harmonics:
+                weights = np.pad(weights, (0, num_harmonics - weights.size))
+            weights = weights[:num_harmonics]
     if weights.size == 0 or weights[0] <= 0:
         raise ValueError("Основной тон должен иметь положительный вес.")
     weights = np.clip(weights, 0.0, None)
@@ -133,6 +155,20 @@ def harmonic_transient_envelope(length: int, harmonic_idx: int, instrument_type:
     return 1.0 + strength * (harmonic_idx - 1) * 0.18 * onset
 
 
+def instrument_color_envelope(length: int, instrument_type: str) -> np.ndarray:
+    if length <= 0:
+        return np.zeros(0, dtype=np.float64)
+    x = np.linspace(0.0, 1.0, length, endpoint=True, dtype=np.float64)
+    if instrument_type == "piano":
+        return 1.0 - 0.28 * x**0.7
+    if instrument_type == "guitar":
+        return 0.92 + 0.22 * np.exp(-8.0 * x) - 0.2 * x
+    if instrument_type == "synth":
+        lfo = 0.08 * np.sin(2 * np.pi * (1.5 * x + 0.1))
+        return 0.94 + 0.06 * np.tanh(6.0 * x) + lfo
+    return np.ones(length, dtype=np.float64)
+
+
 def _phases(count: int, fixed_phase: bool) -> np.ndarray:
     if fixed_phase:
         return np.zeros(count, dtype=np.float64)
@@ -152,6 +188,7 @@ def _synthesize_column_pure(
     samplerate: int,
     fixed_phase: bool,
     envelope: np.ndarray,
+    amplitude_scale: float,
 ) -> np.ndarray:
     active = amplitudes > 1e-4
     if not np.any(active):
@@ -163,7 +200,7 @@ def _synthesize_column_pure(
         axis=0,
     )
     signal *= envelope
-    signal /= max(np.sqrt(active.sum()), 1.0)
+    signal /= max(amplitude_scale, 1.0)
     return signal
 
 
@@ -177,6 +214,7 @@ def _synthesize_column_harmonic(
     weights: np.ndarray,
     fmax: float,
     instrument_type: str,
+    amplitude_scale: float,
 ) -> np.ndarray:
     active = amplitudes > 1e-4
     if not np.any(active):
@@ -185,22 +223,34 @@ def _synthesize_column_harmonic(
     t = np.arange(seg_len, dtype=np.float64) / samplerate
     signal = np.zeros(seg_len, dtype=np.float64)
     nyquist = samplerate / 2.0
+    spectral_color = instrument_color_envelope(seg_len, instrument_type)
+    inharmonicity = INSTRUMENT_INHARMONICITY.get(instrument_type, 0.0)
+    detune_cents = INSTRUMENT_DETUNE_CENTS.get(instrument_type, 0.0)
+    detune_ratio = 2 ** (detune_cents / 1200.0)
     norm = 0.0
     for amp, base_freq in zip(amplitudes[active], freqs[active], strict=False):
         partial = np.zeros(seg_len, dtype=np.float64)
         partial_norm = 0.0
         for harmonic_idx, weight in enumerate(weights, start=1):
-            harmonic_freq = base_freq * harmonic_idx
-            if harmonic_freq > fmax or harmonic_freq >= nyquist or weight <= 0:
+            if weight <= 0:
+                continue
+            stretch = np.sqrt(1.0 + inharmonicity * harmonic_idx * harmonic_idx)
+            harmonic_freq = base_freq * harmonic_idx * stretch
+            if harmonic_freq > fmax or harmonic_freq >= nyquist:
                 continue
             phase = 0.0 if fixed_phase else float(np.random.uniform(0.0, 2 * np.pi))
             transient = harmonic_transient_envelope(seg_len, harmonic_idx, instrument_type)
-            partial += weight * transient * np.sin(2 * np.pi * harmonic_freq * t + phase)
-            partial_norm += float(np.mean(transient**2)) * weight**2
+            sinusoid = np.sin(2 * np.pi * harmonic_freq * t + phase)
+            if instrument_type == "synth" and harmonic_idx <= 3:
+                sinusoid = 0.72 * sinusoid + 0.28 * np.sin(2 * np.pi * harmonic_freq * detune_ratio * t + phase / 2.0)
+            partial_component = weight * transient * sinusoid
+            partial += partial_component
+            partial_norm += float(np.mean((weight * transient) ** 2))
         if partial_norm > 0:
-            signal += amp * partial / np.sqrt(partial_norm)
+            signal += amp * spectral_color * partial / np.sqrt(partial_norm)
             norm += 1.0
     signal *= envelope
+    signal /= max(amplitude_scale, 1.0)
     signal /= max(np.sqrt(norm), 1.0)
     return signal
 
@@ -235,6 +285,8 @@ def synthesize_signal(
     bitmap = apply_contrast(bitmap, contrast_power)
     freqs = np.linspace(fmin, fmax, freq_bins, dtype=np.float64)
     seg_lengths = _segment_lengths(total_samples, time_bins)
+    column_activity = np.sqrt(np.maximum(np.count_nonzero(bitmap > 1e-4, axis=0), 1))
+    amplitude_scale = float(np.max(column_activity))
     harmonic_profile = None
     if timbre_mode == "harmonic":
         harmonic_profile = harmonic_weights(
@@ -259,10 +311,19 @@ def synthesize_signal(
                 harmonic_profile,
                 fmax,
                 instrument_type,
+                amplitude_scale,
             )
         else:
             envelope = edge_fade_envelope(seg_len)
-            segment = _synthesize_column_pure(amplitudes, freqs, seg_len, samplerate, fixed_phase, envelope)
+            segment = _synthesize_column_pure(
+                amplitudes,
+                freqs,
+                seg_len,
+                samplerate,
+                fixed_phase,
+                envelope,
+                amplitude_scale,
+            )
         parts.append(segment)
 
     signal = np.concatenate(parts).astype(np.float32)

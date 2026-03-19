@@ -35,3 +35,5 @@ class GenerationRequest(BaseModel):
     adsr_sustain: float = 0.9
     adsr_release: float = 0.05
     sample_masked: bool = False
+    scrolling_text: bool = False
+    word_per_line: bool = False
