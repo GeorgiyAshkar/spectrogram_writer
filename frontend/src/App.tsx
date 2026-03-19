@@ -22,7 +22,7 @@ export default function App() {
 
   return (
     <div className="page-shell">
-      {logoUrl ? <LogoSidebar logoUrl={logoUrl} /> : null}
+      <LogoSidebar logoUrl={logoUrl} />
       <div className="app-shell">
         <Header />
         <main className="workspace-grid">

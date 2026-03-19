@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -21,9 +22,16 @@ def healthcheck() -> dict:
 
 @router.get("/branding/logo")
 def branding_logo() -> Response:
-    if not LOGO_FILE.exists():
-        return Response(status_code=404)
-    return FileResponse(LOGO_FILE, media_type="image/png")
+    if LOGO_FILE.exists():
+        return FileResponse(LOGO_FILE, media_type="image/png")
+
+    svg = f"""<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 120' role='img' aria-label='Спектральный след'>
+  <rect width='260' height='120' rx='20' fill='#faf5ef'/>
+  <rect x='10' y='10' width='240' height='100' rx='16' fill='none' stroke='#d6ad7b' stroke-width='2'/>
+  <path d='M34 78c14-34 26 8 40-22s26 10 40-18 24 8 38-16 22 12 40-10' fill='none' stroke='#b08968' stroke-width='6' stroke-linecap='round'/>
+  <text x='130' y='96' text-anchor='middle' font-family='Inter,Arial,sans-serif' font-size='18' font-weight='700' fill='#5f4633'>Спектральный след</text>
+</svg>"""
+    return Response(content=svg, media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=3600", "Content-Disposition": f"inline; filename={quote('spectral-logo.svg')}"})
 
 
 @router.post("/preview")
