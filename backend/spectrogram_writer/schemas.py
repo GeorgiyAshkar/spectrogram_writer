@@ -13,6 +13,8 @@ class GenerationRequest(BaseModel):
     preview_png: str | None = None
     orientation: str = "time-x"
     freq_x_rotation: str = "ccw"
+    freq_x_marquee: bool = False
+    freq_x_word_rows: bool = False
     edge_pad_cols: int = -1
     img_width: int = 1000
     img_height: int = 160

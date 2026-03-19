@@ -9,6 +9,8 @@ import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
 import './styles/app.css';
 
+const EMOJI_OPTIONS = ['❤️', '😊', '😢', '😡', '⭐', '☀️', '🌙', '☁️', '⚡', '🎵'];
+
 const initialState: GenerationFormData = defaults as GenerationFormData;
 
 function parseWeights(value: string): number[] | null {
@@ -34,9 +36,33 @@ export default function App() {
   const showHarmonicControls = formData.timbre_mode === 'harmonic';
   const showCustomWeights =
     formData.instrument_type === 'custom' || formData.harmonic_decay_mode === 'custom_list';
+  const showFreqXFlowModes = formData.orientation === 'freq-x';
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
     setFormData((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateFreqXMarquee = (checked: boolean) => {
+    setFormData((current) => ({
+      ...current,
+      freq_x_marquee: checked,
+      freq_x_word_rows: checked ? false : current.freq_x_word_rows,
+    }));
+  };
+
+  const updateFreqXWordRows = (checked: boolean) => {
+    setFormData((current) => ({
+      ...current,
+      freq_x_word_rows: checked,
+      freq_x_marquee: checked ? false : current.freq_x_marquee,
+    }));
+  };
+
+  const appendEmoji = (emoji: string) => {
+    setFormData((current) => ({
+      ...current,
+      text: current.text.trim() ? `${current.text.trim()} ${emoji}` : emoji,
+    }));
   };
 
   return (
@@ -50,6 +76,13 @@ export default function App() {
               <FormField label="Текст">
                 <textarea value={formData.text} onChange={(e) => updateField('text', e.target.value)} rows={2} />
               </FormField>
+              <div className="emoji-toolbar" aria-label="Базовые эмоди">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <button key={emoji} type="button" className="emoji-chip" onClick={() => appendEmoji(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </SettingsSection>
 
@@ -91,6 +124,18 @@ export default function App() {
                   <option value="ccw">Против часовой</option>
                   <option value="cw">По часовой</option>
                 </select>
+              </FormField>
+              <FormField label="Бегущая строка">
+                <label className="toggle toggle--compact">
+                  <input type="checkbox" checked={formData.freq_x_marquee} onChange={(e) => updateFreqXMarquee(e.target.checked)} disabled={!showFreqXFlowModes} />
+                  <span>{showFreqXFlowModes ? 'Включить' : 'Доступно только для Частоты по X'}</span>
+                </label>
+              </FormField>
+              <FormField label="Слова с новой строки">
+                <label className="toggle toggle--compact">
+                  <input type="checkbox" checked={formData.freq_x_word_rows} onChange={(e) => updateFreqXWordRows(e.target.checked)} disabled={!showFreqXFlowModes} />
+                  <span>{showFreqXFlowModes ? 'Включить' : 'Доступно только для Частоты по X'}</span>
+                </label>
               </FormField>
               <FormField label="Внутренние поля"><input type="number" value={formData.edge_pad_cols} onChange={(e) => updateField('edge_pad_cols', Number(e.target.value))} /></FormField>
               <FormField label="Ширина bitmap"><input type="number" value={formData.img_width} onChange={(e) => updateField('img_width', Number(e.target.value))} /></FormField>
