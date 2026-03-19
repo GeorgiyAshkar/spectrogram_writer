@@ -40,6 +40,19 @@ def _measure_text(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont)
     return bbox[2] - bbox[0], bbox[3] - bbox[1], bbox
 
 
+def _normalize_bitmap_intensity(bitmap: np.ndarray, invert: bool) -> np.ndarray:
+    threshold = 0.04
+    if invert:
+        ink_mask = bitmap < 1.0 - threshold
+        normalized = np.ones_like(bitmap, dtype=np.float32)
+        normalized[ink_mask] = 0.0
+        return normalized
+    ink_mask = bitmap > threshold
+    normalized = np.zeros_like(bitmap, dtype=np.float32)
+    normalized[ink_mask] = 1.0
+    return normalized
+
+
 def render_text_bitmap(
     text: str,
     width: int,
@@ -105,7 +118,8 @@ def render_text_bitmap(
     offset_x = margin_px + max(0, (target_w - cropped.size[0]) // 2)
     offset_y = vertical_margin_px + max(0, (target_h - cropped.size[1]) // 2)
     final_img.paste(cropped, (offset_x, offset_y))
-    return np.asarray(final_img, dtype=np.float32) / 255.0
+    bitmap = np.asarray(final_img, dtype=np.float32) / 255.0
+    return _normalize_bitmap_intensity(bitmap, invert)
 
 
 def bitmap_from_text(**kwargs: object) -> np.ndarray:
@@ -141,6 +155,14 @@ def auto_edge_pad_cols(img_width: int, img_height: int, orientation: str, edge_p
     return max(6, int(round(0.06 * max(img_width, img_height))))
 
 
+def _split_freq_x_segments(text: str, freq_x_marquee: bool, freq_x_word_rows: bool) -> list[str]:
+    if freq_x_marquee:
+        return [char for char in text if char.strip()]
+    if freq_x_word_rows:
+        return [word for word in text.split() if word.strip()]
+    return [text]
+
+
 def build_bitmap(
     *,
     text: str,
@@ -153,23 +175,35 @@ def build_bitmap(
     invert: bool,
     orientation: str,
     freq_x_rotation: str,
+    freq_x_marquee: bool,
+    freq_x_word_rows: bool,
     edge_pad_cols: int,
-) -> tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int, int]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
-    bitmap_img = bitmap_from_text(
-        text=text,
-        width=img_width,
-        height=img_height,
-        font_size=font_size,
-        font_path=font_path,
-        margin_px=margin,
-        vertical_margin_px=vertical_margin,
-        invert=invert,
-    )
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
-    bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
-    bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
-    return bitmap, resolved_pad
+    segments = _split_freq_x_segments(text, freq_x_marquee if orientation == "freq-x" else False, freq_x_word_rows if orientation == "freq-x" else False)
+    rendered_segments: list[np.ndarray] = []
+
+    for segment in segments:
+        bitmap_img = bitmap_from_text(
+            text=segment,
+            width=img_width,
+            height=img_height,
+            font_size=font_size,
+            font_path=font_path,
+            margin_px=margin,
+            vertical_margin_px=vertical_margin,
+            invert=invert,
+        )
+        bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
+        bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
+        rendered_segments.append(bitmap)
+
+    if len(rendered_segments) == 1:
+        return rendered_segments[0], resolved_pad, 1
+
+    bitmap = np.concatenate(rendered_segments, axis=1)
+    return bitmap, resolved_pad, len(rendered_segments)
 
 
 def save_preview_png(bitmap: np.ndarray) -> bytes:

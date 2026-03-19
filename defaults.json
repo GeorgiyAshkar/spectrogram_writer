@@ -8,6 +8,8 @@
   "samplerate": 48000,
   "orientation": "time-x",
   "freq_x_rotation": "ccw",
+  "freq_x_marquee": false,
+  "freq_x_word_rows": false,
   "edge_pad_cols": -1,
   "img_width": 1000,
   "img_height": 160,
