@@ -172,18 +172,54 @@ def auto_edge_pad_cols(img_width: int, img_height: int, orientation: str, edge_p
     return max(6, int(round(0.06 * max(img_width, img_height))))
 
 
-def prepare_text(text: str, orientation: str, scrolling_text: bool, word_per_line: bool) -> str:
-    """Prepare user text for the selected orientation layout."""
+def _split_text_units(text: str, scrolling_text: bool, word_per_line: bool) -> list[str]:
     normalized = " ".join(text.split())
-    if orientation != "freq-x":
-        return normalized
     if word_per_line:
-        words = normalized.split(" ")
-        return "\n".join(word for word in words if word)
+        return [word for word in normalized.split(" ") if word]
     if scrolling_text:
-        chars = [char for char in normalized if char != "\n"]
-        return "\n".join(chars)
-    return normalized
+        return [char if char != " " else " " for char in normalized]
+    return [normalized]
+
+
+def _render_freq_x_units(
+    *,
+    text: str,
+    img_width: int,
+    img_height: int,
+    font_size: int,
+    font_path: Optional[str],
+    margin: int,
+    vertical_margin: int,
+    invert: bool,
+    freq_x_rotation: str,
+    scrolling_text: bool,
+    word_per_line: bool,
+) -> np.ndarray:
+    units = _split_text_units(text, scrolling_text, word_per_line)
+    if not units:
+        raise ValueError("Не удалось разбить текст на элементы для freq-x.")
+
+    gap_cols = max(2, int(round(img_width * 0.04)))
+    parts: list[np.ndarray] = []
+    for index, unit in enumerate(units):
+        if unit.strip():
+            unit_img = render_text_bitmap(
+                text=unit,
+                width=img_width,
+                height=img_height,
+                font_size=font_size,
+                font_path=font_path,
+                margin_px=margin,
+                vertical_margin_px=vertical_margin,
+                invert=invert,
+            )
+            unit_bitmap = orient_bitmap(unit_img, "freq-x", freq_x_rotation)
+        else:
+            unit_bitmap = np.zeros((img_width, img_height), dtype=np.float32)
+        parts.append(unit_bitmap)
+        if index != len(units) - 1:
+            parts.append(np.zeros((unit_bitmap.shape[0], gap_cols), dtype=np.float32))
+    return np.concatenate(parts, axis=1)
 
 
 def build_bitmap(
@@ -203,18 +239,33 @@ def build_bitmap(
     word_per_line: bool,
 ) -> tuple[np.ndarray, int]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
-    bitmap_img = bitmap_from_text(
-        text=prepare_text(text, orientation, scrolling_text, word_per_line),
-        width=img_width,
-        height=img_height,
-        font_size=font_size,
-        font_path=font_path,
-        margin_px=margin,
-        vertical_margin_px=vertical_margin,
-        invert=invert,
-    )
+    if orientation == "freq-x" and (scrolling_text or word_per_line):
+        bitmap = _render_freq_x_units(
+            text=text,
+            img_width=img_width,
+            img_height=img_height,
+            font_size=font_size,
+            font_path=font_path,
+            margin=margin,
+            vertical_margin=vertical_margin,
+            invert=invert,
+            freq_x_rotation=freq_x_rotation,
+            scrolling_text=scrolling_text,
+            word_per_line=word_per_line,
+        )
+    else:
+        bitmap_img = bitmap_from_text(
+            text=" ".join(text.split()),
+            width=img_width,
+            height=img_height,
+            font_size=font_size,
+            font_path=font_path,
+            margin_px=margin,
+            vertical_margin_px=vertical_margin,
+            invert=invert,
+        )
+        bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
-    bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
     bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
     return bitmap, resolved_pad
 
