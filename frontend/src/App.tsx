@@ -34,9 +34,25 @@ export default function App() {
   const showHarmonicControls = formData.timbre_mode === 'harmonic';
   const showCustomWeights =
     formData.instrument_type === 'custom' || formData.harmonic_decay_mode === 'custom_list';
+  const showFreqXLayoutControls = formData.orientation === 'freq-x';
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
-    setFormData((current) => ({ ...current, [key]: value }));
+    setFormData((current) => {
+      if (key === 'orientation') {
+        const nextOrientation = value as GenerationFormData['orientation'];
+        return {
+          ...current,
+          orientation: nextOrientation,
+          scrolling_text: nextOrientation === 'freq-x' ? current.scrolling_text : false,
+          word_per_line: nextOrientation === 'freq-x' ? current.word_per_line : false,
+        };
+      }
+      if (key === 'word_per_line') {
+        const enabled = value as boolean;
+        return { ...current, word_per_line: enabled, scrolling_text: enabled ? false : current.scrolling_text };
+      }
+      return { ...current, [key]: value };
+    });
   };
 
   return (
@@ -98,6 +114,28 @@ export default function App() {
               <FormField label="Размер шрифта"><input type="number" value={formData.font_size} onChange={(e) => updateField('font_size', Number(e.target.value))} /></FormField>
               <FormField label="Поля по X"><input type="number" value={formData.margin} onChange={(e) => updateField('margin', Number(e.target.value))} /></FormField>
               <FormField label="Поля по Y"><input type="number" value={formData.vertical_margin} onChange={(e) => updateField('vertical_margin', Number(e.target.value))} /></FormField>
+              <FormField label="Бегущая строка">
+                <label className="toggle toggle--compact">
+                  <input
+                    type="checkbox"
+                    checked={formData.scrolling_text}
+                    onChange={(e) => updateField('scrolling_text', e.target.checked)}
+                    disabled={!showFreqXLayoutControls || formData.word_per_line}
+                  />
+                  <span>По символам</span>
+                </label>
+              </FormField>
+              <FormField label="Слова с новой строки">
+                <label className="toggle toggle--compact">
+                  <input
+                    type="checkbox"
+                    checked={formData.word_per_line}
+                    onChange={(e) => updateField('word_per_line', e.target.checked)}
+                    disabled={!showFreqXLayoutControls}
+                  />
+                  <span>Включить</span>
+                </label>
+              </FormField>
               <FormField label="Сглаживание"><input type="number" value={formData.smooth_freq} onChange={(e) => updateField('smooth_freq', Number(e.target.value))} /></FormField>
               <FormField label="Sigma"><input type="number" value={formData.smooth_sigma} onChange={(e) => updateField('smooth_sigma', Number(e.target.value))} /></FormField>
               <FormField label="Контраст"><input type="number" step="0.1" value={formData.contrast} onChange={(e) => updateField('contrast', Number(e.target.value))} /></FormField>
@@ -118,7 +156,7 @@ export default function App() {
             <div className="section-subblock">
               <div className="section-subblock__header">
                 <h3>Инструментальный режим</h3>
-                <p>Выберите режим синтеза и настройте профиль гармоник для piano, guitar, synth или custom.</p>
+                <p>Pure строго удерживает надпись внутри диапазона fmin–fmax, Harmonic добавляет различимый инструментальный тембр для piano, guitar, synth или custom.</p>
               </div>
               <div className="fields-grid fields-grid--compact">
                 <FormField label="Режим тембра" hint="Pure даёт максимально читаемый waterfall, Harmonic добавляет инструментальный тембр и ADSR-огибающую.">
@@ -151,9 +189,9 @@ export default function App() {
               {showHarmonicControls ? (
                 <>
                   <div className="preset-notes">
-                    <span><strong>Piano:</strong> 1.0, 0.65, 0.36, 0.16, 0.08</span>
-                    <span><strong>Guitar:</strong> 1.0, 0.85, 0.6, 0.34, 0.18, 0.1</span>
-                    <span><strong>Synth:</strong> 1.0, 1.0, 0.9, 0.72, 0.55, 0.4, 0.28</span>
+                    <span><strong>Piano:</strong> 1.0, 0.52, 0.24, 0.11, 0.05, 0.025</span>
+                    <span><strong>Guitar:</strong> 1.0, 0.95, 0.48, 0.34, 0.16, 0.08, 0.04</span>
+                    <span><strong>Synth:</strong> 1.0, 0.88, 0.92, 0.8, 0.62, 0.48, 0.38, 0.28</span>
                   </div>
                   <div className="fields-grid fields-grid--single fields-grid--tight">
                     <FormField

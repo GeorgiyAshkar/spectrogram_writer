@@ -35,6 +35,8 @@ export interface GenerationFormData {
   adsr_sustain: number;
   adsr_release: number;
   sample_masked: boolean;
+  scrolling_text: boolean;
+  word_per_line: boolean;
 }
 
 export interface PreviewResponse {

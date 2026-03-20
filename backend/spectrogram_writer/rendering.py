@@ -33,11 +33,29 @@ def find_font(user_font_path: Optional[str] = None, font_size: int = 120) -> Ima
     return ImageFont.load_default()
 
 
-def _measure_text(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont) -> tuple[int, int, tuple[int, int, int, int]]:
+def _normalized_lines(text: str) -> list[str]:
+    lines = [line.rstrip() for line in text.splitlines()]
+    return lines or [text]
+
+
+def _measure_text_block(
+    lines: list[str],
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    line_spacing: int,
+) -> tuple[int, int, list[tuple[int, int, int, int]]]:
     measure_img = Image.new("L", (16, 16), color=0)
     measure_draw = ImageDraw.Draw(measure_img)
-    bbox = measure_draw.textbbox((0, 0), text, font=font, stroke_width=0)
-    return bbox[2] - bbox[0], bbox[3] - bbox[1], bbox
+    bboxes: list[tuple[int, int, int, int]] = []
+    widths: list[int] = []
+    heights: list[int] = []
+    for line in lines:
+        sample = line if line else " "
+        bbox = measure_draw.textbbox((0, 0), sample, font=font, stroke_width=0)
+        bboxes.append(bbox)
+        widths.append(bbox[2] - bbox[0])
+        heights.append(bbox[3] - bbox[1])
+    total_height = sum(heights) + max(0, len(lines) - 1) * line_spacing
+    return max(widths, default=0), total_height, bboxes
 
 
 def render_text_bitmap(
@@ -60,29 +78,42 @@ def render_text_bitmap(
     fg = 0 if invert else 255
     target_w = width - 2 * margin_px
     target_h = height - 2 * vertical_margin_px
+    lines = _normalized_lines(text)
 
     chosen_font = None
-    chosen_bbox = None
+    chosen_bboxes = None
+    chosen_line_spacing = 0
     chosen_w = chosen_h = 0
     for test_size in range(max(8, font_size), 7, -2):
         font = find_font(font_path, test_size)
-        text_w, text_h, bbox = _measure_text(text, font)
+        line_spacing = max(2, int(round(test_size * 0.18)))
+        text_w, text_h, bboxes = _measure_text_block(lines, font, line_spacing)
         if text_w <= target_w and text_h <= target_h:
             chosen_font = font
-            chosen_bbox = bbox
+            chosen_bboxes = bboxes
+            chosen_line_spacing = line_spacing
             chosen_w = text_w
             chosen_h = text_h
             break
         chosen_font = font
-        chosen_bbox = bbox
+        chosen_bboxes = bboxes
+        chosen_line_spacing = line_spacing
         chosen_w = text_w
         chosen_h = text_h
 
-    assert chosen_font is not None and chosen_bbox is not None
+    assert chosen_font is not None and chosen_bboxes is not None
     pad = 6
     scratch = Image.new("L", (max(1, chosen_w + 2 * pad), max(1, chosen_h + 2 * pad)), color=bg)
     draw = ImageDraw.Draw(scratch)
-    draw.text((pad - chosen_bbox[0], pad - chosen_bbox[1]), text, fill=fg, font=chosen_font)
+
+    baseline_y = pad
+    for line, bbox in zip(lines, chosen_bboxes, strict=False):
+        sample = line if line else " "
+        line_w = bbox[2] - bbox[0]
+        x = pad + max(0, (chosen_w - line_w) // 2) - bbox[0]
+        y = baseline_y - bbox[1]
+        draw.text((x, y), sample, fill=fg, font=chosen_font)
+        baseline_y += (bbox[3] - bbox[1]) + chosen_line_spacing
 
     arr = np.asarray(scratch, dtype=np.uint8)
     if invert:
@@ -141,6 +172,53 @@ def auto_edge_pad_cols(img_width: int, img_height: int, orientation: str, edge_p
     return max(6, int(round(0.06 * max(img_width, img_height))))
 
 
+def split_text_units(text: str, scrolling_text: bool, word_per_line: bool) -> list[str]:
+    normalized = " ".join(text.split())
+    if word_per_line:
+        return [word for word in normalized.split(" ") if word]
+    if scrolling_text:
+        return [char if char != " " else " " for char in normalized]
+    return [normalized]
+
+
+def _render_freq_x_units(
+    *,
+    text: str,
+    img_width: int,
+    img_height: int,
+    font_size: int,
+    font_path: Optional[str],
+    margin: int,
+    vertical_margin: int,
+    invert: bool,
+    freq_x_rotation: str,
+    scrolling_text: bool,
+    word_per_line: bool,
+) -> np.ndarray:
+    units = split_text_units(text, scrolling_text, word_per_line)
+    if not units:
+        raise ValueError("Не удалось разбить текст на элементы для freq-x.")
+
+    parts: list[np.ndarray] = []
+    for unit in units:
+        if unit.strip():
+            unit_img = render_text_bitmap(
+                text=unit,
+                width=img_width,
+                height=img_height,
+                font_size=font_size,
+                font_path=font_path,
+                margin_px=margin,
+                vertical_margin_px=vertical_margin,
+                invert=invert,
+            )
+            unit_bitmap = orient_bitmap(unit_img, "freq-x", freq_x_rotation)
+        else:
+            unit_bitmap = np.zeros((img_width, img_height), dtype=np.float32)
+        parts.append(unit_bitmap)
+    return np.concatenate(parts, axis=1)
+
+
 def build_bitmap(
     *,
     text: str,
@@ -154,22 +232,43 @@ def build_bitmap(
     orientation: str,
     freq_x_rotation: str,
     edge_pad_cols: int,
-) -> tuple[np.ndarray, int]:
+    scrolling_text: bool,
+    word_per_line: bool,
+) -> tuple[np.ndarray, int, float]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
-    bitmap_img = bitmap_from_text(
-        text=text,
-        width=img_width,
-        height=img_height,
-        font_size=font_size,
-        font_path=font_path,
-        margin_px=margin,
-        vertical_margin_px=vertical_margin,
-        invert=invert,
-    )
+    if orientation == "freq-x" and (scrolling_text or word_per_line):
+        bitmap = _render_freq_x_units(
+            text=text,
+            img_width=img_width,
+            img_height=img_height,
+            font_size=font_size,
+            font_path=font_path,
+            margin=margin,
+            vertical_margin=vertical_margin,
+            invert=invert,
+            freq_x_rotation=freq_x_rotation,
+            scrolling_text=scrolling_text,
+            word_per_line=word_per_line,
+        )
+    else:
+        bitmap_img = bitmap_from_text(
+            text=" ".join(text.split()),
+            width=img_width,
+            height=img_height,
+            font_size=font_size,
+            font_path=font_path,
+            margin_px=margin,
+            vertical_margin_px=vertical_margin,
+            invert=invert,
+        )
+        bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
-    bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
+    duration_multiplier = 1.0
+    if orientation == "freq-x" and (scrolling_text or word_per_line):
+        units = split_text_units(text, scrolling_text, word_per_line)
+        duration_multiplier = float(len(units)) if units else 1.0
     bitmap = pad_bitmap_time_axis(bitmap, resolved_pad, resolved_pad)
-    return bitmap, resolved_pad
+    return bitmap, resolved_pad, duration_multiplier
 
 
 def save_preview_png(bitmap: np.ndarray) -> bytes:

@@ -45,6 +45,8 @@ class GenerationConfig:
     adsr_sustain: float = 0.9
     adsr_release: float = 0.05
     sample_masked: bool = False
+    scrolling_text: bool = False
+    word_per_line: bool = False
 
     def validate(self) -> None:
         """Validate user-facing generation parameters."""
@@ -98,6 +100,10 @@ class GenerationConfig:
             raise ValueError("Для harmonic_decay_mode=custom_list задайте harmonic_weights.")
         if self.instrument_type == "custom" and not self.harmonic_weights:
             raise ValueError("Для instrument_type=custom задайте harmonic_weights.")
+        if self.word_per_line and self.orientation != "freq-x":
+            raise ValueError("word_per_line доступен только для ориентации freq-x.")
+        if self.scrolling_text and self.orientation != "freq-x":
+            raise ValueError("scrolling_text доступен только для ориентации freq-x.")
 
 
 @dataclass(slots=True)
@@ -112,7 +118,7 @@ class GeneratedArtifacts:
 def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
     """Generate bitmap preview and synthesized WAV payloads."""
     config.validate()
-    bitmap, auto_edge_pad = build_bitmap(
+    bitmap, auto_edge_pad, duration_multiplier = build_bitmap(
         text=config.text,
         img_width=config.img_width,
         img_height=config.img_height,
@@ -124,13 +130,15 @@ def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
         orientation=config.orientation,
         freq_x_rotation=config.freq_x_rotation,
         edge_pad_cols=config.edge_pad_cols,
+        scrolling_text=config.scrolling_text,
+        word_per_line=config.word_per_line,
     )
     bitmap = smooth_along_frequency(bitmap, config.smooth_freq, config.smooth_sigma)
     useful_signal = synthesize_signal(
         bitmap=bitmap,
         fmin=config.fmin,
         fmax=config.fmax,
-        signal_duration=config.signal_duration,
+        signal_duration=config.signal_duration * duration_multiplier,
         samplerate=config.samplerate,
         contrast_power=config.contrast,
         fixed_phase=config.fixed_phase,
