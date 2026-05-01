@@ -98,10 +98,15 @@ class GenerationConfig:
         }.items():
             if value < 0:
                 raise ValueError(f"{name} не может быть отрицательным.")
+        if self.adsr_sustain > 1:
+            raise ValueError("adsr_sustain должен быть в диапазоне [0, 1].")
         if self.harmonic_decay_mode == "custom_list" and not self.harmonic_weights:
             raise ValueError("Для harmonic_decay_mode=custom_list задайте harmonic_weights.")
         if self.instrument_type == "custom" and not self.harmonic_weights:
             raise ValueError("Для instrument_type=custom задайте harmonic_weights.")
+        if self.harmonic_weights:
+            if any(weight < 0 for weight in self.harmonic_weights):
+                raise ValueError("harmonic_weights не должны содержать отрицательных значений.")
 
 
 @dataclass(slots=True)
