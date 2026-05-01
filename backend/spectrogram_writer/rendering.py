@@ -156,6 +156,25 @@ def _normalize_bitmap_intensity(bitmap: np.ndarray, invert: bool) -> np.ndarray:
     return normalized
 
 
+def _normalize_uploaded_image(bitmap: np.ndarray, invert: bool) -> np.ndarray:
+    """Prepare uploaded images for synthesis with robust auto-contrast."""
+    values = np.clip(bitmap.astype(np.float32), 0.0, 1.0)
+    # For regular mode dark pixels should become "ink" (high amplitude).
+    working = values if invert else (1.0 - values)
+    low = float(np.percentile(working, 2.0))
+    high = float(np.percentile(working, 98.0))
+    if high - low < 1e-6:
+        low = float(np.min(working))
+        high = float(np.max(working))
+    if high - low < 1e-6:
+        return np.clip(working, 0.0, 1.0).astype(np.float32)
+    normalized = (working - low) / (high - low)
+    normalized = np.clip(normalized, 0.0, 1.0)
+    # Slight gamma lift preserves faint details.
+    normalized = normalized**0.85
+    return normalized.astype(np.float32)
+
+
 def render_text_bitmap(
     text: str,
     width: int,
@@ -310,7 +329,7 @@ def build_bitmap(
                 with Image.open(io.BytesIO(image_bytes)) as uploaded:
                     prepared = uploaded.convert("L").resize((img_width, img_height), Image.Resampling.LANCZOS)
                     bitmap = np.asarray(prepared, dtype=np.float32) / 255.0
-                    return _normalize_bitmap_intensity(bitmap, invert)
+                    return _normalize_uploaded_image(bitmap, invert)
             except Exception as exc:
                 raise ValueError("Не удалось декодировать image_base64.") from exc
         return bitmap_from_text(
