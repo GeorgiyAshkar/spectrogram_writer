@@ -49,6 +49,12 @@ textarea {
   min-height: 74px;
 }
 
+.ascii-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  line-height: 1.2;
+  white-space: pre;
+}
+
 button {
   cursor: pointer;
   background: linear-gradient(135deg, #b08968, #d6ad7b);

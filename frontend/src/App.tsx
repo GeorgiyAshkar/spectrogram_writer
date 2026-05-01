@@ -74,7 +74,13 @@ export default function App() {
           <SettingsSection className="panel--fill" title="Текст">
             <div className="fields-grid fields-grid--single fields-grid--tight">
               <FormField label="Текст">
-                <textarea value={formData.text} onChange={(e) => updateField('text', e.target.value)} rows={2} />
+                <textarea
+                  value={formData.text}
+                  onChange={(e) => updateField('text', e.target.value)}
+                  rows={10}
+                  spellCheck={false}
+                  className="ascii-input"
+                />
               </FormField>
               <div className="emoji-toolbar" aria-label="Базовые эмоди">
                 {EMOJI_OPTIONS.map((emoji) => (
