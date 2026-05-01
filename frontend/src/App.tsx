@@ -65,6 +65,18 @@ export default function App() {
     }));
   };
 
+  const uploadImage = async (file: File | null) => {
+    if (!file) {
+      updateField('image_base64', null);
+      return;
+    }
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    updateField('image_base64', btoa(binary));
+  };
+
   return (
     <div className="page-shell">
       <LogoSidebar logoUrl={logoUrl} />
@@ -89,6 +101,15 @@ export default function App() {
                   </button>
                 ))}
               </div>
+              <FormField label="Изображение (опционально)" hint="Если загрузить картинку, она будет закодирована в аудиосигнал и отобразится на спектре.">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    void uploadImage(e.target.files?.[0] ?? null);
+                  }}
+                />
+              </FormField>
             </div>
           </SettingsSection>
 

@@ -37,3 +37,4 @@ class GenerationRequest(BaseModel):
     adsr_sustain: float = 0.9
     adsr_release: float = 0.05
     sample_masked: bool = False
+    image_base64: str | None = None

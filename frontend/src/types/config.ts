@@ -37,6 +37,7 @@ export interface GenerationFormData {
   adsr_sustain: number;
   adsr_release: number;
   sample_masked: boolean;
+  image_base64: string | null;
 }
 
 export interface PreviewResponse {

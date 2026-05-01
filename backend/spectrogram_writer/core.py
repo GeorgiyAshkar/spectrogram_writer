@@ -47,6 +47,7 @@ class GenerationConfig:
     adsr_sustain: float = 0.9
     adsr_release: float = 0.05
     sample_masked: bool = False
+    image_base64: Optional[str] = None
 
     def validate(self) -> None:
         """Validate user-facing generation parameters."""
@@ -135,6 +136,7 @@ def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
         freq_x_marquee=config.freq_x_marquee,
         freq_x_word_rows=config.freq_x_word_rows,
         edge_pad_cols=config.edge_pad_cols,
+        image_base64=config.image_base64,
     )
     bitmap = smooth_along_frequency(bitmap, config.smooth_freq, config.smooth_sigma)
     useful_signal = synthesize_signal(

@@ -30,5 +30,6 @@
   "adsr_decay": 0.08,
   "adsr_sustain": 0.9,
   "adsr_release": 0.05,
-  "sample_masked": false
+  "sample_masked": false,
+  "image_base64": null
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import base64
 from typing import Optional
 
 import numpy as np
@@ -295,15 +296,25 @@ def build_bitmap(
     freq_x_marquee: bool,
     freq_x_word_rows: bool,
     edge_pad_cols: int,
+    image_base64: Optional[str] = None,
 ) -> tuple[np.ndarray, int, float]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
     segments = _split_freq_x_segments(text, freq_x_marquee if orientation == "freq-x" else False, freq_x_word_rows if orientation == "freq-x" else False)
     rendered_segments: list[np.ndarray] = []
 
-    for segment in segments:
-        bitmap_img = bitmap_from_text(
-            text=segment,
+    def render_segment(segment_text: str) -> np.ndarray:
+        if image_base64:
+            try:
+                image_bytes = base64.b64decode(image_base64, validate=True)
+                with Image.open(io.BytesIO(image_bytes)) as uploaded:
+                    prepared = uploaded.convert("L").resize((img_width, img_height), Image.Resampling.LANCZOS)
+                    bitmap = np.asarray(prepared, dtype=np.float32) / 255.0
+                    return _normalize_bitmap_intensity(bitmap, invert)
+            except Exception as exc:
+                raise ValueError("Не удалось декодировать image_base64.") from exc
+        return bitmap_from_text(
+            text=segment_text,
             width=img_width,
             height=img_height,
             font_size=font_size,
@@ -312,6 +323,9 @@ def build_bitmap(
             vertical_margin_px=vertical_margin,
             invert=invert,
         )
+
+    for segment in segments:
+        bitmap_img = render_segment(segment)
         bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
         rendered_segments.append(bitmap)
 
