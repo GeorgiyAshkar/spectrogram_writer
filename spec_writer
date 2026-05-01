@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
+from pathlib import Path
+
+from backend.spectrogram_writer.core import GenerationConfig, generate_artifacts
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Генерация WAV-файла с текстом для spectrogram / waterfall.")
+    parser.add_argument("--text", type=str, required=True, help="Текст надписи")
+    parser.add_argument("--fmin", type=float, required=True, help="Нижняя частота, Гц")
+    parser.add_argument("--fmax", type=float, required=True, help="Верхняя частота, Гц")
+    parser.add_argument("--signal-duration", type=float, required=True, help="Длительность полезного сигнала, сек")
+    parser.add_argument("--leading-silence", type=float, default=0.0)
+    parser.add_argument("--trailing-silence", type=float, default=0.0)
+    parser.add_argument("--samplerate", type=int, default=48000)
+    parser.add_argument("--output", type=str, default="waterfall_text.wav")
+    parser.add_argument("--preview-png", type=str, default=None)
+    parser.add_argument("--orientation", type=str, default="time-x", choices=["time-x", "freq-x"])
+    parser.add_argument("--freq-x-rotation", type=str, default="ccw", choices=["ccw", "cw"])
+    parser.add_argument("--edge-pad-cols", type=int, default=-1)
+    parser.add_argument("--img-width", type=int, default=1000)
+    parser.add_argument("--img-height", type=int, default=160)
+    parser.add_argument("--font-size", type=int, default=180)
+    parser.add_argument("--font-path", type=str, default=None)
+    parser.add_argument("--margin", type=int, default=12)
+    parser.add_argument("--vertical-margin", type=int, default=8)
+    parser.add_argument("--smooth-freq", type=int, default=5)
+    parser.add_argument("--smooth-sigma", type=float, default=1.0)
+    parser.add_argument("--contrast", type=float, default=1.0)
+    parser.add_argument("--invert", action="store_true")
+    parser.add_argument("--fixed-phase", action="store_true")
+    args = parser.parse_args()
+
+    config = GenerationConfig(
+        text=args.text,
+        fmin=args.fmin,
+        fmax=args.fmax,
+        signal_duration=args.signal_duration,
+        leading_silence=args.leading_silence,
+        trailing_silence=args.trailing_silence,
+        samplerate=args.samplerate,
+        orientation=args.orientation,
+        freq_x_rotation=args.freq_x_rotation,
+        edge_pad_cols=args.edge_pad_cols,
+        img_width=args.img_width,
+        img_height=args.img_height,
+        font_size=args.font_size,
+        font_path=args.font_path,
+        margin=args.margin,
+        vertical_margin=args.vertical_margin,
+        smooth_freq=args.smooth_freq,
+        smooth_sigma=args.smooth_sigma,
+        contrast=args.contrast,
+        invert=args.invert,
+        fixed_phase=args.fixed_phase,
+    )
+    artifacts = generate_artifacts(config)
+    Path(args.output).write_bytes(artifacts.wav_bytes)
+    if args.preview_png:
+        Path(args.preview_png).write_bytes(artifacts.preview_png)
+
+    print("Готово.")
+    print(f"Файл: {args.output}")
+    if args.preview_png:
+        print(f"Preview PNG: {args.preview_png}")
+    print(f"Текст: {args.text}")
+    print(f"Ориентация: {args.orientation}")
+    print(f"Частоты: {args.fmin} .. {args.fmax} Гц")
+    print(f"Итоговая длина файла: {artifacts.total_duration:.3f} с")
+    print(f"Рабочий bitmap [freq_bins, time_bins]: {artifacts.bitmap.shape[0]} x {artifacts.bitmap.shape[1]}")
+
+
+if __name__ == "__main__":
+    main()
