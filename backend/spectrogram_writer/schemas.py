@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class GenerationRequest(BaseModel):
-    text: str = Field(..., min_length=1, max_length=240)
+    text: str = Field(..., min_length=1, max_length=20000)
     fmin: float = 2000
     fmax: float = 12000
     signal_duration: float = 10
@@ -37,3 +37,4 @@ class GenerationRequest(BaseModel):
     adsr_sustain: float = 0.9
     adsr_release: float = 0.05
     sample_masked: bool = False
+    image_base64: str | None = None

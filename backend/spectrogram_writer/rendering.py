@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import base64
 from typing import Optional
 
 import numpy as np
@@ -155,6 +156,25 @@ def _normalize_bitmap_intensity(bitmap: np.ndarray, invert: bool) -> np.ndarray:
     return normalized
 
 
+def _normalize_uploaded_image(bitmap: np.ndarray, invert: bool) -> np.ndarray:
+    """Prepare uploaded images for synthesis with robust auto-contrast."""
+    values = np.clip(bitmap.astype(np.float32), 0.0, 1.0)
+    # For regular mode dark pixels should become "ink" (high amplitude).
+    working = values if invert else (1.0 - values)
+    low = float(np.percentile(working, 2.0))
+    high = float(np.percentile(working, 98.0))
+    if high - low < 1e-6:
+        low = float(np.min(working))
+        high = float(np.max(working))
+    if high - low < 1e-6:
+        return np.clip(working, 0.0, 1.0).astype(np.float32)
+    normalized = (working - low) / (high - low)
+    normalized = np.clip(normalized, 0.0, 1.0)
+    # Slight gamma lift preserves faint details.
+    normalized = normalized**0.85
+    return normalized.astype(np.float32)
+
+
 def render_text_bitmap(
     text: str,
     width: int,
@@ -177,6 +197,27 @@ def render_text_bitmap(
     target_h = height - 2 * vertical_margin_px
 
     normalized_text = _normalize_symbol(text)
+    text_lines = text.splitlines()
+    if len(text_lines) > 1:
+        final_img = Image.new("L", (width, height), color=bg)
+        usable_lines = [line if line.strip() else " " for line in text_lines]
+        slot_h = max(1, target_h // max(1, len(usable_lines)))
+        for line_index, line in enumerate(usable_lines):
+            line_bitmap = render_text_bitmap(
+                text=line,
+                width=width,
+                height=max(8, slot_h + 2 * vertical_margin_px),
+                font_size=font_size,
+                font_path=font_path,
+                margin_px=margin_px,
+                vertical_margin_px=vertical_margin_px,
+                invert=invert,
+            )
+            line_img = Image.fromarray((line_bitmap * 255.0).astype(np.uint8), mode="L")
+            top = vertical_margin_px + line_index * slot_h
+            final_img.paste(line_img.crop((0, vertical_margin_px, width, line_img.height - vertical_margin_px)), (0, min(top, height - 1)))
+        bitmap = np.asarray(final_img, dtype=np.float32) / 255.0
+        return _normalize_bitmap_intensity(bitmap, invert)
     supported_emojis = set(_emoji_aliases().values())
     if normalized_text in supported_emojis:
         final_img = Image.new("L", (width, height), color=bg)
@@ -295,15 +336,25 @@ def build_bitmap(
     freq_x_marquee: bool,
     freq_x_word_rows: bool,
     edge_pad_cols: int,
+    image_base64: Optional[str] = None,
 ) -> tuple[np.ndarray, int, float]:
     """Render, orient and pad bitmap into the working [freq_bins, time_bins] shape."""
     resolved_pad = auto_edge_pad_cols(img_width, img_height, orientation, edge_pad_cols)
     segments = _split_freq_x_segments(text, freq_x_marquee if orientation == "freq-x" else False, freq_x_word_rows if orientation == "freq-x" else False)
     rendered_segments: list[np.ndarray] = []
 
-    for segment in segments:
-        bitmap_img = bitmap_from_text(
-            text=segment,
+    def render_segment(segment_text: str) -> np.ndarray:
+        if image_base64:
+            try:
+                image_bytes = base64.b64decode(image_base64, validate=True)
+                with Image.open(io.BytesIO(image_bytes)) as uploaded:
+                    prepared = uploaded.convert("L").resize((img_width, img_height), Image.Resampling.LANCZOS)
+                    bitmap = np.asarray(prepared, dtype=np.float32) / 255.0
+                    return _normalize_uploaded_image(bitmap, invert)
+            except Exception as exc:
+                raise ValueError("Не удалось декодировать image_base64.") from exc
+        return bitmap_from_text(
+            text=segment_text,
             width=img_width,
             height=img_height,
             font_size=font_size,
@@ -312,6 +363,9 @@ def build_bitmap(
             vertical_margin_px=vertical_margin,
             invert=invert,
         )
+
+    for segment in segments:
+        bitmap_img = render_segment(segment)
         bitmap = orient_bitmap(bitmap_img, orientation, freq_x_rotation)
         rendered_segments.append(bitmap)
 

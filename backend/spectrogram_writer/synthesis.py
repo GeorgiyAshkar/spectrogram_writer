@@ -57,7 +57,11 @@ def harmonic_weights(
     custom_weights: Iterable[float] | None,
 ) -> np.ndarray:
     """Resolve harmonic weights for the requested timbre profile."""
-    if instrument_type in PRESET_HARMONICS:
+    if decay_mode == "custom_list":
+        if not custom_weights:
+            raise ValueError("Для harmonic_decay_mode=custom_list необходимо задать harmonic_weights.")
+        weights = np.asarray(list(custom_weights), dtype=np.float64)
+    elif instrument_type in PRESET_HARMONICS:
         weights = np.asarray(PRESET_HARMONICS[instrument_type], dtype=np.float64)
     elif instrument_type == "custom":
         if not custom_weights:

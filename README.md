@@ -29,7 +29,7 @@ pip install -r requirements.txt
 Запуск API:
 
 ```bash
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Основные endpoints:
@@ -43,7 +43,7 @@ uvicorn backend.main:app --reload
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
 По умолчанию фронтенд ожидает API на `http://localhost:8000/api`.
