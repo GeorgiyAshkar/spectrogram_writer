@@ -9,8 +9,6 @@ import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
 import './styles/app.css';
 
-const EMOJI_OPTIONS = ['❤️', '😊', '😢', '😡', '☀️', '☁️', '⚡'];
-
 const initialState: GenerationFormData = defaults as GenerationFormData;
 
 function parseWeights(value: string): number[] | null {
@@ -57,13 +55,6 @@ export default function App() {
       ...current,
       freq_x_word_rows: checked,
       freq_x_marquee: checked ? false : current.freq_x_marquee,
-    }));
-  };
-
-  const appendEmoji = (emoji: string) => {
-    setFormData((current) => ({
-      ...current,
-      text: current.text.trim() ? `${current.text.trim()} ${emoji}` : emoji,
     }));
   };
 
@@ -152,7 +143,9 @@ export default function App() {
           <section className="panel panel--fill authoring-panel">
             <div className="text-draw-grid">
               <div className="text-draw-grid__text">
-                <h3 className="authoring-title">Текст</h3>
+                <div className="draw-panel__header">
+                  <h3 className="authoring-title">Текст</h3>
+                </div>
                 <textarea
                   value={formData.text}
                   onChange={(e) => updateField('text', e.target.value)}
@@ -161,13 +154,6 @@ export default function App() {
                   className="ascii-input text-input--full"
                   aria-label="Текст для спектра"
                 />
-                <div className="emoji-toolbar" aria-label="Базовые эмоди">
-                  {EMOJI_OPTIONS.map((emoji) => (
-                    <button key={emoji} type="button" className="emoji-chip" onClick={() => appendEmoji(emoji)}>
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
               </div>
               <div className="draw-panel">
                   <div className="draw-panel__header">

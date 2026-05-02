@@ -94,6 +94,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 38px;
 }
 
 .draw-panel {
