@@ -185,14 +185,6 @@ export function PreviewCard({ preview, formData, isLoading, className = '' }: Pr
           )}
         </div>
 
-        {preview ? (
-          <dl className="stats-grid stats-grid--compact">
-            <div><dt>Линий</dt><dd>{preview.bitmapShape.freqBins}</dd></div>
-            <div><dt>Шагов</dt><dd>{preview.bitmapShape.timeBins}</dd></div>
-            <div><dt>Длина</dt><dd>{preview.totalDuration.toFixed(2)} c</dd></div>
-            <div><dt>Поля</dt><dd>{preview.autoEdgePad}</dd></div>
-          </dl>
-        ) : null}
       </div>
     </section>
   );

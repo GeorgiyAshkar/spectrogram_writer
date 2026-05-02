@@ -65,11 +65,23 @@ textarea {
   grid-template-columns: 30% 70%;
   gap: 12px;
   align-items: start;
+  min-height: calc(100vh - 260px);
 }
 
 .text-draw-grid__text {
   display: grid;
   gap: 10px;
+  grid-template-rows: auto auto 1fr;
+}
+
+.authoring-title {
+  margin: 0;
+  font-weight: 800;
+  color: #5f4633;
+}
+
+.authoring-panel textarea {
+  min-height: 100%;
 }
 
 .draw-panel__header {
@@ -77,6 +89,11 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.draw-panel {
+  height: 100%;
+  grid-template-rows: auto 1fr;
 }
 
 .draw-panel__header .button-secondary {

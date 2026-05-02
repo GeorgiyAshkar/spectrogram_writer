@@ -9,7 +9,7 @@ import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
 import './styles/app.css';
 
-const EMOJI_OPTIONS = ['❤️', '😊', '😢', '😡', '⭐', '☀️', '🌙', '☁️', '⚡', '🎵'];
+const EMOJI_OPTIONS = ['❤️', '😊', '😢', '😡', '☀️', '☁️', '⚡'];
 
 const initialState: GenerationFormData = defaults as GenerationFormData;
 
@@ -149,9 +149,10 @@ export default function App() {
           onToggleSettings={() => setShowSettings((s) => !s)}
         />
         <main className="workspace-grid">
-          <SettingsSection className="panel--fill" title="Текст и рисунок">
+          <section className="panel panel--fill authoring-panel">
             <div className="text-draw-grid">
               <div className="text-draw-grid__text">
+                <h3 className="authoring-title">Текст</h3>
                 <FormField label="Текст">
                   <textarea
                     value={formData.text}
@@ -205,7 +206,7 @@ export default function App() {
                   />
               </div>
             </div>
-          </SettingsSection>
+          </section>
 
           <section className="panel action-card panel--compact panel--fill">
             <h2>Результат</h2>
