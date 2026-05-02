@@ -1,6 +1,15 @@
 import type { GenerationFormData, PreviewResponse } from '../types/config';
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/api';
+function resolveApiBase(): string {
+  const explicit = import.meta.env.VITE_API_BASE;
+  if (explicit && explicit.trim().length > 0) {
+    return explicit.replace(/\/$/, '');
+  }
+
+  return '/api';
+}
+
+const API_BASE = resolveApiBase();
 const LOGO_URL = `${API_BASE}/branding/logo`;
 
 async function parseError(response: Response): Promise<string> {
