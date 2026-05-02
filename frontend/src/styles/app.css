@@ -84,6 +84,10 @@ textarea {
   min-height: 100%;
 }
 
+.text-input--full {
+  height: 100%;
+}
+
 .draw-panel__header {
   display: flex;
   align-items: center;
@@ -103,7 +107,7 @@ textarea {
 
 .draw-canvas {
   width: 100%;
-  height: auto;
+  height: 100%;
   border: 1px solid #d6d3d1;
   border-radius: 12px;
   background: #fff;

@@ -153,15 +153,14 @@ export default function App() {
             <div className="text-draw-grid">
               <div className="text-draw-grid__text">
                 <h3 className="authoring-title">Текст</h3>
-                <FormField label="Текст">
-                  <textarea
-                    value={formData.text}
-                    onChange={(e) => updateField('text', e.target.value)}
-                    rows={10}
-                    spellCheck={false}
-                    className="ascii-input"
-                  />
-                </FormField>
+                <textarea
+                  value={formData.text}
+                  onChange={(e) => updateField('text', e.target.value)}
+                  rows={10}
+                  spellCheck={false}
+                  className="ascii-input text-input--full"
+                  aria-label="Текст для спектра"
+                />
                 <div className="emoji-toolbar" aria-label="Базовые эмоди">
                   {EMOJI_OPTIONS.map((emoji) => (
                     <button key={emoji} type="button" className="emoji-chip" onClick={() => appendEmoji(emoji)}>
@@ -172,7 +171,7 @@ export default function App() {
               </div>
               <div className="draw-panel">
                   <div className="draw-panel__header">
-                    <strong>Рисование</strong>
+                    <h3 className="authoring-title">Рисование</h3>
                     <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
                   </div>
                   <canvas
