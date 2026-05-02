@@ -6,13 +6,7 @@ function resolveApiBase(): string {
     return explicit.replace(/\/$/, '');
   }
 
-  if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
-    const apiPort = import.meta.env.VITE_API_PORT ?? '8000';
-    return `${protocol}//${hostname}:${apiPort}/api`;
-  }
-
-  return 'http://localhost:8000/api';
+  return '/api';
 }
 
 const API_BASE = resolveApiBase();
