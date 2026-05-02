@@ -197,6 +197,27 @@ def render_text_bitmap(
     target_h = height - 2 * vertical_margin_px
 
     normalized_text = _normalize_symbol(text)
+    text_lines = text.splitlines()
+    if len(text_lines) > 1:
+        final_img = Image.new("L", (width, height), color=bg)
+        usable_lines = [line if line.strip() else " " for line in text_lines]
+        slot_h = max(1, target_h // max(1, len(usable_lines)))
+        for line_index, line in enumerate(usable_lines):
+            line_bitmap = render_text_bitmap(
+                text=line,
+                width=width,
+                height=max(8, slot_h + 2 * vertical_margin_px),
+                font_size=font_size,
+                font_path=font_path,
+                margin_px=margin_px,
+                vertical_margin_px=vertical_margin_px,
+                invert=invert,
+            )
+            line_img = Image.fromarray((line_bitmap * 255.0).astype(np.uint8), mode="L")
+            top = vertical_margin_px + line_index * slot_h
+            final_img.paste(line_img.crop((0, vertical_margin_px, width, line_img.height - vertical_margin_px)), (0, min(top, height - 1)))
+        bitmap = np.asarray(final_img, dtype=np.float32) / 255.0
+        return _normalize_bitmap_intensity(bitmap, invert)
     supported_emojis = set(_emoji_aliases().values())
     if normalized_text in supported_emojis:
         final_img = Image.new("L", (width, height), color=bg)

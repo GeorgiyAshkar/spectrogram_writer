@@ -25,10 +25,9 @@ function parseWeights(value: string): number[] | null {
 
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
+  const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('text');
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
-  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
-    useSpectrogramGenerator(formData);
 
   const harmonicWeightsText = useMemo(
     () => (formData.harmonic_weights?.length ? formData.harmonic_weights.join(', ') : ''),
@@ -77,6 +76,7 @@ export default function App() {
     let binary = '';
     for (const byte of bytes) binary += String.fromCharCode(byte);
     updateField('image_base64', btoa(binary));
+    setInputSource('upload');
   };
 
   const syncCanvasToPayload = () => {
@@ -118,11 +118,30 @@ export default function App() {
     clearCanvas();
   }, []);
 
+  const effectiveFormData = useMemo(
+    () => ({
+      ...formData,
+      image_base64: inputSource === 'text' ? null : formData.image_base64,
+    }),
+    [formData, inputSource],
+  );
+
+  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
+    useSpectrogramGenerator(effectiveFormData);
+
   return (
     <div className="page-shell">
       <LogoSidebar logoUrl={logoUrl} />
       <div className="app-shell">
         <Header />
+        <section className="panel panel--compact source-mode-panel">
+          <h3>Источник для преобразования</h3>
+          <div className="source-mode-options">
+            <label><input type="radio" name="source-mode" checked={inputSource === 'text'} onChange={() => setInputSource('text')} /> Печатный текст</label>
+            <label><input type="radio" name="source-mode" checked={inputSource === 'upload'} onChange={() => setInputSource('upload')} /> Загруженное изображение</label>
+            <label><input type="radio" name="source-mode" checked={inputSource === 'draw'} onChange={() => setInputSource('draw')} /> Рисунок на холсте</label>
+          </div>
+        </section>
         <main className="workspace-grid">
           <SettingsSection className="panel--fill" title="Текст">
             <div className="fields-grid fields-grid--single fields-grid--tight">
@@ -154,7 +173,7 @@ export default function App() {
               <div className="draw-panel">
                 <div className="draw-panel__header">
                   <strong>Или нарисуйте вручную</strong>
-                  <button type="button" className="button-secondary" onClick={clearCanvas}>Очистить холст</button>
+                  <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
                 </div>
                 <canvas
                   ref={drawCanvasRef}
@@ -162,6 +181,7 @@ export default function App() {
                   height={240}
                   className="draw-canvas"
                   onPointerDown={(e) => {
+                    setInputSource('draw');
                     drawState.current.active = true;
                     const ctx = e.currentTarget.getContext('2d');
                     if (ctx) {

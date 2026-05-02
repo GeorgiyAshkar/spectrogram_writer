@@ -82,6 +82,33 @@ textarea {
   cursor: crosshair;
 }
 
+.source-mode-panel {
+  margin-bottom: 12px;
+}
+
+.source-mode-panel h3 {
+  margin: 0 0 8px;
+  color: #5f4633;
+}
+
+.source-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.source-mode-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.source-mode-options input[type='radio'] {
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+
 button {
   cursor: pointer;
   background: linear-gradient(135deg, #b08968, #d6ad7b);
