@@ -149,58 +149,60 @@ export default function App() {
           onToggleSettings={() => setShowSettings((s) => !s)}
         />
         <main className="workspace-grid">
-          <SettingsSection className="panel--fill" title="Текст">
-            <div className="fields-grid fields-grid--single fields-grid--tight">
-              <FormField label="Текст">
-                <textarea
-                  value={formData.text}
-                  onChange={(e) => updateField('text', e.target.value)}
-                  rows={10}
-                  spellCheck={false}
-                  className="ascii-input"
-                />
-              </FormField>
-              <div className="emoji-toolbar" aria-label="Базовые эмоди">
-                {EMOJI_OPTIONS.map((emoji) => (
-                  <button key={emoji} type="button" className="emoji-chip" onClick={() => appendEmoji(emoji)}>
-                    {emoji}
-                  </button>
-                ))}
+          <SettingsSection className="panel--fill" title="Текст и рисунок">
+            <div className="text-draw-grid">
+              <div className="text-draw-grid__text">
+                <FormField label="Текст">
+                  <textarea
+                    value={formData.text}
+                    onChange={(e) => updateField('text', e.target.value)}
+                    rows={10}
+                    spellCheck={false}
+                    className="ascii-input"
+                  />
+                </FormField>
+                <div className="emoji-toolbar" aria-label="Базовые эмоди">
+                  {EMOJI_OPTIONS.map((emoji) => (
+                    <button key={emoji} type="button" className="emoji-chip" onClick={() => appendEmoji(emoji)}>
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="draw-panel">
-                <div className="draw-panel__header">
-                  <strong>Или нарисуйте вручную</strong>
-                  <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
-                </div>
-                <canvas
-                  ref={drawCanvasRef}
-                  width={640}
-                  height={240}
-                  className="draw-canvas"
-                  onPointerDown={(e) => {
-                    setInputSource('draw');
-                    drawState.current.active = true;
-                    const ctx = e.currentTarget.getContext('2d');
-                    if (ctx) {
-                      ctx.beginPath();
-                    }
-                    drawAt(e);
-                  }}
-                  onPointerMove={drawAt}
-                  onPointerUp={() => {
-                    drawState.current.active = false;
-                    const canvas = drawCanvasRef.current;
-                    const ctx = canvas?.getContext('2d');
-                    ctx?.beginPath();
-                    syncCanvasToPayload();
-                  }}
-                  onPointerLeave={() => {
-                    if (drawState.current.active) {
+                  <div className="draw-panel__header">
+                    <strong>Рисование</strong>
+                    <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
+                  </div>
+                  <canvas
+                    ref={drawCanvasRef}
+                    width={960}
+                    height={340}
+                    className="draw-canvas"
+                    onPointerDown={(e) => {
+                      setInputSource('draw');
+                      drawState.current.active = true;
+                      const ctx = e.currentTarget.getContext('2d');
+                      if (ctx) {
+                        ctx.beginPath();
+                      }
+                      drawAt(e);
+                    }}
+                    onPointerMove={drawAt}
+                    onPointerUp={() => {
                       drawState.current.active = false;
+                      const canvas = drawCanvasRef.current;
+                      const ctx = canvas?.getContext('2d');
+                      ctx?.beginPath();
                       syncCanvasToPayload();
-                    }
-                  }}
-                />
+                    }}
+                    onPointerLeave={() => {
+                      if (drawState.current.active) {
+                        drawState.current.active = false;
+                        syncCanvasToPayload();
+                      }
+                    }}
+                  />
               </div>
             </div>
           </SettingsSection>
@@ -224,7 +226,13 @@ export default function App() {
             {error ? <p className="error-banner">{error}</p> : null}
           </section>
 
-          {showSettings ? <SettingsSection className="panel--fill" title="Параметры генерации">
+          {showSettings ? <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+            <div className="settings-overlay__panel" onClick={(e) => e.stopPropagation()}>
+              <div className="settings-overlay__header">
+                <h2>Параметры генерации</h2>
+                <button type="button" className="button-secondary hero__icon-btn" onClick={() => setShowSettings(false)}>✕</button>
+              </div>
+              <SettingsSection className="panel--fill" title="Параметры генерации">
             <div className="fields-grid fields-grid--compact">
               <FormField label="Длительность, сек"><input type="number" value={formData.signal_duration} onChange={(e) => updateField('signal_duration', Number(e.target.value))} /></FormField>
               <FormField label="Тишина до, сек"><input type="number" value={formData.leading_silence} onChange={(e) => updateField('leading_silence', Number(e.target.value))} /></FormField>
@@ -342,7 +350,9 @@ export default function App() {
                 </>
               ) : null}
             </div>
-          </SettingsSection> : <section className="panel panel--fill settings-collapsed"><p>Нажмите ⚙ чтобы открыть параметры генерации.</p></section>}
+              </SettingsSection>
+            </div>
+          </div> : null}
 
           <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="panel--fill" />
         </main>
