@@ -263,17 +263,18 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.95fr);
   grid-template-areas:
-    'text summary'
-    'settings preview';
-  grid-template-rows: auto minmax(420px, 1fr);
+    'text summary';
+  grid-template-rows: minmax(420px, 1fr);
   gap: 16px;
   align-items: stretch;
 }
 
 .workspace-grid > :nth-child(1) { grid-area: text; }
 .workspace-grid > :nth-child(2) { grid-area: summary; }
-.workspace-grid > :nth-child(3) { grid-area: settings; }
-.workspace-grid > :nth-child(4) { grid-area: preview; }
+
+.result-preview {
+  margin-top: 12px;
+}
 
 .panel {
   background: rgba(255, 255, 255, 0.92);

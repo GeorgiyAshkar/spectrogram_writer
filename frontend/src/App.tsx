@@ -217,6 +217,14 @@ export default function App() {
                   <strong>{item.value}</strong>
                 </li>
               ))}
+              {preview ? (
+                <>
+                  <li><span>Линий</span><strong>{preview.bitmapShape.freqBins}</strong></li>
+                  <li><span>Шагов</span><strong>{preview.bitmapShape.timeBins}</strong></li>
+                  <li><span>Длина</span><strong>{preview.totalDuration.toFixed(2)} c</strong></li>
+                  <li><span>Поля</span><strong>{preview.autoEdgePad}</strong></li>
+                </>
+              ) : null}
             </ul>
             <div className="actions-row actions-row--push">
               <button className="button-secondary" onClick={() => void exportWav()} disabled={isDownloading}>
@@ -224,6 +232,7 @@ export default function App() {
               </button>
             </div>
             {error ? <p className="error-banner">{error}</p> : null}
+            <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="result-preview" />
           </section>
 
           {showSettings ? <div className="settings-overlay" onClick={() => setShowSettings(false)}>
@@ -354,7 +363,6 @@ export default function App() {
             </div>
           </div> : null}
 
-          <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="panel--fill" />
         </main>
       </div>
     </div>
