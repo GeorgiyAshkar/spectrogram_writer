@@ -55,6 +55,33 @@ textarea {
   white-space: pre;
 }
 
+.draw-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.draw-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.draw-panel__header .button-secondary {
+  width: auto;
+  padding: 0.5rem 0.8rem;
+}
+
+.draw-canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
 button {
   cursor: pointer;
   background: linear-gradient(135deg, #b08968, #d6ad7b);

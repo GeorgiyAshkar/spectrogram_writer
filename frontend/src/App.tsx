@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
@@ -25,6 +25,8 @@ function parseWeights(value: string): number[] | null {
 
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
+  const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawState = useRef<{ active: boolean }>({ active: false });
   const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
     useSpectrogramGenerator(formData);
 
@@ -77,6 +79,45 @@ export default function App() {
     updateField('image_base64', btoa(binary));
   };
 
+  const syncCanvasToPayload = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : null;
+    updateField('image_base64', base64);
+  };
+
+  const clearCanvas = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    syncCanvasToPayload();
+  };
+
+  const drawAt = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas || !drawState.current.active) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000000';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  useEffect(() => {
+    clearCanvas();
+  }, []);
+
   return (
     <div className="page-shell">
       <LogoSidebar logoUrl={logoUrl} />
@@ -110,6 +151,40 @@ export default function App() {
                   }}
                 />
               </FormField>
+              <div className="draw-panel">
+                <div className="draw-panel__header">
+                  <strong>Или нарисуйте вручную</strong>
+                  <button type="button" className="button-secondary" onClick={clearCanvas}>Очистить холст</button>
+                </div>
+                <canvas
+                  ref={drawCanvasRef}
+                  width={640}
+                  height={240}
+                  className="draw-canvas"
+                  onPointerDown={(e) => {
+                    drawState.current.active = true;
+                    const ctx = e.currentTarget.getContext('2d');
+                    if (ctx) {
+                      ctx.beginPath();
+                    }
+                    drawAt(e);
+                  }}
+                  onPointerMove={drawAt}
+                  onPointerUp={() => {
+                    drawState.current.active = false;
+                    const canvas = drawCanvasRef.current;
+                    const ctx = canvas?.getContext('2d');
+                    ctx?.beginPath();
+                    syncCanvasToPayload();
+                  }}
+                  onPointerLeave={() => {
+                    if (drawState.current.active) {
+                      drawState.current.active = false;
+                      syncCanvasToPayload();
+                    }
+                  }}
+                />
+              </div>
             </div>
           </SettingsSection>
 
