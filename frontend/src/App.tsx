@@ -26,6 +26,7 @@ function parseWeights(value: string): number[] | null {
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('text');
+  const [showSettings, setShowSettings] = useState(false);
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
 
@@ -133,15 +134,20 @@ export default function App() {
     <div className="page-shell">
       <LogoSidebar logoUrl={logoUrl} />
       <div className="app-shell">
-        <Header />
-        <section className="panel panel--compact source-mode-panel">
-          <h3>Источник для преобразования</h3>
-          <div className="source-mode-options">
-            <label><input type="radio" name="source-mode" checked={inputSource === 'text'} onChange={() => setInputSource('text')} /> Печатный текст</label>
-            <label><input type="radio" name="source-mode" checked={inputSource === 'upload'} onChange={() => setInputSource('upload')} /> Загруженное изображение</label>
-            <label><input type="radio" name="source-mode" checked={inputSource === 'draw'} onChange={() => setInputSource('draw')} /> Рисунок на холсте</label>
-          </div>
-        </section>
+        <Header
+          inputSource={inputSource}
+          onSourceChange={setInputSource}
+          onImageSelect={(file) => {
+            void uploadImage(file);
+          }}
+          onClearImage={() => {
+            updateField('image_base64', null);
+            setInputSource('text');
+          }}
+          hasImage={Boolean(formData.image_base64)}
+          showSettings={showSettings}
+          onToggleSettings={() => setShowSettings((s) => !s)}
+        />
         <main className="workspace-grid">
           <SettingsSection className="panel--fill" title="Текст">
             <div className="fields-grid fields-grid--single fields-grid--tight">
@@ -161,15 +167,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <FormField label="Изображение (опционально)" hint="Если загрузить картинку, она будет закодирована в аудиосигнал и отобразится на спектре.">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    void uploadImage(e.target.files?.[0] ?? null);
-                  }}
-                />
-              </FormField>
               <div className="draw-panel">
                 <div className="draw-panel__header">
                   <strong>Или нарисуйте вручную</strong>
@@ -227,7 +224,7 @@ export default function App() {
             {error ? <p className="error-banner">{error}</p> : null}
           </section>
 
-          <SettingsSection className="panel--fill" title="Параметры генерации">
+          {showSettings ? <SettingsSection className="panel--fill" title="Параметры генерации">
             <div className="fields-grid fields-grid--compact">
               <FormField label="Длительность, сек"><input type="number" value={formData.signal_duration} onChange={(e) => updateField('signal_duration', Number(e.target.value))} /></FormField>
               <FormField label="Тишина до, сек"><input type="number" value={formData.leading_silence} onChange={(e) => updateField('leading_silence', Number(e.target.value))} /></FormField>
@@ -345,7 +342,7 @@ export default function App() {
                 </>
               ) : null}
             </div>
-          </SettingsSection>
+          </SettingsSection> : <section className="panel panel--fill settings-collapsed"><p>Нажмите ⚙ чтобы открыть параметры генерации.</p></section>}
 
           <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="panel--fill" />
         </main>
