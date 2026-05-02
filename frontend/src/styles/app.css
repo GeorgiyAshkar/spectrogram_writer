@@ -64,14 +64,15 @@ textarea {
   display: grid;
   grid-template-columns: 30% 70%;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
   min-height: calc(100vh - 260px);
 }
 
 .text-draw-grid__text {
   display: grid;
   gap: 10px;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
 }
 
 .authoring-title {
