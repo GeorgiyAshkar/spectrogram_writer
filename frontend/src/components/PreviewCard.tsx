@@ -36,6 +36,31 @@ function createTicks(min: number, max: number, count: number): number[] {
   return Array.from({ length: count }, (_, index) => min + ((max - min) * index) / (count - 1));
 }
 
+
+function drawPreviewImage(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  plotLeft: number,
+  plotTop: number,
+  plotWidth: number,
+  plotHeight: number,
+  formData: GenerationFormData,
+) {
+  if (formData.orientation === 'time-x') {
+    context.drawImage(image, plotLeft, plotTop, plotWidth, plotHeight);
+    return;
+  }
+
+  context.save();
+  context.translate(plotLeft + plotWidth / 2, plotTop + plotHeight / 2);
+
+  const compensatingAngle = formData.freq_x_rotation === 'ccw' ? Math.PI / 2 : -Math.PI / 2;
+  context.rotate(compensatingAngle);
+
+  context.drawImage(image, -plotHeight / 2, -plotWidth / 2, plotHeight, plotWidth);
+  context.restore();
+}
+
 function drawSpectrogramChart(
   canvas: HTMLCanvasElement,
   image: HTMLImageElement,
@@ -72,7 +97,7 @@ function drawSpectrogramChart(
   context.beginPath();
   context.rect(plotLeft, plotTop, plotWidth, plotHeight);
   context.clip();
-  context.drawImage(image, plotLeft, plotTop, plotWidth, plotHeight);
+  drawPreviewImage(context, image, plotLeft, plotTop, plotWidth, plotHeight, formData);
   context.restore();
 
   context.strokeStyle = '#d7cfc3';
