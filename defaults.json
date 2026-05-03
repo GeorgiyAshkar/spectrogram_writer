@@ -6,7 +6,7 @@
   "leading_silence": 0.5,
   "trailing_silence": 0.5,
   "samplerate": 8000,
-  "orientation": "time-x",
+  "orientation": "freq-x",
   "freq_x_rotation": "ccw",
   "freq_x_marquee": false,
   "freq_x_word_rows": false,
