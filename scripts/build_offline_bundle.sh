@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${ROOT_DIR}/build/offline_bundle"
-IMAGES_DIR="${OUT_DIR}/deploy/offline/images"
+DEPLOY_DIR="${OUT_DIR}/deploy/offline"
+IMAGES_DIR="${DEPLOY_DIR}/images"
 ARCHIVE_PATH="${ROOT_DIR}/build/spectrogram-writer-offline-bundle.tar.gz"
 
 rm -rf "$OUT_DIR"
@@ -23,10 +24,12 @@ echo "[4/6] Saving frontend image..."
 docker save -o "$IMAGES_DIR/spectrogram-writer-frontend-offline.tar" spectrogram-writer-frontend:offline
 
 echo "[5/6] Copying deployment files..."
-cp -R "$ROOT_DIR/deploy/offline" "$OUT_DIR/deploy/offline"
-cp "$ROOT_DIR/deploy/nginx/default.conf" "$OUT_DIR/deploy/offline/nginx.default.conf"
+cp "$ROOT_DIR/deploy/offline/docker-compose.yml" "$DEPLOY_DIR/docker-compose.yml"
+cp "$ROOT_DIR/deploy/offline/load_and_run.sh" "$DEPLOY_DIR/load_and_run.sh"
+cp "$ROOT_DIR/deploy/nginx/default.conf" "$DEPLOY_DIR/nginx.default.conf"
+chmod +x "$DEPLOY_DIR/load_and_run.sh"
 
-cat > "$OUT_DIR/deploy/offline/README_DEPLOY.md" <<'DOC'
+cat > "$DEPLOY_DIR/README_DEPLOY.md" <<'DOC'
 # Offline deployment
 
 ## Prerequisites on target server

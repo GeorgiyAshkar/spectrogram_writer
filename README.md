@@ -124,6 +124,7 @@ npm run dev -- --host 0.0.0.0 --port 5173
 ```bash
 tar -xzf spectrogram-writer-offline-bundle.tar.gz
 cd deploy/offline
+ls images
 ./load_and_run.sh
 ```
 
