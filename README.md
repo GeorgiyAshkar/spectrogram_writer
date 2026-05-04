@@ -107,3 +107,27 @@ npm run dev -- --host 0.0.0.0 --port 5173
 ## Логотип компании
 
 Если в корень проекта положить файл `logo.png`, backend автоматически начнёт отдавать его на `GET /api/branding/logo`, а интерфейс покажет логотип в шапке приложения.
+## Офлайн-упаковка в Docker (для сервера без интернета)
+
+Скрипт собирает frontend/backend образы, сохраняет их в tar и формирует единый архив для переноса:
+
+```bash
+./scripts/build_offline_bundle.sh
+```
+
+После выполнения получите архив:
+
+- `build/spectrogram-writer-offline-bundle.tar.gz`
+
+На целевом сервере:
+
+```bash
+tar -xzf spectrogram-writer-offline-bundle.tar.gz
+cd deploy/offline
+ls images
+./load_and_run.sh
+```
+
+Сервис будет доступен на порту `8080`:
+
+- `http://<SERVER_IP>:8080`
