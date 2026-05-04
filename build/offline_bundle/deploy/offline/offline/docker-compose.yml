@@ -1,0 +1,14 @@
+services:
+  backend:
+    image: spectrogram-writer-backend:offline
+    container_name: spectrogram-writer-backend
+    restart: unless-stopped
+
+  frontend:
+    image: spectrogram-writer-frontend:offline
+    container_name: spectrogram-writer-frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "8080:80"

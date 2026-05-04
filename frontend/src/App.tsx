@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import defaults from '../../defaults.json';
+import defaults from './config/defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
 import { LogoSidebar } from './components/LogoSidebar';
