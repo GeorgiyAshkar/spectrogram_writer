@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
+import { AudioPlayer } from './components/AudioPlayer';
 import { PreviewCard } from './components/PreviewCard';
 import { SettingsSection } from './components/SettingsSection';
 import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
@@ -137,10 +138,11 @@ export default function App() {
           onPanelChange={handlePanelChange}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings((s) => !s)}
-          onPlayAudio={playAudio}
-          isPreparingAudio={isDownloading}
-          audioUrl={audioUrl}
         />
+        <section className="panel playback-panel">
+          <AudioPlayer audioUrl={audioUrl} isPreparingAudio={isDownloading} onRequestAudio={playAudio} />
+          {error ? <p className="error-banner">{error}</p> : null}
+        </section>
         <main className="workspace-grid">
           {activePanel === 'text' ? (
             <section className="panel panel--fill authoring-panel">
@@ -198,7 +200,6 @@ export default function App() {
                 </>
               ) : null}
             </ul>
-            {error ? <p className="error-banner">{error}</p> : null}
           </section>
           ) : null}
 

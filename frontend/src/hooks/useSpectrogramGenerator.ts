@@ -66,6 +66,14 @@ export function useSpectrogramGenerator(formData: GenerationFormData) {
     };
   }, [formData]);
 
+
+  useEffect(() => {
+    setAudioUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, [formData]);
+
   const playAudio = async () => {
     setIsDownloading(true);
     setError(null);

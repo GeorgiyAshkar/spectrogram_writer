@@ -1,8 +1,4 @@
-import { AudioPlayer } from './AudioPlayer';
 interface HeaderProps {
-  onPlayAudio: () => Promise<void>;
-  isPreparingAudio: boolean;
-  audioUrl: string | null;
   logoUrl?: string | null;
   activePanel: 'text' | 'upload' | 'draw' | 'result' | 'preview';
   onPanelChange: (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => void;
@@ -18,7 +14,7 @@ const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'previe
   { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
 ];
 
-export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings, onPlayAudio, isPreparingAudio, audioUrl }: HeaderProps) {
+export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings }: HeaderProps) {
   return (
     <header className="hero panel">
       <div className="hero__content hero__content--row">
@@ -49,7 +45,6 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
             >
               <span aria-hidden="true">⚙️</span>
             </button>
-            <AudioPlayer audioUrl={audioUrl} isPreparingAudio={isPreparingAudio} onRequestAudio={onPlayAudio} />
           </div>
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>

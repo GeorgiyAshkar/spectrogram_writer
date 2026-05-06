@@ -238,6 +238,10 @@ button:disabled {
 .result-preview {
   margin-top: 12px;
 }
+
+.playback-panel {
+  margin-bottom: 12px;
+}
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid #e7dfd4;
@@ -633,10 +637,10 @@ button:disabled {
 .panel-tab.is-active{background:#b08968;color:#fff;border-color:#b08968;}
 .upload-panel{display:flex; gap:10px; align-items:center;}
 
-.source-mode-options--row {align-items:center;}
+.source-mode-options--row {align-items:center; width:100%;}
 .panel-tab--icon {width:88px; height:88px; padding:0; display:grid; place-items:center; font-size:2.6rem;}
-.header-player{display:flex; align-items:center; gap:8px;}
-.waveform-block{display:grid; gap:4px; width:280px;}
+.header-player{display:flex; align-items:center; gap:8px; width:100%;}
+.waveform-block{display:grid; gap:4px; width:min(560px, 100%);} 
 .waveform{position:relative; height:46px; border:1px solid #d6d3d1; border-radius:10px; background:#fff; display:flex; align-items:flex-end; gap:1px; overflow:hidden; padding:2px;}
 .waveform__bar{flex:1; background:#d7b799; opacity:0.8; border-radius:2px 2px 0 0;}
 .waveform__progress{position:absolute; left:0; top:0; bottom:0; background:rgba(176,137,104,0.2); pointer-events:none;}
