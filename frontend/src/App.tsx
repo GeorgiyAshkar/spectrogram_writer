@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
-import { LogoSidebar } from './components/LogoSidebar';
 import { PreviewCard } from './components/PreviewCard';
 import { SettingsSection } from './components/SettingsSection';
 import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
@@ -25,6 +24,7 @@ export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('text');
   const [showSettings, setShowSettings] = useState(false);
+  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('text');
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
 
@@ -123,76 +123,52 @@ export default function App() {
 
   return (
     <div className="page-shell">
-      <LogoSidebar logoUrl={logoUrl} />
       <div className="app-shell">
         <Header
-          inputSource={inputSource}
-          onSourceChange={setInputSource}
-          onImageSelect={(file) => {
-            void uploadImage(file);
-          }}
-          onClearImage={() => {
-            updateField('image_base64', null);
-            setInputSource('text');
-          }}
-          hasImage={Boolean(formData.image_base64)}
+          logoUrl={logoUrl}
+          activePanel={activePanel}
+          onPanelChange={setActivePanel}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings((s) => !s)}
         />
         <main className="workspace-grid">
-          <section className="panel panel--fill authoring-panel">
-            <div className="text-draw-grid">
-              <div className="text-draw-grid__text">
-                <div className="draw-panel__header">
-                  <h3 className="authoring-title">Текст</h3>
-                </div>
-                <textarea
-                  value={formData.text}
-                  onChange={(e) => updateField('text', e.target.value)}
-                  rows={10}
-                  spellCheck={false}
-                  className="ascii-input text-input--full"
-                  aria-label="Текст для спектра"
-                />
-              </div>
-              <div className="draw-panel">
-                  <div className="draw-panel__header">
-                    <h3 className="authoring-title">Рисование</h3>
-                    <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
-                  </div>
-                  <canvas
-                    ref={drawCanvasRef}
-                    width={960}
-                    height={340}
-                    className="draw-canvas"
-                    onPointerDown={(e) => {
-                      setInputSource('draw');
-                      drawState.current.active = true;
-                      const ctx = e.currentTarget.getContext('2d');
-                      if (ctx) {
-                        ctx.beginPath();
-                      }
-                      drawAt(e);
-                    }}
-                    onPointerMove={drawAt}
-                    onPointerUp={() => {
-                      drawState.current.active = false;
-                      const canvas = drawCanvasRef.current;
-                      const ctx = canvas?.getContext('2d');
-                      ctx?.beginPath();
-                      syncCanvasToPayload();
-                    }}
-                    onPointerLeave={() => {
-                      if (drawState.current.active) {
-                        drawState.current.active = false;
-                        syncCanvasToPayload();
-                      }
-                    }}
-                  />
-              </div>
-            </div>
-          </section>
+          {activePanel === 'text' ? (
+            <section className="panel panel--fill authoring-panel">
+              <div className="draw-panel__header"><h3 className="authoring-title">Текст</h3></div>
+              <textarea
+                value={formData.text}
+                onChange={(e) => updateField('text', e.target.value)}
+                rows={10}
+                spellCheck={false}
+                className="ascii-input text-input--full"
+                aria-label="Текст для спектра"
+              />
+            </section>
+          ) : null}
 
+          {activePanel === 'upload' ? (
+            <section className="panel panel--fill">
+              <div className="draw-panel__header"><h3 className="authoring-title">Изображение</h3></div>
+              <div className="upload-panel">
+                <input type="file" accept="image/*" onChange={(e) => { void uploadImage(e.target.files?.[0] ?? null); }} />
+                <button type="button" className="button-secondary" onClick={() => updateField('image_base64', null)} disabled={!formData.image_base64}>Очистить изображение</button>
+              </div>
+            </section>
+          ) : null}
+
+          {activePanel === 'draw' ? (
+            <section className="panel panel--fill">
+              <div className="draw-panel">
+                <div className="draw-panel__header">
+                  <h3 className="authoring-title">Рисование</h3>
+                  <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
+                </div>
+                <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+              </div>
+            </section>
+          ) : null}
+
+          {activePanel === 'result' ? (
           <section className="panel action-card panel--compact panel--fill">
             <h2>Результат</h2>
             <p className="action-card__text">Параметры генерации</p>
@@ -214,14 +190,22 @@ export default function App() {
             </ul>
             <div className="actions-row actions-row--push">
               <button className="button-secondary" onClick={() => void exportWav()} disabled={isDownloading}>
-                {isDownloading ? 'Подготовка файла…' : 'Скачать WAV'}
+                {isDownloading ? 'Подготовка аудио…' : 'Воспроизвести'}
               </button>
             </div>
             {error ? <p className="error-banner">{error}</p> : null}
-            <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="result-preview" />
           </section>
+          ) : null}
 
-          {showSettings ? <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          {activePanel === 'preview' ? (
+            <section className="panel panel--fill">
+              <h2>Живой предпросмотр</h2>
+              <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="result-preview" />
+            </section>
+          ) : null}
+        </main>
+
+{showSettings ? <div className="settings-overlay" onClick={() => setShowSettings(false)}>
             <div className="settings-overlay__panel" onClick={(e) => e.stopPropagation()}>
               <div className="settings-overlay__header">
                 <h2>Параметры генерации</h2>
@@ -349,7 +333,6 @@ export default function App() {
             </div>
           </div> : null}
 
-        </main>
       </div>
     </div>
   );
