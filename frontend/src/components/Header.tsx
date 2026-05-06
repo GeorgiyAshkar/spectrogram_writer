@@ -7,9 +7,9 @@ interface HeaderProps {
 }
 
 const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'preview'; label: string; icon: string }> = [
-  { key: 'text', label: 'Текст', icon: '🅣' },
-  { key: 'upload', label: 'Изображение', icon: '🖼️' },
   { key: 'draw', label: 'Рисунок', icon: '🎨' },
+  { key: 'upload', label: 'Изображение', icon: '🖼️' },
+  { key: 'text', label: 'Текст', icon: '🅣' },
   { key: 'result', label: 'Результат', icon: '🏁' },
   { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
 ];

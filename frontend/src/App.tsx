@@ -23,9 +23,9 @@ function parseWeights(value: string): number[] | null {
 
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
-  const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('text');
+  const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('draw');
   const [showSettings, setShowSettings] = useState(false);
-  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('text');
+  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('draw');
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => {
     setActivePanel(next);
