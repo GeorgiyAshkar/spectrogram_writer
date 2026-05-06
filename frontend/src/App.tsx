@@ -112,6 +112,7 @@ export default function App() {
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(x, y);
+    updateField('image_base64', canvas.toDataURL('image/png').split(',')[1] ?? null);
   };
 
   useEffect(() => {

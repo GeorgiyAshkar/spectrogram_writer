@@ -41,6 +41,15 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio }: Audi
     setPendingAutoplay(false);
   }, [audioUrl, pendingAutoplay]);
 
+
+  useEffect(() => {
+    if (!audioRef.current || audioUrl) return;
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+    setIsPlaying(false);
+    setPosition(0);
+  }, [audioUrl]);
+
   useEffect(() => {
     let cancelled = false;
     if (!audioUrl) {
@@ -98,25 +107,27 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio }: Audi
       </button>
 
       <div className="waveform-block">
-        <div className="waveform" aria-hidden="true">
-          {peaks.map((peak, index) => (
-            <span key={`${index}`} className="waveform__bar" style={{ height: `${Math.max(4, peak * 100)}%` }} />
-          ))}
-          <div className="waveform__progress" style={{ width: `${progress}%` }} />
+        <div className="waveform">
+          <div className="waveform__bars" aria-hidden="true">
+            {peaks.map((peak, index) => (
+              <span key={`${index}`} className="waveform__bar" style={{ height: `${Math.max(6, peak * 100)}%` }} />
+            ))}
+            <div className="waveform__progress" style={{ width: `${progress}%` }} />
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={duration || 1}
+            step={0.01}
+            value={position}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setPosition(next);
+              if (audioRef.current) audioRef.current.currentTime = next;
+            }}
+            className="waveform-slider"
+          />
         </div>
-        <input
-          type="range"
-          min={0}
-          max={duration || 1}
-          step={0.01}
-          value={position}
-          onChange={(e) => {
-            const next = Number(e.target.value);
-            setPosition(next);
-            if (audioRef.current) audioRef.current.currentTime = next;
-          }}
-          className="waveform-slider"
-        />
       </div>
 
       <audio ref={audioRef} src={audioUrl ?? undefined} preload="metadata" />
