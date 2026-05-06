@@ -25,6 +25,13 @@ export default function App() {
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('text');
   const [showSettings, setShowSettings] = useState(false);
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('text');
+
+  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => {
+    setActivePanel(next);
+    if (next === 'text' || next === 'upload' || next === 'draw') {
+      setInputSource(next);
+    }
+  };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
 
@@ -127,7 +134,7 @@ export default function App() {
         <Header
           logoUrl={logoUrl}
           activePanel={activePanel}
-          onPanelChange={setActivePanel}
+          onPanelChange={handlePanelChange}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings((s) => !s)}
           onPlayAudio={playAudio}
