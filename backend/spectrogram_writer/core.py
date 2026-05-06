@@ -23,6 +23,8 @@ class GenerationConfig:
     preview_png: Optional[str] = None
     orientation: str = "time-x"
     freq_x_rotation: str = "ccw"
+    freq_x_marquee: bool = False
+    freq_x_word_rows: bool = False
     edge_pad_cols: int = -1
     img_width: int = 1000
     img_height: int = 160
@@ -45,6 +47,7 @@ class GenerationConfig:
     adsr_sustain: float = 0.9
     adsr_release: float = 0.05
     sample_masked: bool = False
+    image_base64: Optional[str] = None
 
     def validate(self) -> None:
         """Validate user-facing generation parameters."""
@@ -70,6 +73,8 @@ class GenerationConfig:
             raise ValueError("orientation должен быть time-x или freq-x.")
         if self.freq_x_rotation not in {"ccw", "cw"}:
             raise ValueError("freq_x_rotation должен быть ccw или cw.")
+        if self.freq_x_marquee and self.freq_x_word_rows:
+            raise ValueError("Режимы бегущей строки и слов с новой строки нельзя включать одновременно.")
         if self.smooth_freq < 1:
             raise ValueError("smooth_freq должен быть >= 1.")
         if self.smooth_sigma <= 0:
@@ -94,10 +99,15 @@ class GenerationConfig:
         }.items():
             if value < 0:
                 raise ValueError(f"{name} не может быть отрицательным.")
+        if self.adsr_sustain > 1:
+            raise ValueError("adsr_sustain должен быть в диапазоне [0, 1].")
         if self.harmonic_decay_mode == "custom_list" and not self.harmonic_weights:
             raise ValueError("Для harmonic_decay_mode=custom_list задайте harmonic_weights.")
         if self.instrument_type == "custom" and not self.harmonic_weights:
             raise ValueError("Для instrument_type=custom задайте harmonic_weights.")
+        if self.harmonic_weights:
+            if any(weight < 0 for weight in self.harmonic_weights):
+                raise ValueError("harmonic_weights не должны содержать отрицательных значений.")
 
 
 @dataclass(slots=True)
@@ -112,7 +122,7 @@ class GeneratedArtifacts:
 def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
     """Generate bitmap preview and synthesized WAV payloads."""
     config.validate()
-    bitmap, auto_edge_pad = build_bitmap(
+    bitmap, auto_edge_pad, duration_multiplier = build_bitmap(
         text=config.text,
         img_width=config.img_width,
         img_height=config.img_height,
@@ -123,14 +133,17 @@ def generate_artifacts(config: GenerationConfig) -> GeneratedArtifacts:
         invert=config.invert,
         orientation=config.orientation,
         freq_x_rotation=config.freq_x_rotation,
+        freq_x_marquee=config.freq_x_marquee,
+        freq_x_word_rows=config.freq_x_word_rows,
         edge_pad_cols=config.edge_pad_cols,
+        image_base64=config.image_base64,
     )
     bitmap = smooth_along_frequency(bitmap, config.smooth_freq, config.smooth_sigma)
     useful_signal = synthesize_signal(
         bitmap=bitmap,
         fmin=config.fmin,
         fmax=config.fmax,
-        signal_duration=config.signal_duration,
+        signal_duration=config.signal_duration * duration_multiplier,
         samplerate=config.samplerate,
         contrast_power=config.contrast,
         fixed_phase=config.fixed_phase,

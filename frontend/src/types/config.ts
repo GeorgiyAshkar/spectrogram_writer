@@ -14,6 +14,8 @@ export interface GenerationFormData {
   samplerate: number;
   orientation: Orientation;
   freq_x_rotation: Rotation;
+  freq_x_marquee: boolean;
+  freq_x_word_rows: boolean;
   edge_pad_cols: number;
   img_width: number;
   img_height: number;
@@ -35,6 +37,7 @@ export interface GenerationFormData {
   adsr_sustain: number;
   adsr_release: number;
   sample_masked: boolean;
+  image_base64: string | null;
 }
 
 export interface PreviewResponse {

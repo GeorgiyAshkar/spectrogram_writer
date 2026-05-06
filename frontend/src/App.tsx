@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
-import { LogoSidebar } from './components/LogoSidebar';
+import { AudioPlayer } from './components/AudioPlayer';
 import { PreviewCard } from './components/PreviewCard';
 import { SettingsSection } from './components/SettingsSection';
 import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
@@ -23,8 +23,18 @@ function parseWeights(value: string): number[] | null {
 
 export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
-  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
-    useSpectrogramGenerator(formData);
+  const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('draw');
+  const [showSettings, setShowSettings] = useState(false);
+  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('draw');
+
+  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => {
+    setActivePanel(next);
+    if (next === 'text' || next === 'upload' || next === 'draw') {
+      setInputSource(next);
+    }
+  };
+  const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawState = useRef<{ active: boolean }>({ active: false });
 
   const harmonicWeightsText = useMemo(
     () => (formData.harmonic_weights?.length ? formData.harmonic_weights.join(', ') : ''),
@@ -34,25 +44,144 @@ export default function App() {
   const showHarmonicControls = formData.timbre_mode === 'harmonic';
   const showCustomWeights =
     formData.instrument_type === 'custom' || formData.harmonic_decay_mode === 'custom_list';
+  const showFreqXFlowModes = formData.orientation === 'freq-x';
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
     setFormData((current) => ({ ...current, [key]: value }));
   };
 
+  const updateFreqXMarquee = (checked: boolean) => {
+    setFormData((current) => ({
+      ...current,
+      freq_x_marquee: checked,
+      freq_x_word_rows: checked ? false : current.freq_x_word_rows,
+    }));
+  };
+
+  const updateFreqXWordRows = (checked: boolean) => {
+    setFormData((current) => ({
+      ...current,
+      freq_x_word_rows: checked,
+      freq_x_marquee: checked ? false : current.freq_x_marquee,
+    }));
+  };
+
+  const uploadImage = async (file: File | null) => {
+    if (!file) {
+      updateField('image_base64', null);
+      return;
+    }
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    updateField('image_base64', btoa(binary));
+    setInputSource('upload');
+  };
+
+  const syncCanvasToPayload = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : null;
+    updateField('image_base64', base64);
+  };
+
+  const clearCanvas = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    syncCanvasToPayload();
+  };
+
+  const drawAt = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas || !drawState.current.active) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000000';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    updateField('image_base64', canvas.toDataURL('image/png').split(',')[1] ?? null);
+  };
+
+  useEffect(() => {
+    clearCanvas();
+  }, []);
+
+  const effectiveFormData = useMemo(
+    () => ({
+      ...formData,
+      image_base64: inputSource === 'text' ? null : formData.image_base64,
+    }),
+    [formData, inputSource],
+  );
+
+  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, playAudio, audioUrl } =
+    useSpectrogramGenerator(effectiveFormData);
+
   return (
     <div className="page-shell">
-      <LogoSidebar logoUrl={logoUrl} />
       <div className="app-shell">
-        <Header />
+        <Header
+          logoUrl={logoUrl}
+          activePanel={activePanel}
+          onPanelChange={handlePanelChange}
+          showSettings={showSettings}
+          onToggleSettings={() => setShowSettings((s) => !s)}
+        />
+        <section className="panel playback-panel">
+          <AudioPlayer audioUrl={audioUrl} isPreparingAudio={isDownloading} onRequestAudio={playAudio} />
+          {error ? <p className="error-banner">{error}</p> : null}
+        </section>
         <main className="workspace-grid">
-          <SettingsSection className="panel--fill" title="Текст">
-            <div className="fields-grid fields-grid--single fields-grid--tight">
-              <FormField label="Текст">
-                <textarea value={formData.text} onChange={(e) => updateField('text', e.target.value)} rows={2} />
-              </FormField>
-            </div>
-          </SettingsSection>
+          {activePanel === 'text' ? (
+            <section className="panel panel--fill authoring-panel">
+              <div className="draw-panel__header"><h3 className="authoring-title">Текст</h3></div>
+              <textarea
+                value={formData.text}
+                onChange={(e) => updateField('text', e.target.value)}
+                rows={10}
+                spellCheck={false}
+                className="ascii-input text-input--full"
+                aria-label="Текст для спектра"
+              />
+            </section>
+          ) : null}
 
+          {activePanel === 'upload' ? (
+            <section className="panel panel--fill">
+              <div className="draw-panel__header"><h3 className="authoring-title">Изображение</h3></div>
+              <div className="upload-panel">
+                <input type="file" accept="image/*" onChange={(e) => { void uploadImage(e.target.files?.[0] ?? null); }} />
+                <button type="button" className="button-secondary" onClick={() => updateField('image_base64', null)} disabled={!formData.image_base64}>Очистить изображение</button>
+              </div>
+            </section>
+          ) : null}
+
+          {activePanel === 'draw' ? (
+            <section className="panel panel--fill">
+              <div className="draw-panel">
+                <div className="draw-panel__header">
+                  <h3 className="authoring-title">Рисование</h3>
+                  <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
+                </div>
+                <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+              </div>
+            </section>
+          ) : null}
+
+          {activePanel === 'result' ? (
           <section className="panel action-card panel--compact panel--fill">
             <h2>Результат</h2>
             <p className="action-card__text">Параметры генерации</p>
@@ -63,16 +192,33 @@ export default function App() {
                   <strong>{item.value}</strong>
                 </li>
               ))}
+              {preview ? (
+                <>
+                  <li><span>Линий</span><strong>{preview.bitmapShape.freqBins}</strong></li>
+                  <li><span>Шагов</span><strong>{preview.bitmapShape.timeBins}</strong></li>
+                  <li><span>Длина</span><strong>{preview.totalDuration.toFixed(2)} c</strong></li>
+                  <li><span>Поля</span><strong>{preview.autoEdgePad}</strong></li>
+                </>
+              ) : null}
             </ul>
-            <div className="actions-row actions-row--push">
-              <button className="button-secondary" onClick={() => void exportWav()} disabled={isDownloading}>
-                {isDownloading ? 'Подготовка файла…' : 'Скачать WAV'}
-              </button>
-            </div>
-            {error ? <p className="error-banner">{error}</p> : null}
           </section>
+          ) : null}
 
-          <SettingsSection className="panel--fill" title="Параметры генерации">
+          {activePanel === 'preview' ? (
+            <section className="panel panel--fill">
+              <h2>Живой предпросмотр</h2>
+              <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="result-preview" />
+            </section>
+          ) : null}
+        </main>
+
+{showSettings ? <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+            <div className="settings-overlay__panel" onClick={(e) => e.stopPropagation()}>
+              <div className="settings-overlay__header">
+                <h2>Параметры генерации</h2>
+                <button type="button" className="button-secondary hero__icon-btn" onClick={() => setShowSettings(false)}>✕</button>
+              </div>
+              <SettingsSection className="panel--fill" title="Параметры генерации">
             <div className="fields-grid fields-grid--compact">
               <FormField label="Длительность, сек"><input type="number" value={formData.signal_duration} onChange={(e) => updateField('signal_duration', Number(e.target.value))} /></FormField>
               <FormField label="Тишина до, сек"><input type="number" value={formData.leading_silence} onChange={(e) => updateField('leading_silence', Number(e.target.value))} /></FormField>
@@ -91,6 +237,18 @@ export default function App() {
                   <option value="ccw">Против часовой</option>
                   <option value="cw">По часовой</option>
                 </select>
+              </FormField>
+              <FormField label="Бегущая строка">
+                <label className="toggle toggle--compact">
+                  <input type="checkbox" checked={formData.freq_x_marquee} onChange={(e) => updateFreqXMarquee(e.target.checked)} disabled={!showFreqXFlowModes} />
+                  <span>{showFreqXFlowModes ? 'Включить' : 'Доступно только для Частоты по X'}</span>
+                </label>
+              </FormField>
+              <FormField label="Слова с новой строки">
+                <label className="toggle toggle--compact">
+                  <input type="checkbox" checked={formData.freq_x_word_rows} onChange={(e) => updateFreqXWordRows(e.target.checked)} disabled={!showFreqXFlowModes} />
+                  <span>{showFreqXFlowModes ? 'Включить' : 'Доступно только для Частоты по X'}</span>
+                </label>
               </FormField>
               <FormField label="Внутренние поля"><input type="number" value={formData.edge_pad_cols} onChange={(e) => updateField('edge_pad_cols', Number(e.target.value))} /></FormField>
               <FormField label="Ширина bitmap"><input type="number" value={formData.img_width} onChange={(e) => updateField('img_width', Number(e.target.value))} /></FormField>
@@ -178,10 +336,10 @@ export default function App() {
                 </>
               ) : null}
             </div>
-          </SettingsSection>
+              </SettingsSection>
+            </div>
+          </div> : null}
 
-          <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="panel--fill" />
-        </main>
       </div>
     </div>
   );

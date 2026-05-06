@@ -1,13 +1,15 @@
 {
-  "text": "ПОЗЫВНОЙ DE SPECTROGRAM",
-  "fmin": 2000,
-  "fmax": 12000,
-  "signal_duration": 10,
+  "text": "ПОЗЫВНОЙ DE SPECTROGRAM\n❤️ 😊 😢 😡 ☀️ ☁️ ⚡",
+  "fmin": 500,
+  "fmax": 3700,
+  "signal_duration": 30,
   "leading_silence": 0.5,
   "trailing_silence": 0.5,
-  "samplerate": 48000,
-  "orientation": "time-x",
+  "samplerate": 8000,
+  "orientation": "freq-x",
   "freq_x_rotation": "ccw",
+  "freq_x_marquee": false,
+  "freq_x_word_rows": false,
   "edge_pad_cols": -1,
   "img_width": 1000,
   "img_height": 160,
@@ -28,5 +30,6 @@
   "adsr_decay": 0.08,
   "adsr_sustain": 0.9,
   "adsr_release": 0.05,
-  "sample_masked": false
+  "sample_masked": false,
+  "image_base64": null
 }

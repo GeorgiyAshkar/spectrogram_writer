@@ -9,6 +9,7 @@ export function useSpectrogramGenerator(formData: GenerationFormData) {
   const [error, setError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const previewRequestId = useRef(0);
 
@@ -18,6 +19,7 @@ export function useSpectrogramGenerator(formData: GenerationFormData) {
       { label: 'Длительность сигнала', value: `${formData.signal_duration} c` },
       { label: 'Частота дискретизации', value: `${formData.samplerate} Гц` },
       { label: 'Ориентация', value: formData.orientation === 'time-x' ? 'Время по X' : 'Частота по X' },
+      { label: 'Режим раскладки', value: formData.orientation !== 'freq-x' ? 'Обычный' : formData.freq_x_marquee ? 'Бегущая строка по буквам' : formData.freq_x_word_rows ? 'Слова с новой строки' : 'Обычный' },
       { label: 'Режим тембра', value: formData.timbre_mode === 'pure' ? 'Pure' : formData.timbre_mode === 'harmonic' ? `Harmonic · ${formData.instrument_type}` : 'Sample masked' },
     ],
     [formData],
@@ -64,23 +66,36 @@ export function useSpectrogramGenerator(formData: GenerationFormData) {
     };
   }, [formData]);
 
-  const exportWav = async () => {
+
+  useEffect(() => {
+    setAudioUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, [formData]);
+
+  const playAudio = async () => {
     setIsDownloading(true);
     setError(null);
     try {
       const blob = await downloadWav(formData);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'spectrogram.wav';
-      link.click();
-      URL.revokeObjectURL(url);
+      setAudioUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return URL.createObjectURL(blob);
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось скачать WAV');
+      setError(err instanceof Error ? err.message : 'Не удалось подготовить аудио');
     } finally {
       setIsDownloading(false);
     }
   };
 
-  return { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav };
+  useEffect(() => () => {
+    setAudioUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, []);
+
+  return { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, playAudio, audioUrl };
 }
