@@ -6,6 +6,14 @@ interface HeaderProps {
   onToggleSettings: () => void;
 }
 
+const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'preview'; label: string; icon: string }> = [
+  { key: 'text', label: 'Текст', icon: '🅣' },
+  { key: 'upload', label: 'Изображение', icon: '🖼️' },
+  { key: 'draw', label: 'Рисунок', icon: '🎨' },
+  { key: 'result', label: 'Результат', icon: '🏁' },
+  { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
+];
+
 export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings }: HeaderProps) {
   return (
     <header className="hero panel">
@@ -14,16 +22,29 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
           {logoUrl ? <img src={logoUrl} alt="Логотип компании" className="hero__logo" /> : null}
           <h1>Спектральный след</h1>
         </div>
-        <div className="hero__controls">
-          <div className="source-mode-options">
-            <button type="button" className={`button-secondary panel-tab ${activePanel === 'text' ? 'is-active' : ''}`} onClick={() => onPanelChange('text')}>Текст</button>
-            <button type="button" className={`button-secondary panel-tab ${activePanel === 'upload' ? 'is-active' : ''}`} onClick={() => onPanelChange('upload')}>Изображение</button>
-            <button type="button" className={`button-secondary panel-tab ${activePanel === 'draw' ? 'is-active' : ''}`} onClick={() => onPanelChange('draw')}>Рисунок</button>
-            <button type="button" className={`button-secondary panel-tab ${activePanel === 'result' ? 'is-active' : ''}`} onClick={() => onPanelChange('result')}>Результат</button>
-            <button type="button" className={`button-secondary panel-tab ${activePanel === 'preview' ? 'is-active' : ''}`} onClick={() => onPanelChange('preview')}>Живой предпросмотр</button>
-          </div>
-          <div className="hero__file-row">
-            <button type="button" className="button-secondary hero__icon-btn" onClick={onToggleSettings} aria-label="Параметры">⚙</button>
+        <div className="hero__controls hero__controls--row">
+          <div className="source-mode-options source-mode-options--row">
+            {panelButtons.map((panel) => (
+              <button
+                key={panel.key}
+                type="button"
+                title={panel.label}
+                aria-label={panel.label}
+                className={`button-secondary panel-tab panel-tab--icon ${activePanel === panel.key ? 'is-active' : ''}`}
+                onClick={() => onPanelChange(panel.key)}
+              >
+                <span aria-hidden="true">{panel.icon}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              title="Параметры генерации"
+              aria-label="Параметры генерации"
+              className="button-secondary panel-tab panel-tab--icon"
+              onClick={onToggleSettings}
+            >
+              <span aria-hidden="true">⚙️</span>
+            </button>
           </div>
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>
