@@ -1,38 +1,50 @@
 interface HeaderProps {
-  inputSource: 'text' | 'upload' | 'draw';
-  onSourceChange: (next: 'text' | 'upload' | 'draw') => void;
-  onImageSelect: (file: File | null) => void;
-  onClearImage: () => void;
-  hasImage: boolean;
+  logoUrl?: string | null;
+  activePanel: 'text' | 'upload' | 'draw' | 'result' | 'preview';
+  onPanelChange: (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => void;
   showSettings: boolean;
   onToggleSettings: () => void;
 }
 
-export function Header({
-  inputSource,
-  onSourceChange,
-  onImageSelect,
-  onClearImage,
-  showSettings,
-  onToggleSettings,
-  hasImage,
-}: HeaderProps) {
+const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'preview'; label: string; icon: string }> = [
+  { key: 'draw', label: 'Рисунок', icon: '🎨' },
+  { key: 'upload', label: 'Изображение', icon: '🖼️' },
+  { key: 'text', label: 'Текст', icon: '🅣' },
+  { key: 'result', label: 'Результат', icon: '🏁' },
+  { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
+];
+
+export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings }: HeaderProps) {
   return (
     <header className="hero panel">
       <div className="hero__content hero__content--row">
-        <div className="hero__brand-copy">
+        <div className="hero__brand-copy hero__brand-copy--row">
+          {logoUrl ? <img src={logoUrl} alt="Логотип компании" className="hero__logo" /> : null}
           <h1>Спектральный след</h1>
         </div>
-        <div className="hero__controls">
-          <div className="source-mode-options">
-            <label><input type="radio" name="source-mode" checked={inputSource === 'text'} onChange={() => onSourceChange('text')} /> Текст</label>
-            <label><input type="radio" name="source-mode" checked={inputSource === 'upload'} onChange={() => onSourceChange('upload')} /> Изображение</label>
-            <label><input type="radio" name="source-mode" checked={inputSource === 'draw'} onChange={() => onSourceChange('draw')} /> Рисунок</label>
-          </div>
-          <div className="hero__file-row">
-            <input type="file" accept="image/*" onChange={(e) => onImageSelect(e.target.files?.[0] ?? null)} />
-            <button type="button" className="button-secondary hero__icon-btn" onClick={onClearImage} disabled={!hasImage}>✕</button>
-            <button type="button" className="button-secondary hero__icon-btn" onClick={onToggleSettings} aria-label="Параметры">⚙</button>
+        <div className="hero__controls hero__controls--row">
+          <div className="source-mode-options source-mode-options--row">
+            {panelButtons.map((panel) => (
+              <button
+                key={panel.key}
+                type="button"
+                title={panel.label}
+                aria-label={panel.label}
+                className={`button-secondary panel-tab panel-tab--icon ${activePanel === panel.key ? 'is-active' : ''}`}
+                onClick={() => onPanelChange(panel.key)}
+              >
+                <span aria-hidden="true">{panel.icon}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              title="Параметры генерации"
+              aria-label="Параметры генерации"
+              className="button-secondary panel-tab panel-tab--icon"
+              onClick={onToggleSettings}
+            >
+              <span aria-hidden="true">⚙️</span>
+            </button>
           </div>
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>
