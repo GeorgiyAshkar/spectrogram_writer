@@ -1,5 +1,6 @@
+import { AudioPlayer } from './AudioPlayer';
 interface HeaderProps {
-  onPlayAudio: () => void;
+  onPlayAudio: () => Promise<void>;
   isPreparingAudio: boolean;
   audioUrl: string | null;
   logoUrl?: string | null;
@@ -39,9 +40,6 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
                 <span aria-hidden="true">{panel.icon}</span>
               </button>
             ))}
-            <button type="button" title="Воспроизвести" aria-label="Воспроизвести" className="button-secondary panel-tab panel-tab--icon" onClick={onPlayAudio} disabled={isPreparingAudio}>
-              <span aria-hidden="true">▶️</span>
-            </button>
             <button
               type="button"
               title="Параметры генерации"
@@ -51,7 +49,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
             >
               <span aria-hidden="true">⚙️</span>
             </button>
-            <audio className="header-audio-player" controls src={audioUrl ?? undefined} />
+            <AudioPlayer audioUrl={audioUrl} isPreparingAudio={isPreparingAudio} onRequestAudio={onPlayAudio} />
           </div>
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>

@@ -130,7 +130,7 @@ export default function App() {
           onPanelChange={setActivePanel}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings((s) => !s)}
-          onPlayAudio={() => { void playAudio(); }}
+          onPlayAudio={playAudio}
           isPreparingAudio={isDownloading}
           audioUrl={audioUrl}
         />
