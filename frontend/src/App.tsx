@@ -118,7 +118,7 @@ export default function App() {
     [formData, inputSource],
   );
 
-  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, exportWav } =
+  const { preview, error, summary, logoUrl, isLoadingPreview, isDownloading, playAudio, audioUrl } =
     useSpectrogramGenerator(effectiveFormData);
 
   return (
@@ -130,6 +130,9 @@ export default function App() {
           onPanelChange={setActivePanel}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings((s) => !s)}
+          onPlayAudio={() => { void playAudio(); }}
+          isPreparingAudio={isDownloading}
+          audioUrl={audioUrl}
         />
         <main className="workspace-grid">
           {activePanel === 'text' ? (
@@ -188,11 +191,6 @@ export default function App() {
                 </>
               ) : null}
             </ul>
-            <div className="actions-row actions-row--push">
-              <button className="button-secondary" onClick={() => void exportWav()} disabled={isDownloading}>
-                {isDownloading ? 'Подготовка аудио…' : 'Воспроизвести'}
-              </button>
-            </div>
             {error ? <p className="error-banner">{error}</p> : null}
           </section>
           ) : null}

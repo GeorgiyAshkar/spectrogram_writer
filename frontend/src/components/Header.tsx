@@ -1,4 +1,7 @@
 interface HeaderProps {
+  onPlayAudio: () => void;
+  isPreparingAudio: boolean;
+  audioUrl: string | null;
   logoUrl?: string | null;
   activePanel: 'text' | 'upload' | 'draw' | 'result' | 'preview';
   onPanelChange: (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => void;
@@ -14,7 +17,7 @@ const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'previe
   { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
 ];
 
-export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings }: HeaderProps) {
+export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings, onPlayAudio, isPreparingAudio, audioUrl }: HeaderProps) {
   return (
     <header className="hero panel">
       <div className="hero__content hero__content--row">
@@ -36,6 +39,9 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
                 <span aria-hidden="true">{panel.icon}</span>
               </button>
             ))}
+            <button type="button" title="Воспроизвести" aria-label="Воспроизвести" className="button-secondary panel-tab panel-tab--icon" onClick={onPlayAudio} disabled={isPreparingAudio}>
+              <span aria-hidden="true">▶️</span>
+            </button>
             <button
               type="button"
               title="Параметры генерации"
@@ -45,6 +51,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
             >
               <span aria-hidden="true">⚙️</span>
             </button>
+            <audio className="header-audio-player" controls src={audioUrl ?? undefined} />
           </div>
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>
