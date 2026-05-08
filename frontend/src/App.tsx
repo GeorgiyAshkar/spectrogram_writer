@@ -180,10 +180,6 @@ export default function App() {
           {activePanel === 'draw' ? (
             <section className="panel panel--fill">
               <div className="draw-panel">
-                <div className="draw-panel__header">
-                  <h3 className="authoring-title">Рисование</h3>
-                  
-                </div>
                 <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
               </div>
             </section>

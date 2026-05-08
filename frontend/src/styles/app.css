@@ -639,7 +639,7 @@ button:disabled {
 }
 
 .hero__brand-copy--row {display:flex; align-items:center; gap:12px;}
-.hero__logo{height:38px; width:auto; object-fit:contain;}
+.hero__logo{height:42px; width:auto; object-fit:contain;}
 .panel-tab{width:auto;}
 .panel-tab.is-active{background:#b08968;color:#fff;border-color:#b08968;}
 .upload-panel{display:flex; gap:10px; align-items:center;}
@@ -652,9 +652,9 @@ button:disabled {
 
 .draw-panel__clear-btn {
   width: auto;
-  min-height: 54px;
-  padding: 0.8rem 1.1rem;
-  font-size: 1rem;
+  min-height: 60px;
+  padding: 0.95rem 1.3rem;
+  font-size: 1.68rem;
 }
 
 .header-player__play {
@@ -664,12 +664,13 @@ button:disabled {
 }
 
 .header-player__play-icon {
-  font-size: 3.1rem;
+  font-size: 4.1rem;
   line-height: 1;
 }
 
 .header-player__clear {
   white-space: nowrap;
+  font-size: 1.68rem;
 }
 .source-mode-options--row {align-items:center; width:100%;}
 .panel-tab--icon {width:88px; height:88px; padding:0; display:grid; place-items:center; font-size:2.6rem;}
@@ -746,7 +747,7 @@ button:disabled {
   }
 
   .hero__logo {
-    height: 28px;
+    height: 30px;
   }
 
   .playback-panel {
@@ -765,12 +766,13 @@ button:disabled {
   }
 
   .header-player__play-icon {
-    font-size: 2.25rem;
+    font-size: 2.9rem;
   }
 
   .draw-panel__clear-btn {
-    min-height: 46px;
-    padding: 0.65rem 0.95rem;
+    min-height: 50px;
+    padding: 0.72rem 1rem;
+    font-size: 1.4rem;
   }
 
   .waveform {
