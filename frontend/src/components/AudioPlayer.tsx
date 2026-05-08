@@ -102,7 +102,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio }: Audi
 
   return (
     <div className="header-player">
-      <button type="button" className="button-secondary panel-tab panel-tab--icon" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
+      <button type="button" className="button-secondary panel-tab panel-tab--icon header-player__play" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
         <span aria-hidden="true">{isPlaying ? '⏸️' : '▶️'}</span>
       </button>
 
