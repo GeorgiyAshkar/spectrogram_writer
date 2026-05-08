@@ -92,11 +92,7 @@ textarea {
 }
 
 .draw-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 38px;
+  min-height: 0;
 }
 
 .draw-panel {
@@ -651,18 +647,24 @@ button:disabled {
 }
 
 .draw-panel__clear-btn {
-  width: auto;
-  min-height: 54px;
-  padding: 0.8rem 1.1rem;
-  font-size: 1rem;
+  width: 100%;
+  min-height: 108px;
+  padding: 1.2rem 1.4rem;
+  font-size: 1.4rem;
+}
+
+.draw-panel__clear-btn--global {
+  margin-bottom: 12px;
 }
 
 .header-player__play {
   height: 100%;
-  min-height: 92px;
-  width: 96px;
-  font-size: 2.3rem;
+  min-height: 176px;
+  width: 176px;
+  font-size: 4rem;
+  border: none;
 }
+
 .source-mode-options--row {align-items:center; width:100%;}
 .panel-tab--icon {width:88px; height:88px; padding:0; display:grid; place-items:center; font-size:2.6rem;}
 .header-player{display:flex; align-items:stretch; gap:8px; width:100%;}
@@ -752,14 +754,15 @@ button:disabled {
   }
 
   .header-player__play {
-    min-height: 62px;
-    width: 64px;
-    font-size: 1.8rem;
+    min-height: 124px;
+    width: 124px;
+    font-size: 2.7rem;
   }
 
   .draw-panel__clear-btn {
-    min-height: 46px;
-    padding: 0.65rem 0.95rem;
+    min-height: 84px;
+    padding: 1rem 1.15rem;
+    font-size: 1.15rem;
   }
 
   .waveform {

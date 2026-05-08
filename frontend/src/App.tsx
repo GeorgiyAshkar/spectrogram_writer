@@ -147,6 +147,15 @@ export default function App() {
           <AudioPlayer audioUrl={audioUrl} isPreparingAudio={isDownloading} onRequestAudio={playAudio} />
           {error ? <p className="error-banner">{error}</p> : null}
         </section>
+        {activePanel === 'draw' ? (
+          <button
+            type="button"
+            className="button-secondary draw-panel__clear-btn draw-panel__clear-btn--global"
+            onClick={() => { clearCanvas(); setInputSource('draw'); }}
+          >
+            Очистить холст
+          </button>
+        ) : null}
         <main className="workspace-grid">
           {activePanel === 'text' ? (
             <section className="panel panel--fill authoring-panel">
@@ -175,10 +184,7 @@ export default function App() {
           {activePanel === 'draw' ? (
             <section className="panel panel--fill">
               <div className="draw-panel">
-                <div className="draw-panel__header">
-                  <h3 className="authoring-title">Рисование</h3>
-                  <button type="button" className="button-secondary draw-panel__clear-btn" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
-                </div>
+                <div className="draw-panel__header" />
                 <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
               </div>
             </section>

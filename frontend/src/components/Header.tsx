@@ -34,7 +34,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
           <h1>Спектральный след</h1>
         </div>
         <div className="hero__controls hero__controls--row">
-          {!controlsHidden ? <div className="source-mode-options source-mode-options--row">
+          {controlsHidden ? null : <div className="source-mode-options source-mode-options--row">
             {panelButtons.map((panel) => (
               <button
                 key={panel.key}
@@ -56,7 +56,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
             >
               <span aria-hidden="true">⚙️</span>
             </button>
-          </div> : <div className="hero__dropdown-note">Панель скрыта (тройной клик по логотипу)</div>}
+          </div>}
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>
       </div>
