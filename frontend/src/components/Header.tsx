@@ -4,6 +4,8 @@ interface HeaderProps {
   onPanelChange: (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => void;
   showSettings: boolean;
   onToggleSettings: () => void;
+  controlsHidden: boolean;
+  onLogoTripleClick: () => void;
 }
 
 const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'preview'; label: string; icon: string }> = [
@@ -14,16 +16,25 @@ const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'previe
   { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
 ];
 
-export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings }: HeaderProps) {
+export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings, controlsHidden, onLogoTripleClick }: HeaderProps) {
   return (
     <header className="hero panel">
       <div className="hero__content hero__content--row">
         <div className="hero__brand-copy hero__brand-copy--row">
-          {logoUrl ? <img src={logoUrl} alt="Логотип компании" className="hero__logo" /> : null}
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Логотип компании"
+              className="hero__logo hero__logo--interactive"
+              onClick={(event) => {
+                if (event.detail === 3) onLogoTripleClick();
+              }}
+            />
+          ) : null}
           <h1>Спектральный след</h1>
         </div>
         <div className="hero__controls hero__controls--row">
-          <div className="source-mode-options source-mode-options--row">
+          {!controlsHidden ? <div className="source-mode-options source-mode-options--row">
             {panelButtons.map((panel) => (
               <button
                 key={panel.key}
@@ -45,7 +56,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
             >
               <span aria-hidden="true">⚙️</span>
             </button>
-          </div>
+          </div> : <div className="hero__dropdown-note">Панель скрыта (тройной клик по логотипу)</div>}
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
         </div>
       </div>
