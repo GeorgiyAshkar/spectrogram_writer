@@ -4,11 +4,13 @@ type AudioPlayerProps = {
   audioUrl: string | null;
   isPreparingAudio: boolean;
   onRequestAudio: () => Promise<void>;
+  onClearCanvas?: () => void;
+  showClearCanvas?: boolean;
 };
 
 const WAVE_SAMPLES = 220;
 
-export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio }: AudioPlayerProps) {
+export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClearCanvas, showClearCanvas = false }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
@@ -102,7 +104,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio }: Audi
 
   return (
     <div className="header-player">
-      <button type="button" className="button-secondary panel-tab panel-tab--icon" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
+      <button type="button" className="play-toggle-btn" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
         <span aria-hidden="true">{isPlaying ? '⏸️' : '▶️'}</span>
       </button>
 
@@ -129,6 +131,10 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio }: Audi
           />
         </div>
       </div>
+
+      {showClearCanvas && onClearCanvas ? (
+        <button type="button" className="button-secondary clear-canvas-btn" onClick={onClearCanvas}>Очистить холст</button>
+      ) : null}
 
       <audio ref={audioRef} src={audioUrl ?? undefined} preload="metadata" />
     </div>

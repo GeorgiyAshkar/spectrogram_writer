@@ -26,6 +26,7 @@ export default function App() {
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('draw');
   const [showSettings, setShowSettings] = useState(false);
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('draw');
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => {
     setActivePanel(next);
@@ -133,15 +134,24 @@ export default function App() {
   return (
     <div className="page-shell">
       <div className="app-shell">
-        <Header
-          logoUrl={logoUrl}
-          activePanel={activePanel}
-          onPanelChange={handlePanelChange}
-          showSettings={showSettings}
-          onToggleSettings={() => setShowSettings((s) => !s)}
-        />
+        <button type="button" className="button-secondary header-toggle-btn" onClick={() => setIsHeaderHidden((v) => !v)}>{isHeaderHidden ? 'Показать панель' : 'Скрыть панель'}</button>
+        {!isHeaderHidden ? (
+          <Header
+            logoUrl={logoUrl}
+            activePanel={activePanel}
+            onPanelChange={handlePanelChange}
+            showSettings={showSettings}
+            onToggleSettings={() => setShowSettings((s) => !s)}
+          />
+        ) : null}
         <section className="panel playback-panel">
-          <AudioPlayer audioUrl={audioUrl} isPreparingAudio={isDownloading} onRequestAudio={playAudio} />
+          <AudioPlayer
+            audioUrl={audioUrl}
+            isPreparingAudio={isDownloading}
+            onRequestAudio={playAudio}
+            showClearCanvas={activePanel === 'draw'}
+            onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
+          />
           {error ? <p className="error-banner">{error}</p> : null}
         </section>
         <main className="workspace-grid">
@@ -172,10 +182,6 @@ export default function App() {
           {activePanel === 'draw' ? (
             <section className="panel panel--fill">
               <div className="draw-panel">
-                <div className="draw-panel__header">
-                  <h3 className="authoring-title">Рисование</h3>
-                  <button type="button" className="button-secondary" onClick={() => { clearCanvas(); setInputSource('draw'); }}>Очистить холст</button>
-                </div>
                 <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
               </div>
             </section>
