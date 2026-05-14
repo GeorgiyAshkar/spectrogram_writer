@@ -101,6 +101,16 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
 
   const progress = useMemo(() => (duration > 0 ? (position / duration) * 100 : 0), [duration, position]);
 
+  const downloadWav = () => {
+    if (!audioUrl) return;
+    const link = document.createElement('a');
+    link.href = audioUrl;
+    link.download = 'spectrogram.wav';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="header-player">
       <button type="button" className="button-secondary panel-tab panel-tab--icon header-player__play" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
@@ -131,6 +141,14 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
         </div>
       </div>
 
+      <button
+        type="button"
+        className="button-secondary draw-panel__clear-btn header-player__download"
+        onClick={downloadWav}
+        disabled={!audioUrl || isPreparingAudio}
+      >
+        Скачать WAV
+      </button>
 
       <button
         type="button"

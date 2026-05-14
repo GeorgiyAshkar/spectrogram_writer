@@ -668,6 +668,7 @@ button:disabled {
   line-height: 1;
 }
 
+.header-player__download,
 .header-player__clear {
   white-space: nowrap;
   font-size: 1.68rem;
