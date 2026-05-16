@@ -1,0 +1,8 @@
+{
+  "draw": "icons/draw.svg",
+  "upload": "icons/upload-image.svg",
+  "text": "icons/text-input.svg",
+  "info": "icons/info.svg",
+  "settings": "icons/settings.svg",
+  "play": "icons/play.svg"
+}
