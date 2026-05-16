@@ -1,19 +1,18 @@
 interface HeaderProps {
   logoUrl?: string | null;
-  activePanel: 'text' | 'upload' | 'draw' | 'result' | 'preview';
-  onPanelChange: (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => void;
+  activePanel: 'text' | 'upload' | 'draw' | 'info';
+  onPanelChange: (next: 'text' | 'upload' | 'draw' | 'info') => void;
   showSettings: boolean;
   onToggleSettings: () => void;
   controlsHidden: boolean;
   onLogoTripleClick: () => void;
 }
 
-const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'result' | 'preview'; label: string; icon: string }> = [
+const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'info'; label: string; icon: string }> = [
   { key: 'draw', label: 'Рисунок', icon: '🎨' },
   { key: 'upload', label: 'Изображение', icon: '🖼️' },
   { key: 'text', label: 'Текст', icon: '🅣' },
-  { key: 'result', label: 'Результат', icon: '🏁' },
-  { key: 'preview', label: 'Живой предпросмотр', icon: '👁️' },
+  { key: 'info', label: 'Результат и предпросмотр', icon: 'ℹ️' },
 ];
 
 export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings, controlsHidden, onLogoTripleClick }: HeaderProps) {
