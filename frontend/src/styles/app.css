@@ -780,3 +780,6 @@ button:disabled {
     height: 62px;
   }
 }
+
+.panel-tab__icon-image { width: 56%; height: 56%; object-fit: contain; }
+.header-player__play-icon-image { width: 64%; height: 64%; object-fit: contain; }

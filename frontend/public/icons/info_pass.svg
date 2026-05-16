@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Слой_1" data-name="Слой_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 100 100">
+  <!-- Generator: Adobe Illustrator 29.8.5, SVG Export Plug-In . SVG Version: 2.1.1 Build 2)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #fff;
+      }
+
+      .st1 {
+        fill: #2400ff;
+      }
+    </style>
+  </defs>
+  <rect class="st0" x=".5" y=".5" width="99" height="99" rx="9.5" ry="9.5"/>
+  <path class="st1" d="M54.05,43.45v27.51h11.62v5.04h-29.19v-5.04h11.55v-22.47h-10.15v-5.04h16.17ZM50.34,24.9c1.68,0,2.94.4,3.78,1.19.89.75,1.33,1.87,1.33,3.36,0,1.4-.47,2.47-1.4,3.22-.93.75-2.22,1.12-3.85,1.12-1.49,0-2.73-.37-3.71-1.12-.93-.75-1.4-1.87-1.4-3.36,0-1.26.47-2.31,1.4-3.15s2.22-1.26,3.85-1.26Z"/>
+</svg>

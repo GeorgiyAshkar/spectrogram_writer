@@ -1,0 +1,8 @@
+{
+  "draw": "icons/Drawing_pass.svg",
+  "upload": "icons/Download_pass.svg",
+  "text": "icons/Text_pass.svg",
+  "info": "icons/info_pass.svg",
+  "settings": "icons/Settings_pass.svg",
+  "play": "icons/Start.svg"
+}
