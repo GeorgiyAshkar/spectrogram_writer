@@ -25,10 +25,10 @@ export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('draw');
   const [showSettings, setShowSettings] = useState(false);
-  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'result' | 'preview'>('draw');
+  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
 
-  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'result' | 'preview') => {
+  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'info') => {
     setActivePanel(next);
     if (next === 'text' || next === 'upload' || next === 'draw') {
       setInputSource(next);
@@ -185,34 +185,34 @@ export default function App() {
             </section>
           ) : null}
 
-          {activePanel === 'result' ? (
-          <section className="panel action-card panel--compact panel--fill">
-            <h2>Результат</h2>
-            <p className="action-card__text">Параметры генерации</p>
-            <ul className="summary-list summary-list--compact">
-              {summary.map((item) => (
-                <li key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                </li>
-              ))}
-              {preview ? (
-                <>
-                  <li><span>Линий</span><strong>{preview.bitmapShape.freqBins}</strong></li>
-                  <li><span>Шагов</span><strong>{preview.bitmapShape.timeBins}</strong></li>
-                  <li><span>Длина</span><strong>{preview.totalDuration.toFixed(2)} c</strong></li>
-                  <li><span>Поля</span><strong>{preview.autoEdgePad}</strong></li>
-                </>
-              ) : null}
-            </ul>
-          </section>
-          ) : null}
+          {activePanel === 'info' ? (
+            <>
+              <section className="panel action-card panel--compact panel--fill">
+                <h2>Результат</h2>
+                <p className="action-card__text">Параметры генерации</p>
+                <ul className="summary-list summary-list--compact">
+                  {summary.map((item) => (
+                    <li key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </li>
+                  ))}
+                  {preview ? (
+                    <>
+                      <li><span>Линий</span><strong>{preview.bitmapShape.freqBins}</strong></li>
+                      <li><span>Шагов</span><strong>{preview.bitmapShape.timeBins}</strong></li>
+                      <li><span>Длина</span><strong>{preview.totalDuration.toFixed(2)} c</strong></li>
+                      <li><span>Поля</span><strong>{preview.autoEdgePad}</strong></li>
+                    </>
+                  ) : null}
+                </ul>
+              </section>
 
-          {activePanel === 'preview' ? (
-            <section className="panel panel--fill">
-              <h2>Живой предпросмотр</h2>
-              <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="result-preview" />
-            </section>
+              <section className="panel panel--fill">
+                <h2>Живой предпросмотр</h2>
+                <PreviewCard preview={preview} formData={formData} isLoading={isLoadingPreview} className="result-preview" />
+              </section>
+            </>
           ) : null}
         </main>
 

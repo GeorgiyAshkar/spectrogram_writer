@@ -16,6 +16,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [peaks, setPeaks] = useState<number[]>([]);
+  const [playIcon, setPlayIcon] = useState('/icons/play.svg');
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -99,6 +100,13 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
     else audio.pause();
   };
 
+  useEffect(() => {
+    void fetch('/icon_config.json')
+      .then((response) => response.json())
+      .then((config) => setPlayIcon(config.play ?? '/icons/play.svg'))
+      .catch(() => setPlayIcon('/icons/play.svg'));
+  }, []);
+
   const progress = useMemo(() => (duration > 0 ? (position / duration) * 100 : 0), [duration, position]);
 
   const downloadWav = () => {
@@ -114,7 +122,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
   return (
     <div className="header-player">
       <button type="button" className="button-secondary panel-tab panel-tab--icon header-player__play" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
-        <span className="header-player__play-icon" aria-hidden="true">{isPlaying ? '⏸️' : '▶️'}</span>
+        {isPlaying ? <span className="header-player__play-icon" aria-hidden="true">⏸️</span> : <img src={playIcon} alt="" aria-hidden="true" className="header-player__play-icon-image" />}
       </button>
 
       <div className="waveform-block">
