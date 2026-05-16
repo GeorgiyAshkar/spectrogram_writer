@@ -783,3 +783,5 @@ button:disabled {
 
 .panel-tab__icon-image { width: 56%; height: 56%; object-fit: contain; }
 .header-player__play-icon-image { width: 64%; height: 64%; object-fit: contain; }
+
+.panel-tab__icon-fallback {font-size: 2rem; line-height:1; display:grid; place-items:center; width:56%; height:56%;}

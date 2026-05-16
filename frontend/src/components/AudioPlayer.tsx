@@ -17,6 +17,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
   const [position, setPosition] = useState(0);
   const [peaks, setPeaks] = useState<number[]>([]);
   const [playIcon, setPlayIcon] = useState('/icons/play.svg');
+  const [playIconBroken, setPlayIconBroken] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -103,8 +104,17 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
   useEffect(() => {
     void fetch('/icon_config.json')
       .then((response) => response.json())
-      .then((config) => setPlayIcon(config.play ?? '/icons/play.svg'))
-      .catch(() => setPlayIcon('/icons/play.svg'));
+      .then((config) => {
+        const icon = typeof config.play === 'string' && config.play.trim().length > 0
+          ? (config.play.startsWith('/') ? config.play : `/${config.play}`)
+          : '/icons/play.svg';
+        setPlayIcon(icon);
+        setPlayIconBroken(false);
+      })
+      .catch(() => {
+        setPlayIcon('/icons/play.svg');
+        setPlayIconBroken(false);
+      });
   }, []);
 
   const progress = useMemo(() => (duration > 0 ? (position / duration) * 100 : 0), [duration, position]);
@@ -122,7 +132,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
   return (
     <div className="header-player">
       <button type="button" className="button-secondary panel-tab panel-tab--icon header-player__play" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
-        {isPlaying ? <span className="header-player__play-icon" aria-hidden="true">⏸️</span> : <img src={playIcon} alt="" aria-hidden="true" className="header-player__play-icon-image" />}
+        {isPlaying ? <span className="header-player__play-icon" aria-hidden="true">⏸️</span> : (playIconBroken ? <span className="header-player__play-icon" aria-hidden="true">▶️</span> : <img src={playIcon} alt="" aria-hidden="true" className="header-player__play-icon-image" onError={() => setPlayIconBroken(true)} />)}
       </button>
 
       <div className="waveform-block">

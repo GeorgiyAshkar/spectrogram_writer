@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ImgHTMLAttributes, useEffect, useState } from 'react';
 
 interface HeaderProps {
   logoUrl?: string | null;
@@ -10,7 +10,9 @@ interface HeaderProps {
   onLogoTripleClick: () => void;
 }
 
-const defaultIcons = {
+type IconMap = { draw: string; upload: string; text: string; info: string; settings: string };
+
+const defaultIcons: IconMap = {
   draw: '/icons/draw.svg',
   upload: '/icons/upload-image.svg',
   text: '/icons/text-input.svg',
@@ -25,19 +27,30 @@ const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'info'; label: str
   { key: 'info', label: 'Результат и предпросмотр', iconKey: 'info' },
 ];
 
+const normalizeIconPath = (value: unknown, fallback: string) => {
+  if (typeof value !== 'string' || value.trim().length === 0) return fallback;
+  return value.startsWith('/') ? value : `/${value}`;
+};
+
+function IconImage(props: ImgHTMLAttributes<HTMLImageElement>) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <span className="panel-tab__icon-fallback" aria-hidden="true">•</span>;
+  return <img {...props} onError={() => setBroken(true)} />;
+}
+
 export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onToggleSettings, controlsHidden, onLogoTripleClick }: HeaderProps) {
-  const [icons, setIcons] = useState(defaultIcons);
+  const [icons, setIcons] = useState<IconMap>(defaultIcons);
 
   useEffect(() => {
     void fetch('/icon_config.json')
       .then((response) => response.json())
       .then((config) => {
         setIcons({
-          draw: config.draw ?? defaultIcons.draw,
-          upload: config.upload ?? defaultIcons.upload,
-          text: config.text ?? defaultIcons.text,
-          info: config.info ?? defaultIcons.info,
-          settings: config.settings ?? defaultIcons.settings,
+          draw: normalizeIconPath(config.draw, defaultIcons.draw),
+          upload: normalizeIconPath(config.upload, defaultIcons.upload),
+          text: normalizeIconPath(config.text, defaultIcons.text),
+          info: normalizeIconPath(config.info, defaultIcons.info),
+          settings: normalizeIconPath(config.settings, defaultIcons.settings),
         });
       })
       .catch(() => setIcons(defaultIcons));
@@ -70,7 +83,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
                 className={`button-secondary panel-tab panel-tab--icon ${activePanel === panel.key ? 'is-active' : ''}`}
                 onClick={() => onPanelChange(panel.key)}
               >
-                <img src={icons[panel.iconKey]} alt="" aria-hidden="true" className="panel-tab__icon-image" />
+                <IconImage src={icons[panel.iconKey]} alt="" aria-hidden="true" className="panel-tab__icon-image" />
               </button>
             ))}
             <button
@@ -80,7 +93,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
               className="button-secondary panel-tab panel-tab--icon"
               onClick={onToggleSettings}
             >
-              <img src={icons.settings} alt="" aria-hidden="true" className="panel-tab__icon-image" />
+              <IconImage src={icons.settings} alt="" aria-hidden="true" className="panel-tab__icon-image" />
             </button>
           </div> : null}
           {showSettings ? <div className="hero__dropdown-note">Параметры открыты ниже</div> : null}
