@@ -27,6 +27,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
+  const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'info') => {
     setActivePanel(next);
@@ -88,6 +89,29 @@ export default function App() {
     updateField('image_base64', base64);
   };
 
+  const resizeCanvas = (nextHeight: number) => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const clampedHeight = Math.min(1200, Math.max(340, Math.round(nextHeight)));
+    if (canvas.height === clampedHeight) return;
+
+    const snapshot = document.createElement('canvas');
+    snapshot.width = canvas.width;
+    snapshot.height = canvas.height;
+    const snapshotCtx = snapshot.getContext('2d');
+    if (snapshotCtx) {
+      snapshotCtx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.height = clampedHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(snapshot, 0, 0);
+    syncCanvasToPayload();
+  };
+
   const clearCanvas = () => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
@@ -119,6 +143,10 @@ export default function App() {
   useEffect(() => {
     clearCanvas();
   }, []);
+
+  useEffect(() => {
+    resizeCanvas(drawCanvasHeight);
+  }, [drawCanvasHeight]);
 
   const effectiveFormData = useMemo(
     () => ({
@@ -180,7 +208,21 @@ export default function App() {
           {activePanel === 'draw' ? (
             <section className="panel panel--fill">
               <div className="draw-panel">
-                <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                <div className="draw-panel__header">
+                  <h3 className="authoring-title">Рисование</h3>
+                  <label className="draw-panel__height-control">
+                    <span>Высота: {drawCanvasHeight}px</span>
+                    <input
+                      type="range"
+                      min={340}
+                      max={1200}
+                      step={20}
+                      value={drawCanvasHeight}
+                      onChange={(e) => setDrawCanvasHeight(Number(e.target.value))}
+                    />
+                  </label>
+                </div>
+                <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
               </div>
             </section>
           ) : null}
