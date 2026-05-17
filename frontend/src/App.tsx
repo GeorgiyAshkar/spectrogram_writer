@@ -37,6 +37,7 @@ export default function App() {
   };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
+  const drawCanvasWrapRef = useRef<HTMLDivElement | null>(null);
 
   const harmonicWeightsText = useMemo(
     () => (formData.harmonic_weights?.length ? formData.harmonic_weights.join(', ') : ''),
@@ -145,8 +146,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    resizeCanvas(drawCanvasHeight);
-  }, [drawCanvasHeight]);
+    const wrap = drawCanvasWrapRef.current;
+    if (!wrap || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const nextHeight = Math.round(entry.contentRect.height);
+      setDrawCanvasHeight((current) => {
+        if (current === nextHeight) return current;
+        resizeCanvas(nextHeight);
+        return nextHeight;
+      });
+    });
+
+    observer.observe(wrap);
+    resizeCanvas(Math.round(wrap.getBoundingClientRect().height));
+
+    return () => observer.disconnect();
+  }, []);
 
   const effectiveFormData = useMemo(
     () => ({
@@ -210,19 +228,11 @@ export default function App() {
               <div className="draw-panel">
                 <div className="draw-panel__header">
                   <h3 className="authoring-title">Рисование</h3>
-                  <label className="draw-panel__height-control">
-                    <span>Высота: {drawCanvasHeight}px</span>
-                    <input
-                      type="range"
-                      min={340}
-                      max={1200}
-                      step={20}
-                      value={drawCanvasHeight}
-                      onChange={(e) => setDrawCanvasHeight(Number(e.target.value))}
-                    />
-                  </label>
+                  <span className="draw-panel__height-label">Высота: {drawCanvasHeight}px</span>
                 </div>
-                <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                <div ref={drawCanvasWrapRef} className="draw-canvas-wrap">
+                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                </div>
               </div>
             </section>
           ) : null}

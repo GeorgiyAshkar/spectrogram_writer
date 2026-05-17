@@ -110,16 +110,18 @@ textarea {
 }
 
 
-.draw-panel__height-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+.draw-panel__height-label {
   color: #5f4633;
   font-size: 0.92rem;
 }
 
-.draw-panel__height-control input[type='range'] {
-  width: 180px;
+.draw-canvas-wrap {
+  width: 100%;
+  min-height: 340px;
+  max-height: 1200px;
+  height: 340px;
+  resize: vertical;
+  overflow: hidden;
 }
 .draw-canvas {
   width: 100%;
