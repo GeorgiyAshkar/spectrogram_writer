@@ -4,12 +4,14 @@ type AudioPlayerProps = {
   audioUrl: string | null;
   isPreparingAudio: boolean;
   onRequestAudio: () => Promise<void>;
+  onToggleEraser: () => void;
+  eraserEnabled: boolean;
   onClearCanvas: () => void;
 };
 
 const WAVE_SAMPLES = 220;
 
-export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClearCanvas }: AudioPlayerProps) {
+export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onClearCanvas }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
@@ -158,6 +160,15 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
         Скачать WAV
       </button>
 
+
+      <button
+        type="button"
+        className="button-secondary draw-panel__clear-btn header-player__eraser"
+        onClick={onToggleEraser}
+        aria-pressed={eraserEnabled}
+      >
+        {eraserEnabled ? 'Ластик: ВКЛ' : 'Ластик'}
+      </button>
       <button
         type="button"
         className="button-secondary draw-panel__clear-btn header-player__clear"

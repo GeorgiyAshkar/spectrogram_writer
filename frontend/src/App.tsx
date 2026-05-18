@@ -27,6 +27,8 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
+  const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
+  const [eraserEnabled, setEraserEnabled] = useState(false);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'info') => {
     setActivePanel(next);
@@ -36,6 +38,7 @@ export default function App() {
   };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
+  const drawCanvasWrapRef = useRef<HTMLDivElement | null>(null);
 
   const harmonicWeightsText = useMemo(
     () => (formData.harmonic_weights?.length ? formData.harmonic_weights.join(', ') : ''),
@@ -88,6 +91,29 @@ export default function App() {
     updateField('image_base64', base64);
   };
 
+  const resizeCanvas = (nextHeight: number) => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const clampedHeight = Math.min(1200, Math.max(340, Math.round(nextHeight)));
+    if (canvas.height === clampedHeight) return;
+
+    const snapshot = document.createElement('canvas');
+    snapshot.width = canvas.width;
+    snapshot.height = canvas.height;
+    const snapshotCtx = snapshot.getContext('2d');
+    if (snapshotCtx) {
+      snapshotCtx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.height = clampedHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(snapshot, 0, 0);
+    syncCanvasToPayload();
+  };
+
   const clearCanvas = () => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
@@ -108,7 +134,7 @@ export default function App() {
     if (!ctx) return;
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = eraserEnabled ? '#ffffff' : '#000000';
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.beginPath();
@@ -116,14 +142,41 @@ export default function App() {
     updateField('image_base64', canvas.toDataURL('image/png').split(',')[1] ?? null);
   };
 
+  const toggleEraser = () => {
+    setEraserEnabled((current) => !current);
+  };
+
   useEffect(() => {
     clearCanvas();
+  }, []);
+
+  useEffect(() => {
+    const wrap = drawCanvasWrapRef.current;
+    if (!wrap || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const nextHeight = Math.round(entry.contentRect.height);
+      setDrawCanvasHeight((current) => {
+        if (current === nextHeight) return current;
+        resizeCanvas(nextHeight);
+        return nextHeight;
+      });
+    });
+
+    observer.observe(wrap);
+    resizeCanvas(Math.round(wrap.getBoundingClientRect().height));
+
+    return () => observer.disconnect();
   }, []);
 
   const effectiveFormData = useMemo(
     () => ({
       ...formData,
       image_base64: inputSource === 'text' ? null : formData.image_base64,
+      leading_silence: formData.orientation === 'freq-x' ? 0 : formData.leading_silence,
+      trailing_silence: formData.orientation === 'freq-x' ? 0 : formData.trailing_silence,
     }),
     [formData, inputSource],
   );
@@ -148,6 +201,8 @@ export default function App() {
             audioUrl={audioUrl}
             isPreparingAudio={isDownloading}
             onRequestAudio={playAudio}
+            onToggleEraser={toggleEraser}
+            eraserEnabled={eraserEnabled}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
           />
           {error ? <p className="error-banner">{error}</p> : null}
@@ -180,7 +235,13 @@ export default function App() {
           {activePanel === 'draw' ? (
             <section className="panel panel--fill">
               <div className="draw-panel">
-                <canvas ref={drawCanvasRef} width={960} height={340} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                <div className="draw-panel__header">
+                  <h3 className="authoring-title">Рисование</h3>
+                  <span className="draw-panel__height-label">Высота: {drawCanvasHeight}px</span>
+                </div>
+                <div ref={drawCanvasWrapRef} className="draw-canvas-wrap">
+                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                </div>
               </div>
             </section>
           ) : null}
