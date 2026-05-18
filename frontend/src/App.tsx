@@ -28,6 +28,7 @@ export default function App() {
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
   const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
+  const [eraserEnabled, setEraserEnabled] = useState(false);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'info') => {
     setActivePanel(next);
@@ -133,12 +134,16 @@ export default function App() {
     if (!ctx) return;
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = eraserEnabled ? '#ffffff' : '#000000';
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(x, y);
     updateField('image_base64', canvas.toDataURL('image/png').split(',')[1] ?? null);
+  };
+
+  const toggleEraser = () => {
+    setEraserEnabled((current) => !current);
   };
 
   useEffect(() => {
@@ -170,6 +175,8 @@ export default function App() {
     () => ({
       ...formData,
       image_base64: inputSource === 'text' ? null : formData.image_base64,
+      leading_silence: formData.orientation === 'freq-x' ? 0 : formData.leading_silence,
+      trailing_silence: formData.orientation === 'freq-x' ? 0 : formData.trailing_silence,
     }),
     [formData, inputSource],
   );
@@ -194,6 +201,8 @@ export default function App() {
             audioUrl={audioUrl}
             isPreparingAudio={isDownloading}
             onRequestAudio={playAudio}
+            onToggleEraser={toggleEraser}
+            eraserEnabled={eraserEnabled}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
           />
           {error ? <p className="error-banner">{error}</p> : null}
