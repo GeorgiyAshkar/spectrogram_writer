@@ -4,12 +4,15 @@ type AudioPlayerProps = {
   audioUrl: string | null;
   isPreparingAudio: boolean;
   onRequestAudio: () => Promise<void>;
+  onToggleEraser: () => void;
+  eraserEnabled: boolean;
+  onDownloadSnapshot: (baseName: string) => void;
   onClearCanvas: () => void;
 };
 
 const WAVE_SAMPLES = 220;
 
-export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClearCanvas }: AudioPlayerProps) {
+export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onDownloadSnapshot, onClearCanvas }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
@@ -109,14 +112,22 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
 
   const progress = useMemo(() => (duration > 0 ? (position / duration) * 100 : 0), [duration, position]);
 
+    const buildTimestampFileName = () => {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `spectrogram_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  };
+
   const downloadWav = () => {
     if (!audioUrl) return;
+    const baseName = buildTimestampFileName();
     const link = document.createElement('a');
     link.href = audioUrl;
-    link.download = 'spectrogram.wav';
+    link.download = `${baseName}.wav`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    onDownloadSnapshot(baseName);
   };
 
   return (
@@ -158,6 +169,15 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onClea
         Скачать WAV
       </button>
 
+
+      <button
+        type="button"
+        className="button-secondary draw-panel__clear-btn header-player__eraser"
+        onClick={onToggleEraser}
+        aria-pressed={eraserEnabled}
+      >
+        {eraserEnabled ? 'Ластик: ВКЛ' : 'Ластик'}
+      </button>
       <button
         type="button"
         className="button-secondary draw-panel__clear-btn header-player__clear"
