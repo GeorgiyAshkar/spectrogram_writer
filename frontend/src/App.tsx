@@ -25,16 +25,53 @@ export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('draw');
   const [showSettings, setShowSettings] = useState(false);
-  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'info'>('draw');
+  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'music' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
   const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
   const [eraserEnabled, setEraserEnabled] = useState(false);
+  const [musicSequence, setMusicSequence] = useState<string[]>([]);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
-  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'info') => {
+  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
     if (next === 'text' || next === 'upload' || next === 'draw') {
       setInputSource(next);
     }
+  };
+  const noteFreq: Record<string, number> = {
+    C3: 130.81, 'C#3': 138.59, D3: 146.83, 'D#3': 155.56, E3: 164.81, F3: 174.61, 'F#3': 185, G3: 196, 'G#3': 207.65, A3: 220, 'A#3': 233.08, B3: 246.94,
+    C4: 261.63, 'C#4': 277.18, D4: 293.66, 'D#4': 311.13, E4: 329.63, F4: 349.23, 'F#4': 369.99, G4: 392, 'G#4': 415.3, A4: 440, 'A#4': 466.16, B4: 493.88,
+    C5: 523.25, 'C#5': 554.37, D5: 587.33, 'D#5': 622.25, E5: 659.25, F5: 698.46, 'F#5': 739.99, G5: 783.99, 'G#5': 830.61, A5: 880, 'A#5': 932.33, B5: 987.77,
+  };
+  const octaves = [3, 4, 5];
+  const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const blackKeys = ['C#', 'D#', 'F#', 'G#', 'A#'];
+
+  const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
+  const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
+
+  const playMusicSequence = async () => {
+    if (!musicSequence.length || isMusicPlaying) return;
+    setIsMusicPlaying(true);
+    const ctx = new AudioContext();
+    for (const note of musicSequence) {
+      const freq = noteFreq[note];
+      if (!freq) continue;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.42);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, 430));
+    }
+    await ctx.close();
+    setIsMusicPlaying(false);
   };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
@@ -210,13 +247,46 @@ export default function App() {
         <section className="panel playback-panel">
           <AudioPlayer
             audioUrl={audioUrl}
-            isPreparingAudio={isDownloading}
+            isPreparingAudio={isDownloading || isMusicPlaying}
             onRequestAudio={playAudio}
             onToggleEraser={toggleEraser}
             eraserEnabled={eraserEnabled}
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
+            musicModeEnabled={activePanel === 'music'}
+            musicSequence={musicSequence}
+            onRemoveLastMusicNote={removeLastMusicNote}
+            onPlayMusicSequence={playMusicSequence}
           />
+          {activePanel === 'music' ? (
+            <div className="music-panel">
+              <div className="music-staff" aria-label="Нотный стан">
+                {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
+                <div className="music-staff__notes">
+                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note">{note}</span>)}
+                </div>
+              </div>
+              <div className="music-octaves">
+                {octaves.map((octave) => (
+                  <div key={octave} className="music-octave">
+                    <div className="music-octave__title">Октава {octave}</div>
+                    <div className="music-keys music-keys--white">
+                      {whiteKeys.map((key) => {
+                        const note = `${key}${octave}`;
+                        return <button key={note} type="button" className="music-key music-key--white" onClick={() => addMusicNote(note)}>{note}</button>;
+                      })}
+                    </div>
+                    <div className="music-keys music-keys--black">
+                      {blackKeys.map((key) => {
+                        const note = `${key}${octave}`;
+                        return <button key={note} type="button" className="music-key music-key--black" onClick={() => addMusicNote(note)}>{note}</button>;
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="error-banner">{error}</p> : null}
         </section>
         <main className="workspace-grid">
