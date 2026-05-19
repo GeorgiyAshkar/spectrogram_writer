@@ -55,7 +55,7 @@ export default function App() {
     'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
   ];
   const noteYOffset = noteOrder.reduce<Record<string, number>>((acc, note, idx) => {
-    acc[note] = 108 - idx * 3;
+    acc[note] = 8 + idx * 2.7;
     return acc;
   }, {});
 
@@ -79,7 +79,8 @@ export default function App() {
         const envIn = Math.min(1, t / 0.03);
         const envOut = Math.max(0, (noteDuration - t) / 0.08);
         const env = Math.min(envIn, envOut);
-        pcm[i] += Math.sin(phase) * env * 0.42;
+        const loudnessComp = Math.max(0.28, Math.min(0.52, 0.42 * Math.pow(220 / freq, 0.2)));
+        pcm[i] += Math.sin(phase) * env * loudnessComp;
       }
     });
 
@@ -324,18 +325,19 @@ export default function App() {
                 {octaves.map((octave) => (
                   <div key={octave} className="music-octave">
                     <div className="music-octave__title">Октава {octave}</div>
-                    <div className="music-keys music-keys--white">
-                      {whiteKeys.map((key) => {
-                        const note = `${key}${octave}`;
-                        return <button key={note} type="button" className="music-key music-key--white" onClick={() => addMusicNote(note)}>{note}</button>;
-                      })}
-                    </div>
-                    <div className="music-keys music-keys--black">
-                      {['C#', 'D#', '', 'F#', 'G#', 'A#', ''].map((key, index) => {
-                        if (!key) return <span key={`gap-${octave}-${index}`} className="music-key-gap" aria-hidden="true" />;
-                        const note = `${key}${octave}`;
-                        return <button key={note} type="button" className="music-key music-key--black" onClick={() => addMusicNote(note)}>{note}</button>;
-                      })}
+                    <div className="music-piano">
+                      <div className="music-piano__white">
+                        {whiteKeys.map((key) => {
+                          const note = `${key}${octave}`;
+                          return <button key={note} type="button" className="music-key music-key--white" onClick={() => addMusicNote(note)}>{note}</button>;
+                        })}
+                      </div>
+                      <div className="music-piano__black">
+                        {[{ key: 'C#', col: 1 }, { key: 'D#', col: 2 }, { key: 'F#', col: 4 }, { key: 'G#', col: 5 }, { key: 'A#', col: 6 }].map((item) => {
+                          const note = `${item.key}${octave}`;
+                          return <button key={note} type="button" className="music-key music-key--black" style={{ gridColumn: item.col }} onClick={() => addMusicNote(note)}>{note}</button>;
+                        })}
+                      </div>
                     </div>
                   </div>
                 ))}
