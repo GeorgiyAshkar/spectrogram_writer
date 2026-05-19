@@ -97,6 +97,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
 
   const togglePlay = async () => {
     if (musicModeEnabled) {
+      setPendingAutoplay(true);
       await onPlayMusicSequence();
       return;
     }
@@ -178,21 +179,25 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
       </button>
 
 
-      <button
-        type="button"
-        className="button-secondary draw-panel__clear-btn header-player__eraser"
-        onClick={onToggleEraser}
-        aria-pressed={eraserEnabled}
-      >
-        {eraserEnabled ? 'Ластик: ВКЛ' : 'Ластик'}
-      </button>
-      <button
-        type="button"
-        className="button-secondary draw-panel__clear-btn header-player__clear"
-        onClick={onClearCanvas}
-      >
-        Очистить холст
-      </button>
+      {!musicModeEnabled ? (
+        <>
+          <button
+            type="button"
+            className="button-secondary draw-panel__clear-btn header-player__eraser"
+            onClick={onToggleEraser}
+            aria-pressed={eraserEnabled}
+          >
+            {eraserEnabled ? 'Ластик: ВКЛ' : 'Ластик'}
+          </button>
+          <button
+            type="button"
+            className="button-secondary draw-panel__clear-btn header-player__clear"
+            onClick={onClearCanvas}
+          >
+            Очистить холст
+          </button>
+        </>
+      ) : null}
       {musicModeEnabled ? (
         <button
           type="button"

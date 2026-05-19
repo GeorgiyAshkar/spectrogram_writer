@@ -31,6 +31,7 @@ export default function App() {
   const [eraserEnabled, setEraserEnabled] = useState(false);
   const [musicSequence, setMusicSequence] = useState<string[]>([]);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -45,7 +46,72 @@ export default function App() {
   };
   const octaves = [3, 4, 5];
   const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-  const blackKeys = ['C#', 'D#', 'F#', 'G#', 'A#'];
+
+
+
+  const noteOrder = [
+    'C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3',
+    'C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4',
+    'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
+  ];
+  const noteYOffset = noteOrder.reduce<Record<string, number>>((acc, note, idx) => {
+    acc[note] = 108 - idx * 3;
+    return acc;
+  }, {});
+
+  const buildMusicWav = async () => {
+    if (!musicSequence.length) return null;
+    const sampleRate = 44100;
+    const noteDuration = 0.42;
+    const tail = 0.06;
+    const totalDuration = musicSequence.length * noteDuration + tail;
+    const totalSamples = Math.floor(totalDuration * sampleRate);
+    const pcm = new Float32Array(totalSamples);
+
+    musicSequence.forEach((note, noteIndex) => {
+      const freq = noteFreq[note];
+      if (!freq) return;
+      const startSample = Math.floor(noteIndex * noteDuration * sampleRate);
+      const endSample = Math.min(totalSamples, startSample + Math.floor(noteDuration * sampleRate));
+      for (let i = startSample; i < endSample; i += 1) {
+        const t = (i - startSample) / sampleRate;
+        const phase = 2 * Math.PI * freq * t;
+        const envIn = Math.min(1, t / 0.03);
+        const envOut = Math.max(0, (noteDuration - t) / 0.08);
+        const env = Math.min(envIn, envOut);
+        pcm[i] += Math.sin(phase) * env * 0.42;
+      }
+    });
+
+    const bytes = new ArrayBuffer(44 + totalSamples * 2);
+    const view = new DataView(bytes);
+    const writeStr = (offset: number, value: string) => {
+      for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + totalSamples * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, totalSamples * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < totalSamples; i += 1) {
+      const sample = Math.max(-1, Math.min(1, pcm[i]));
+      view.setInt16(offset, sample * 32767, true);
+      offset += 2;
+    }
+
+    return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+  };
 
   const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
   const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
@@ -53,25 +119,13 @@ export default function App() {
   const playMusicSequence = async () => {
     if (!musicSequence.length || isMusicPlaying) return;
     setIsMusicPlaying(true);
-    const ctx = new AudioContext();
-    for (const note of musicSequence) {
-      const freq = noteFreq[note];
-      if (!freq) continue;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.42);
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => setTimeout(resolve, 430));
+    try {
+      if (musicAudioUrl) URL.revokeObjectURL(musicAudioUrl);
+      const nextUrl = await buildMusicWav();
+      setMusicAudioUrl(nextUrl);
+    } finally {
+      setIsMusicPlaying(false);
     }
-    await ctx.close();
-    setIsMusicPlaying(false);
   };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
@@ -246,7 +300,7 @@ export default function App() {
         />
         <section className="panel playback-panel">
           <AudioPlayer
-            audioUrl={audioUrl}
+            audioUrl={activePanel === 'music' ? musicAudioUrl : audioUrl}
             isPreparingAudio={isDownloading || isMusicPlaying}
             onRequestAudio={playAudio}
             onToggleEraser={toggleEraser}
@@ -263,7 +317,7 @@ export default function App() {
               <div className="music-staff" aria-label="Нотный стан">
                 {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
                 <div className="music-staff__notes">
-                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note">{note}</span>)}
+                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px` }}>{note}</span>)}
                 </div>
               </div>
               <div className="music-octaves">
@@ -277,7 +331,8 @@ export default function App() {
                       })}
                     </div>
                     <div className="music-keys music-keys--black">
-                      {blackKeys.map((key) => {
+                      {['C#', 'D#', '', 'F#', 'G#', 'A#', ''].map((key, index) => {
+                        if (!key) return <span key={`gap-${octave}-${index}`} className="music-key-gap" aria-hidden="true" />;
                         const note = `${key}${octave}`;
                         return <button key={note} type="button" className="music-key music-key--black" onClick={() => addMusicNote(note)}>{note}</button>;
                       })}

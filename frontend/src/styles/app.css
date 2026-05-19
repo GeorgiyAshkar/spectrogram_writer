@@ -821,23 +821,48 @@ button:disabled {
 
 .music-staff__notes {
   position: absolute;
-  top: 10px;
   left: 14px;
   right: 14px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  bottom: 8px;
+  height: 106px;
 }
 
 .music-staff__note {
+  position: absolute;
+  transform: translateX(-50%);
   background: #f3e5d3;
   border: 1px solid #c7b8a4;
   color: #5f4633;
   border-radius: 999px;
   padding: 2px 8px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
+
+.music-staff__note:nth-child(1) { left: 4%; }
+.music-staff__note:nth-child(2) { left: 8%; }
+.music-staff__note:nth-child(3) { left: 12%; }
+.music-staff__note:nth-child(4) { left: 16%; }
+.music-staff__note:nth-child(5) { left: 20%; }
+.music-staff__note:nth-child(6) { left: 24%; }
+.music-staff__note:nth-child(7) { left: 28%; }
+.music-staff__note:nth-child(8) { left: 32%; }
+.music-staff__note:nth-child(9) { left: 36%; }
+.music-staff__note:nth-child(10) { left: 40%; }
+.music-staff__note:nth-child(11) { left: 44%; }
+.music-staff__note:nth-child(12) { left: 48%; }
+.music-staff__note:nth-child(13) { left: 52%; }
+.music-staff__note:nth-child(14) { left: 56%; }
+.music-staff__note:nth-child(15) { left: 60%; }
+.music-staff__note:nth-child(16) { left: 64%; }
+.music-staff__note:nth-child(17) { left: 68%; }
+.music-staff__note:nth-child(18) { left: 72%; }
+.music-staff__note:nth-child(19) { left: 76%; }
+.music-staff__note:nth-child(20) { left: 80%; }
+.music-staff__note:nth-child(21) { left: 84%; }
+.music-staff__note:nth-child(22) { left: 88%; }
+.music-staff__note:nth-child(23) { left: 92%; }
+.music-staff__note:nth-child(24) { left: 96%; }
 
 .music-octaves {
   display: grid;
@@ -859,13 +884,13 @@ button:disabled {
 
 .music-keys {
   display: grid;
-  gap: 6px;
+  gap: 2px;
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .music-keys--black {
-  margin-top: 6px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: -2px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .music-key {
@@ -885,3 +910,7 @@ button:disabled {
   color: #fff;
   border: 1px solid #3e2d21;
 }
+
+.music-key-gap { display: block; height: 1px; }
+.music-key--white { min-height: 62px; border-radius: 0 0 6px 6px; }
+.music-key--black { min-height: 44px; margin: 0 8px; border-radius: 0 0 5px 5px; z-index: 2; position: relative; }
