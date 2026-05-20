@@ -1,8 +1,8 @@
 {
   "text": "ПОЗЫВНОЙ DE SPECTROGRAM\n❤️ 😊 😢 😡 ☀️ ☁️ ⚡",
   "fmin": 500,
-  "fmax": 3700,
-  "signal_duration": 30,
+  "fmax": 3500,
+  "signal_duration": 60,
   "leading_silence": 0.5,
   "trailing_silence": 0.5,
   "samplerate": 8000,

@@ -11,7 +11,7 @@ type AudioPlayerProps = {
   musicModeEnabled: boolean;
   musicSequence: string[];
   onRemoveLastMusicNote: () => void;
-  onPlayMusicSequence: () => Promise<void>;
+  onPlayMusicSequence: () => Promise<string | null>;
 };
 
 const WAVE_SAMPLES = 220;
@@ -96,13 +96,21 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
   }, [audioUrl]);
 
   const togglePlay = async () => {
-    if (musicModeEnabled) {
-      setPendingAutoplay(true);
-      await onPlayMusicSequence();
-      return;
-    }
     const audio = audioRef.current;
     if (!audio) return;
+
+    if (musicModeEnabled) {
+      if (audioUrl) {
+        if (audio.paused) await audio.play();
+        else audio.pause();
+        return;
+      }
+      const nextUrl = await onPlayMusicSequence();
+      if (!nextUrl) return;
+      audio.src = nextUrl;
+      await audio.play();
+      return;
+    }
     if (!audioUrl) {
       setPendingAutoplay(true);
       await onRequestAudio();
@@ -205,7 +213,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
           onClick={onRemoveLastMusicNote}
           disabled={musicSequence.length === 0}
         >
-          Отменить ноту
+          Отменить шаг
         </button>
       ) : null}
 
