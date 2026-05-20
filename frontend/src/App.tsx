@@ -28,7 +28,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'music' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
-  const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
+  const [drawCanvasHeight, setDrawCanvasHeight] = useState(950);
   const [eraserEnabled, setEraserEnabled] = useState(false);
   const [musicSequence, setMusicSequence] = useState<string[]>([]);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -196,7 +196,7 @@ export default function App() {
   const resizeCanvas = (nextHeight: number) => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
-    const clampedHeight = Math.min(1200, Math.max(340, Math.round(nextHeight)));
+    const clampedHeight = Math.min(1200, Math.max(950, Math.round(nextHeight)));
     if (canvas.height === clampedHeight) return;
 
     const snapshot = document.createElement('canvas');
@@ -269,6 +269,14 @@ export default function App() {
   useEffect(() => {
     clearCanvas();
   }, []);
+
+  useEffect(() => {
+    if (activePanel !== 'draw') {
+      drawState.current.active = false;
+      drawState.current.lastX = null;
+      drawState.current.lastY = null;
+    }
+  }, [activePanel]);
 
   useEffect(() => {
     const wrap = drawCanvasWrapRef.current;
@@ -409,7 +417,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const rect = e.currentTarget.getBoundingClientRect(); if (rect.width > 0 && rect.height > 0) { drawState.current.lastX = (e.clientX - rect.left) * (e.currentTarget.width / rect.width); drawState.current.lastY = (e.clientY - rect.top) * (e.currentTarget.height / rect.height); } drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); } }} />
+                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); e.currentTarget.setPointerCapture(e.pointerId); drawState.current.active = true; const rect = e.currentTarget.getBoundingClientRect(); if (rect.width > 0 && rect.height > 0) { drawState.current.lastX = (e.clientX - rect.left) * (e.currentTarget.width / rect.width); drawState.current.lastY = (e.clientY - rect.top) * (e.currentTarget.height / rect.height); } drawAt(e); }} onPointerMove={drawAt} onPointerUp={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); }} onLostPointerCapture={() => { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); } }} />
                 </div>
               </div>
             </section>
