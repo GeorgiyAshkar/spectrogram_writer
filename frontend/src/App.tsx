@@ -144,7 +144,7 @@ export default function App() {
   const formatGridValue = (value: number) => (value >= 1000 ? `${(value / 1000).toFixed(1)}k` : Math.round(value).toString());
   const frequencyTicks = Array.from({ length: gridSteps + 1 }, (_, i) => {
     const ratio = i / gridSteps;
-    const freq = formData.fmax - ratio * (formData.fmax - formData.fmin);
+    const freq = formData.fmin + ratio * (formData.fmax - formData.fmin);
     return { ratio, label: `${formatGridValue(freq)} Hz` };
   });
   const timeTicks = Array.from({ length: gridSteps + 1 }, (_, i) => {
