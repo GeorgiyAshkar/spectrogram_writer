@@ -96,13 +96,19 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
   }, [audioUrl]);
 
   const togglePlay = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (musicModeEnabled) {
+      if (audioUrl) {
+        if (audio.paused) await audio.play();
+        else audio.pause();
+        return;
+      }
       setPendingAutoplay(true);
       await onPlayMusicSequence();
       return;
     }
-    const audio = audioRef.current;
-    if (!audio) return;
     if (!audioUrl) {
       setPendingAutoplay(true);
       await onRequestAudio();
@@ -205,7 +211,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
           onClick={onRemoveLastMusicNote}
           disabled={musicSequence.length === 0}
         >
-          Отменить ноту
+          Отменить шаг
         </button>
       ) : null}
 

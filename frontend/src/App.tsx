@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
+import customNoteFrequencies from '../../note_frequencies.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
 import { AudioPlayer } from './components/AudioPlayer';
@@ -27,11 +28,12 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'music' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
-  const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
+  const [drawCanvasHeight, setDrawCanvasHeight] = useState(950);
   const [eraserEnabled, setEraserEnabled] = useState(false);
   const [musicSequence, setMusicSequence] = useState<string[]>([]);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
+  const MUSIC_REST_TOKEN = 'REST';
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -42,20 +44,7 @@ export default function App() {
   const octaves = [1, 2, 3, 4, 5];
   const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-  const buildNoteFrequencyMap = () => {
-    const map: Record<string, number> = {};
-    const semitones: Record<string, number> = {
-      C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11,
-    };
-    for (let octave = 1; octave <= 5; octave += 1) {
-      Object.entries(semitones).forEach(([note, semitone]) => {
-        const midi = (octave + 1) * 12 + semitone;
-        map[`${note}${octave}`] = 440 * 2 ** ((midi - 69) / 12);
-      });
-    }
-    return map;
-  };
-  const noteFreq = buildNoteFrequencyMap();
+  const noteFreq = customNoteFrequencies as Record<string, number>;
 
 
 
@@ -77,6 +66,7 @@ export default function App() {
     const pcm = new Float32Array(totalSamples);
 
     musicSequence.forEach((note, noteIndex) => {
+      if (note === MUSIC_REST_TOKEN) return;
       const freq = noteFreq[note];
       if (!freq) return;
       const startSample = Math.floor(noteIndex * noteDuration * sampleRate);
@@ -122,8 +112,25 @@ export default function App() {
     return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
   };
 
-  const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
-  const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
+  const invalidateMusicAudio = () => {
+    setMusicAudioUrl((currentUrl) => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      return null;
+    });
+  };
+
+  const addMusicNote = (note: string) => {
+    invalidateMusicAudio();
+    setMusicSequence((current) => [...current, note]);
+  };
+  const addMusicPause = () => {
+    invalidateMusicAudio();
+    setMusicSequence((current) => [...current, MUSIC_REST_TOKEN]);
+  };
+  const removeLastMusicNote = () => {
+    invalidateMusicAudio();
+    setMusicSequence((current) => current.slice(0, -1));
+  };
 
   const playMusicSequence = async () => {
     if (!musicSequence.length || isMusicPlaying) return;
@@ -136,8 +143,9 @@ export default function App() {
       setIsMusicPlaying(false);
     }
   };
+
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const drawState = useRef<{ active: boolean }>({ active: false });
+  const drawState = useRef<{ active: boolean; lastX: number | null; lastY: number | null }>({ active: false, lastX: null, lastY: null });
   const drawCanvasWrapRef = useRef<HTMLDivElement | null>(null);
 
   const harmonicWeightsText = useMemo(
@@ -149,6 +157,17 @@ export default function App() {
   const showCustomWeights =
     formData.instrument_type === 'custom' || formData.harmonic_decay_mode === 'custom_list';
   const showFreqXFlowModes = formData.orientation === 'freq-x';
+  const gridSteps = 8;
+  const formatGridValue = (value: number) => (value >= 1000 ? `${(value / 1000).toFixed(1)}k` : Math.round(value).toString());
+  const frequencyTicks = Array.from({ length: gridSteps + 1 }, (_, i) => {
+    const ratio = i / gridSteps;
+    const freq = formData.fmin + ratio * (formData.fmax - formData.fmin);
+    return { ratio, label: `${formatGridValue(freq)} Hz` };
+  });
+  const timeTicks = Array.from({ length: gridSteps + 1 }, (_, i) => {
+    const ratio = i / gridSteps;
+    return { ratio, label: `${(formData.signal_duration * ratio).toFixed(1)} s` };
+  });
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
     setFormData((current) => ({ ...current, [key]: value }));
@@ -228,6 +247,7 @@ export default function App() {
     const canvas = drawCanvasRef.current;
     if (!canvas || !drawState.current.active) return;
     const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
     const x = (event.clientX - rect.left) * (canvas.width / rect.width);
     const y = (event.clientY - rect.top) * (canvas.height / rect.height);
     const ctx = canvas.getContext('2d');
@@ -235,10 +255,16 @@ export default function App() {
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     ctx.strokeStyle = eraserEnabled ? '#ffffff' : '#000000';
+    if (drawState.current.lastX === null || drawState.current.lastY === null) {
+      drawState.current.lastX = x;
+      drawState.current.lastY = y;
+    }
+    ctx.beginPath();
+    ctx.moveTo(drawState.current.lastX, drawState.current.lastY);
     ctx.lineTo(x, y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    drawState.current.lastX = x;
+    drawState.current.lastY = y;
     updateField('image_base64', canvas.toDataURL('image/png').split(',')[1] ?? null);
   };
 
@@ -260,6 +286,14 @@ export default function App() {
   useEffect(() => {
     clearCanvas();
   }, []);
+
+  useEffect(() => {
+    if (activePanel !== 'draw') {
+      drawState.current.active = false;
+      drawState.current.lastX = null;
+      drawState.current.lastY = null;
+    }
+  }, [activePanel]);
 
   useEffect(() => {
     const wrap = drawCanvasWrapRef.current;
@@ -326,7 +360,7 @@ export default function App() {
               <div className="music-staff" aria-label="Нотный стан">
                 {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
                 <div className="music-staff__notes">
-                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px`, left: `${4 + idx * 3.2}%` }}>{note}</span>)}
+                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className={`music-staff__note ${note === MUSIC_REST_TOKEN ? 'music-staff__note--rest' : ''}`} style={{ bottom: `${noteYOffset[note] ?? 12}px`, left: `${4 + idx * 3.2}%` }}>{note === MUSIC_REST_TOKEN ? '⏸' : note}</span>)}
                 </div>
               </div>
               <div className="music-octaves">
@@ -349,6 +383,7 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                <button type="button" className="button-secondary music-rest-btn" onClick={addMusicPause}>Добавить паузу</button>
               </div>
             </div>
           ) : null}
@@ -387,7 +422,19 @@ export default function App() {
                   <span className="draw-panel__height-label">Высота: {drawCanvasHeight}px</span>
                 </div>
                 <div ref={drawCanvasWrapRef} className="draw-canvas-wrap">
-                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                  <div className="draw-grid" aria-hidden>
+                    {(formData.orientation === 'time-x' ? frequencyTicks : timeTicks).map((tick) => (
+                      <div key={`h-${tick.ratio}`} className="draw-grid__line draw-grid__line--horizontal" style={{ top: `${tick.ratio * 100}%` }}>
+                        <span className="draw-grid__label draw-grid__label--left">{tick.label}</span>
+                      </div>
+                    ))}
+                    {(formData.orientation === 'time-x' ? timeTicks : frequencyTicks).map((tick) => (
+                      <div key={`v-${tick.ratio}`} className="draw-grid__line draw-grid__line--vertical" style={{ left: `${tick.ratio * 100}%` }}>
+                        <span className="draw-grid__label draw-grid__label--bottom">{tick.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); e.currentTarget.setPointerCapture(e.pointerId); drawState.current.active = true; const rect = e.currentTarget.getBoundingClientRect(); if (rect.width > 0 && rect.height > 0) { drawState.current.lastX = (e.clientX - rect.left) * (e.currentTarget.width / rect.width); drawState.current.lastY = (e.clientY - rect.top) * (e.currentTarget.height / rect.height); } drawAt(e); }} onPointerMove={drawAt} onPointerUp={(e) => { e.currentTarget.releasePointerCapture(e.pointerId); drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); }} onLostPointerCapture={() => { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); } }} />
                 </div>
               </div>
             </section>
