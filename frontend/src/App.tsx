@@ -112,9 +112,25 @@ export default function App() {
     return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
   };
 
-  const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
-  const addMusicPause = () => setMusicSequence((current) => [...current, MUSIC_REST_TOKEN]);
-  const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
+  const invalidateMusicAudio = () => {
+    setMusicAudioUrl((currentUrl) => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      return null;
+    });
+  };
+
+  const addMusicNote = (note: string) => {
+    invalidateMusicAudio();
+    setMusicSequence((current) => [...current, note]);
+  };
+  const addMusicPause = () => {
+    invalidateMusicAudio();
+    setMusicSequence((current) => [...current, MUSIC_REST_TOKEN]);
+  };
+  const removeLastMusicNote = () => {
+    invalidateMusicAudio();
+    setMusicSequence((current) => current.slice(0, -1));
+  };
 
   const playMusicSequence = async () => {
     if (!musicSequence.length || isMusicPlaying) return;
@@ -127,12 +143,6 @@ export default function App() {
       setIsMusicPlaying(false);
     }
   };
-
-  useEffect(() => {
-    if (!musicAudioUrl) return;
-    URL.revokeObjectURL(musicAudioUrl);
-    setMusicAudioUrl(null);
-  }, [musicSequence, musicAudioUrl]);
 
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean; lastX: number | null; lastY: number | null }>({ active: false, lastX: null, lastY: null });
