@@ -127,6 +127,13 @@ export default function App() {
       setIsMusicPlaying(false);
     }
   };
+
+  useEffect(() => {
+    if (!musicAudioUrl) return;
+    URL.revokeObjectURL(musicAudioUrl);
+    setMusicAudioUrl(null);
+  }, [musicSequence, musicAudioUrl]);
+
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean; lastX: number | null; lastY: number | null }>({ active: false, lastX: null, lastY: null });
   const drawCanvasWrapRef = useRef<HTMLDivElement | null>(null);
