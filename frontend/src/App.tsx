@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
+import customNoteFrequencies from '../../note_frequencies.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
 import { AudioPlayer } from './components/AudioPlayer';
@@ -32,6 +33,7 @@ export default function App() {
   const [musicSequence, setMusicSequence] = useState<string[]>([]);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
+  const MUSIC_REST_TOKEN = 'REST';
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -42,20 +44,7 @@ export default function App() {
   const octaves = [1, 2, 3, 4, 5];
   const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-  const buildNoteFrequencyMap = () => {
-    const map: Record<string, number> = {};
-    const semitones: Record<string, number> = {
-      C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11,
-    };
-    for (let octave = 1; octave <= 5; octave += 1) {
-      Object.entries(semitones).forEach(([note, semitone]) => {
-        const midi = (octave + 1) * 12 + semitone;
-        map[`${note}${octave}`] = 440 * 2 ** ((midi - 69) / 12);
-      });
-    }
-    return map;
-  };
-  const noteFreq = buildNoteFrequencyMap();
+  const noteFreq = customNoteFrequencies as Record<string, number>;
 
 
 
@@ -77,6 +66,7 @@ export default function App() {
     const pcm = new Float32Array(totalSamples);
 
     musicSequence.forEach((note, noteIndex) => {
+      if (note === MUSIC_REST_TOKEN) return;
       const freq = noteFreq[note];
       if (!freq) return;
       const startSample = Math.floor(noteIndex * noteDuration * sampleRate);
@@ -123,6 +113,7 @@ export default function App() {
   };
 
   const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
+  const addMusicPause = () => setMusicSequence((current) => [...current, MUSIC_REST_TOKEN]);
   const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
 
   const playMusicSequence = async () => {
@@ -149,6 +140,17 @@ export default function App() {
   const showCustomWeights =
     formData.instrument_type === 'custom' || formData.harmonic_decay_mode === 'custom_list';
   const showFreqXFlowModes = formData.orientation === 'freq-x';
+  const gridSteps = 8;
+  const formatGridValue = (value: number) => (value >= 1000 ? `${(value / 1000).toFixed(1)}k` : Math.round(value).toString());
+  const frequencyTicks = Array.from({ length: gridSteps + 1 }, (_, i) => {
+    const ratio = i / gridSteps;
+    const freq = formData.fmax - ratio * (formData.fmax - formData.fmin);
+    return { ratio, label: `${formatGridValue(freq)} Hz` };
+  });
+  const timeTicks = Array.from({ length: gridSteps + 1 }, (_, i) => {
+    const ratio = i / gridSteps;
+    return { ratio, label: `${(formData.signal_duration * ratio).toFixed(1)} s` };
+  });
 
   const updateField = <K extends keyof GenerationFormData>(key: K, value: GenerationFormData[K]) => {
     setFormData((current) => ({ ...current, [key]: value }));
@@ -326,7 +328,7 @@ export default function App() {
               <div className="music-staff" aria-label="Нотный стан">
                 {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
                 <div className="music-staff__notes">
-                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px`, left: `${4 + idx * 3.2}%` }}>{note}</span>)}
+                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className={`music-staff__note ${note === MUSIC_REST_TOKEN ? 'music-staff__note--rest' : ''}`} style={{ bottom: `${noteYOffset[note] ?? 12}px`, left: `${4 + idx * 3.2}%` }}>{note === MUSIC_REST_TOKEN ? '⏸' : note}</span>)}
                 </div>
               </div>
               <div className="music-octaves">
@@ -349,6 +351,7 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                <button type="button" className="button-secondary music-rest-btn" onClick={addMusicPause}>Добавить паузу</button>
               </div>
             </div>
           ) : null}
@@ -387,6 +390,18 @@ export default function App() {
                   <span className="draw-panel__height-label">Высота: {drawCanvasHeight}px</span>
                 </div>
                 <div ref={drawCanvasWrapRef} className="draw-canvas-wrap">
+                  <div className="draw-grid" aria-hidden>
+                    {(formData.orientation === 'time-x' ? frequencyTicks : timeTicks).map((tick) => (
+                      <div key={`h-${tick.ratio}`} className="draw-grid__line draw-grid__line--horizontal" style={{ top: `${tick.ratio * 100}%` }}>
+                        <span className="draw-grid__label draw-grid__label--left">{tick.label}</span>
+                      </div>
+                    ))}
+                    {(formData.orientation === 'time-x' ? timeTicks : frequencyTicks).map((tick) => (
+                      <div key={`v-${tick.ratio}`} className="draw-grid__line draw-grid__line--vertical" style={{ left: `${tick.ratio * 100}%` }}>
+                        <span className="draw-grid__label draw-grid__label--bottom">{tick.label}</span>
+                      </div>
+                    ))}
+                  </div>
                   <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
                 </div>
               </div>
