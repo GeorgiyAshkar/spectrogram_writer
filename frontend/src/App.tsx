@@ -128,7 +128,7 @@ export default function App() {
     }
   };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const drawState = useRef<{ active: boolean }>({ active: false });
+  const drawState = useRef<{ active: boolean; lastX: number | null; lastY: number | null }>({ active: false, lastX: null, lastY: null });
   const drawCanvasWrapRef = useRef<HTMLDivElement | null>(null);
 
   const harmonicWeightsText = useMemo(
@@ -230,6 +230,7 @@ export default function App() {
     const canvas = drawCanvasRef.current;
     if (!canvas || !drawState.current.active) return;
     const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
     const x = (event.clientX - rect.left) * (canvas.width / rect.width);
     const y = (event.clientY - rect.top) * (canvas.height / rect.height);
     const ctx = canvas.getContext('2d');
@@ -237,10 +238,16 @@ export default function App() {
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     ctx.strokeStyle = eraserEnabled ? '#ffffff' : '#000000';
+    if (drawState.current.lastX === null || drawState.current.lastY === null) {
+      drawState.current.lastX = x;
+      drawState.current.lastY = y;
+    }
+    ctx.beginPath();
+    ctx.moveTo(drawState.current.lastX, drawState.current.lastY);
     ctx.lineTo(x, y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    drawState.current.lastX = x;
+    drawState.current.lastY = y;
     updateField('image_base64', canvas.toDataURL('image/png').split(',')[1] ?? null);
   };
 
@@ -402,7 +409,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const ctx = e.currentTarget.getContext('2d'); if (ctx) ctx.beginPath(); drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; const canvas = drawCanvasRef.current; const ctx = canvas?.getContext('2d'); ctx?.beginPath(); syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; syncCanvasToPayload(); } }} />
+                  <canvas ref={drawCanvasRef} width={960} height={drawCanvasHeight} className="draw-canvas" onPointerDown={(e) => { setInputSource('draw'); drawState.current.active = true; const rect = e.currentTarget.getBoundingClientRect(); if (rect.width > 0 && rect.height > 0) { drawState.current.lastX = (e.clientX - rect.left) * (e.currentTarget.width / rect.width); drawState.current.lastY = (e.clientY - rect.top) * (e.currentTarget.height / rect.height); } drawAt(e); }} onPointerMove={drawAt} onPointerUp={() => { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); }} onPointerLeave={() => { if (drawState.current.active) { drawState.current.active = false; drawState.current.lastX = null; drawState.current.lastY = null; syncCanvasToPayload(); } }} />
                 </div>
               </div>
             </section>
