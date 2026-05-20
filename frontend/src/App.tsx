@@ -39,23 +39,31 @@ export default function App() {
       setInputSource(next);
     }
   };
-  const noteFreq: Record<string, number> = {
-    C3: 130.81, 'C#3': 138.59, D3: 146.83, 'D#3': 155.56, E3: 164.81, F3: 174.61, 'F#3': 185, G3: 196, 'G#3': 207.65, A3: 220, 'A#3': 233.08, B3: 246.94,
-    C4: 261.63, 'C#4': 277.18, D4: 293.66, 'D#4': 311.13, E4: 329.63, F4: 349.23, 'F#4': 369.99, G4: 392, 'G#4': 415.3, A4: 440, 'A#4': 466.16, B4: 493.88,
-    C5: 523.25, 'C#5': 554.37, D5: 587.33, 'D#5': 622.25, E5: 659.25, F5: 698.46, 'F#5': 739.99, G5: 783.99, 'G#5': 830.61, A5: 880, 'A#5': 932.33, B5: 987.77,
-  };
-  const octaves = [3, 4, 5];
+  const octaves = [1, 2, 3, 4, 5];
   const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
+  const buildNoteFrequencyMap = () => {
+    const map: Record<string, number> = {};
+    const semitones: Record<string, number> = {
+      C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11,
+    };
+    for (let octave = 1; octave <= 5; octave += 1) {
+      Object.entries(semitones).forEach(([note, semitone]) => {
+        const midi = (octave + 1) * 12 + semitone;
+        map[`${note}${octave}`] = 440 * 2 ** ((midi - 69) / 12);
+      });
+    }
+    return map;
+  };
+  const noteFreq = buildNoteFrequencyMap();
 
 
-  const noteOrder = [
-    'C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3',
-    'C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4',
-    'C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5',
-  ];
+
+
+  const noteOrder = Array.from({ length: 5 }, (_, octaveOffset) => octaveOffset + 1)
+    .flatMap((octave) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((note) => `${note}${octave}`));
   const noteYOffset = noteOrder.reduce<Record<string, number>>((acc, note, idx) => {
-    acc[note] = 8 + idx * 2.7;
+    acc[note] = 8 + idx * 1.35;
     return acc;
   }, {});
 
@@ -79,7 +87,7 @@ export default function App() {
         const envIn = Math.min(1, t / 0.03);
         const envOut = Math.max(0, (noteDuration - t) / 0.08);
         const env = Math.min(envIn, envOut);
-        const loudnessComp = Math.max(0.28, Math.min(0.52, 0.42 * Math.pow(220 / freq, 0.2)));
+        const loudnessComp = 0.42 * Math.pow(220 / freq, 0.45);
         pcm[i] += Math.sin(phase) * env * loudnessComp;
       }
     });
@@ -318,7 +326,7 @@ export default function App() {
               <div className="music-staff" aria-label="Нотный стан">
                 {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
                 <div className="music-staff__notes">
-                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px` }}>{note}</span>)}
+                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px`, left: `${4 + idx * 3.2}%` }}>{note}</span>)}
                 </div>
               </div>
               <div className="music-octaves">
