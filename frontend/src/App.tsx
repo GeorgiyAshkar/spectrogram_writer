@@ -25,15 +25,115 @@ export default function App() {
   const [formData, setFormData] = useState<GenerationFormData>(initialState);
   const [inputSource, setInputSource] = useState<'text' | 'upload' | 'draw'>('draw');
   const [showSettings, setShowSettings] = useState(false);
-  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'info'>('draw');
+  const [activePanel, setActivePanel] = useState<'text' | 'upload' | 'draw' | 'music' | 'info'>('draw');
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
   const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
   const [eraserEnabled, setEraserEnabled] = useState(false);
+  const [musicSequence, setMusicSequence] = useState<string[]>([]);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
 
-  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'info') => {
+  const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
     if (next === 'text' || next === 'upload' || next === 'draw') {
       setInputSource(next);
+    }
+  };
+  const octaves = [1, 2, 3, 4, 5];
+  const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+  const buildNoteFrequencyMap = () => {
+    const map: Record<string, number> = {};
+    const semitones: Record<string, number> = {
+      C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11,
+    };
+    for (let octave = 1; octave <= 5; octave += 1) {
+      Object.entries(semitones).forEach(([note, semitone]) => {
+        const midi = (octave + 1) * 12 + semitone;
+        map[`${note}${octave}`] = 440 * 2 ** ((midi - 69) / 12);
+      });
+    }
+    return map;
+  };
+  const noteFreq = buildNoteFrequencyMap();
+
+
+
+
+  const noteOrder = Array.from({ length: 5 }, (_, octaveOffset) => octaveOffset + 1)
+    .flatMap((octave) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((note) => `${note}${octave}`));
+  const noteYOffset = noteOrder.reduce<Record<string, number>>((acc, note, idx) => {
+    acc[note] = 8 + idx * 1.35;
+    return acc;
+  }, {});
+
+  const buildMusicWav = async () => {
+    if (!musicSequence.length) return null;
+    const sampleRate = 44100;
+    const noteDuration = 0.42;
+    const tail = 0.06;
+    const totalDuration = musicSequence.length * noteDuration + tail;
+    const totalSamples = Math.floor(totalDuration * sampleRate);
+    const pcm = new Float32Array(totalSamples);
+
+    musicSequence.forEach((note, noteIndex) => {
+      const freq = noteFreq[note];
+      if (!freq) return;
+      const startSample = Math.floor(noteIndex * noteDuration * sampleRate);
+      const endSample = Math.min(totalSamples, startSample + Math.floor(noteDuration * sampleRate));
+      for (let i = startSample; i < endSample; i += 1) {
+        const t = (i - startSample) / sampleRate;
+        const phase = 2 * Math.PI * freq * t;
+        const envIn = Math.min(1, t / 0.03);
+        const envOut = Math.max(0, (noteDuration - t) / 0.08);
+        const env = Math.min(envIn, envOut);
+        const loudnessComp = 0.42 * Math.pow(220 / freq, 0.45);
+        pcm[i] += Math.sin(phase) * env * loudnessComp;
+      }
+    });
+
+    const bytes = new ArrayBuffer(44 + totalSamples * 2);
+    const view = new DataView(bytes);
+    const writeStr = (offset: number, value: string) => {
+      for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + totalSamples * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, totalSamples * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < totalSamples; i += 1) {
+      const sample = Math.max(-1, Math.min(1, pcm[i]));
+      view.setInt16(offset, sample * 32767, true);
+      offset += 2;
+    }
+
+    return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+  };
+
+  const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
+  const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
+
+  const playMusicSequence = async () => {
+    if (!musicSequence.length || isMusicPlaying) return;
+    setIsMusicPlaying(true);
+    try {
+      if (musicAudioUrl) URL.revokeObjectURL(musicAudioUrl);
+      const nextUrl = await buildMusicWav();
+      setMusicAudioUrl(nextUrl);
+    } finally {
+      setIsMusicPlaying(false);
     }
   };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -209,14 +309,49 @@ export default function App() {
         />
         <section className="panel playback-panel">
           <AudioPlayer
-            audioUrl={audioUrl}
-            isPreparingAudio={isDownloading}
+            audioUrl={activePanel === 'music' ? musicAudioUrl : audioUrl}
+            isPreparingAudio={isDownloading || isMusicPlaying}
             onRequestAudio={playAudio}
             onToggleEraser={toggleEraser}
             eraserEnabled={eraserEnabled}
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
+            musicModeEnabled={activePanel === 'music'}
+            musicSequence={musicSequence}
+            onRemoveLastMusicNote={removeLastMusicNote}
+            onPlayMusicSequence={playMusicSequence}
           />
+          {activePanel === 'music' ? (
+            <div className="music-panel">
+              <div className="music-staff" aria-label="Нотный стан">
+                {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
+                <div className="music-staff__notes">
+                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px`, left: `${4 + idx * 3.2}%` }}>{note}</span>)}
+                </div>
+              </div>
+              <div className="music-octaves">
+                {octaves.map((octave) => (
+                  <div key={octave} className="music-octave">
+                    <div className="music-octave__title">Октава {octave}</div>
+                    <div className="music-piano">
+                      <div className="music-piano__white">
+                        {whiteKeys.map((key) => {
+                          const note = `${key}${octave}`;
+                          return <button key={note} type="button" className="music-key music-key--white" onClick={() => addMusicNote(note)}>{note}</button>;
+                        })}
+                      </div>
+                      <div className="music-piano__black">
+                        {[{ key: 'C#', col: 1 }, { key: 'D#', col: 2 }, { key: 'F#', col: 4 }, { key: 'G#', col: 5 }, { key: 'A#', col: 6 }].map((item) => {
+                          const note = `${item.key}${octave}`;
+                          return <button key={note} type="button" className="music-key music-key--black" style={{ gridColumn: item.col }} onClick={() => addMusicNote(note)}>{note}</button>;
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="error-banner">{error}</p> : null}
         </section>
         <main className="workspace-grid">

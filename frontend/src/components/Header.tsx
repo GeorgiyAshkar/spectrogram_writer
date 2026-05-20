@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 interface HeaderProps {
   logoUrl?: string | null;
-  activePanel: 'text' | 'upload' | 'draw' | 'info';
-  onPanelChange: (next: 'text' | 'upload' | 'draw' | 'info') => void;
+  activePanel: 'text' | 'upload' | 'draw' | 'music' | 'info';
+  onPanelChange: (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => void;
   showSettings: boolean;
   onToggleSettings: () => void;
   controlsHidden: boolean;
@@ -14,12 +14,14 @@ const defaultIcons = {
   draw: '/icons/draw.svg',
   upload: '/icons/upload-image.svg',
   text: '/icons/text-input.svg',
+  music: '/icons/music-note.svg',
   info: '/icons/info.svg',
   settings: '/icons/settings.svg',
 };
 
-const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'info'; label: string; iconKey: 'draw' | 'upload' | 'text' | 'info' }> = [
+const panelButtons: Array<{ key: 'text' | 'upload' | 'draw' | 'music' | 'info'; label: string; iconKey: 'draw' | 'upload' | 'text' | 'music' | 'info' }> = [
   { key: 'draw', label: 'Рисунок', iconKey: 'draw' },
+  { key: 'music', label: 'Музыкальный режим', iconKey: 'music' },
   { key: 'upload', label: 'Изображение', iconKey: 'upload' },
   { key: 'text', label: 'Текст', iconKey: 'text' },
   { key: 'info', label: 'Результат и предпросмотр', iconKey: 'info' },
@@ -36,6 +38,7 @@ export function Header({ logoUrl, activePanel, onPanelChange, showSettings, onTo
           draw: config.draw ?? defaultIcons.draw,
           upload: config.upload ?? defaultIcons.upload,
           text: config.text ?? defaultIcons.text,
+          music: config.music ?? defaultIcons.music,
           info: config.info ?? defaultIcons.info,
           settings: config.settings ?? defaultIcons.settings,
         });

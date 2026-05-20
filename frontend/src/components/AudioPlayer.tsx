@@ -8,11 +8,15 @@ type AudioPlayerProps = {
   eraserEnabled: boolean;
   onDownloadSnapshot: (baseName: string) => void;
   onClearCanvas: () => void;
+  musicModeEnabled: boolean;
+  musicSequence: string[];
+  onRemoveLastMusicNote: () => void;
+  onPlayMusicSequence: () => Promise<void>;
 };
 
 const WAVE_SAMPLES = 220;
 
-export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onDownloadSnapshot, onClearCanvas }: AudioPlayerProps) {
+export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onDownloadSnapshot, onClearCanvas, musicModeEnabled, musicSequence, onRemoveLastMusicNote, onPlayMusicSequence }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
@@ -92,6 +96,11 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
   }, [audioUrl]);
 
   const togglePlay = async () => {
+    if (musicModeEnabled) {
+      setPendingAutoplay(true);
+      await onPlayMusicSequence();
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) return;
     if (!audioUrl) {
@@ -170,21 +179,35 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
       </button>
 
 
-      <button
-        type="button"
-        className="button-secondary draw-panel__clear-btn header-player__eraser"
-        onClick={onToggleEraser}
-        aria-pressed={eraserEnabled}
-      >
-        {eraserEnabled ? 'Ластик: ВКЛ' : 'Ластик'}
-      </button>
-      <button
-        type="button"
-        className="button-secondary draw-panel__clear-btn header-player__clear"
-        onClick={onClearCanvas}
-      >
-        Очистить холст
-      </button>
+      {!musicModeEnabled ? (
+        <>
+          <button
+            type="button"
+            className="button-secondary draw-panel__clear-btn header-player__eraser"
+            onClick={onToggleEraser}
+            aria-pressed={eraserEnabled}
+          >
+            {eraserEnabled ? 'Ластик: ВКЛ' : 'Ластик'}
+          </button>
+          <button
+            type="button"
+            className="button-secondary draw-panel__clear-btn header-player__clear"
+            onClick={onClearCanvas}
+          >
+            Очистить холст
+          </button>
+        </>
+      ) : null}
+      {musicModeEnabled ? (
+        <button
+          type="button"
+          className="button-secondary draw-panel__clear-btn header-player__clear"
+          onClick={onRemoveLastMusicNote}
+          disabled={musicSequence.length === 0}
+        >
+          Отменить ноту
+        </button>
+      ) : null}
 
       <audio ref={audioRef} src={audioUrl ?? undefined} preload="metadata" />
     </div>
