@@ -118,7 +118,7 @@ textarea {
 .draw-canvas-wrap {
   position: relative;
   width: 100%;
-  min-height: 950px;
+  min-height: 340px;
   max-height: 1200px;
   height: 950px;
   resize: vertical;

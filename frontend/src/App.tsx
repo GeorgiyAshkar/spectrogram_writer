@@ -196,7 +196,7 @@ export default function App() {
   const resizeCanvas = (nextHeight: number) => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
-    const clampedHeight = Math.min(1200, Math.max(950, Math.round(nextHeight)));
+    const clampedHeight = Math.min(1200, Math.max(340, Math.round(nextHeight)));
     if (canvas.height === clampedHeight) return;
 
     const snapshot = document.createElement('canvas');
