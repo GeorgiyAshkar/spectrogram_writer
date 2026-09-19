@@ -46,10 +46,10 @@ jobs:
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe public interactions
         run: node scripts/reference-interaction-probe.cjs "${{ steps.chrome.outputs.path }}"
-      - name: Probe public exports
-        run: node scripts/reference-export-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Pixel mode geometry
         run: node scripts/reference-pixel-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe public exports
+        run: node scripts/reference-export-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe reference instrument spectra
         run: node scripts/reference-instrument-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Render reference DOM in headless Chrome
