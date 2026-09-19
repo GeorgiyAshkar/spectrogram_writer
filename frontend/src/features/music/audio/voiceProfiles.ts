@@ -15,6 +15,16 @@ export const DEFAULT_VOICE_PROFILE: VoiceProfile = {
 };
 
 export const PARITY_LAYER_VOICE_PROFILES: Readonly<Record<string, VoiceProfile>> = {
+  // Instrument labels/colors are exact observations; synthesis profiles are clean-room approximations.
+  'color:#1d9e75': { waveform: 'sine', gain: 1.0 }, // keys
+  'color:#d85a30': { waveform: 'triangle', gain: 0.86 }, // pluck
+  'color:#7f77dd': { waveform: 'sine', gain: 0.72 }, // bell
+  'color:#ef9f27': { waveform: 'triangle', gain: 0.78 }, // marimba
+  'color:#3e5ec6': { waveform: 'sine', gain: 0.7 }, // flute
+  'color:#de7bae': { waveform: 'sawtooth', gain: 0.46 }, // strings
+  'color:#85bee8': { waveform: 'sine', gain: 0.62 }, // chime
+  'color:#33312b': { waveform: 'triangle', gain: 0.82 }, // bass
+  'color:#f4be82': { waveform: 'square', gain: 0.48 }, // 8bit
   'accompaniment:bass': { waveform: 'triangle', gain: 0.86 },
   'accompaniment:drums:kick': { waveform: 'sine', gain: 1 },
   'accompaniment:drums:snare': { waveform: 'square', gain: 0.28 },
