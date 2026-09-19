@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "isolatedModules": false,
+    "noEmit": false,
+    "outDir": "../.music-test-build",
+    "rootDir": ".",
+    "types": []
+  },
+  "include": [
+    "src/features/music/model/**/*.ts",
+    "src/features/music/audio/renderWav.ts",
+    "src/features/music/export/renderMidi.ts",
+    "tests/music-domain-smoke.ts"
+  ]
+}
