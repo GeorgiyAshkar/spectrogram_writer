@@ -93,6 +93,7 @@ export class RealtimeMusicTransport {
     this.scheduleCursorBeat = 0;
     this.clearScheduler();
     this.stopScheduledSources();
+    this.stopLiveVoices();
   }
 
   async seek(beat: number): Promise<void> {
