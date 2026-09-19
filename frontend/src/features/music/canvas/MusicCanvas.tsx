@@ -143,9 +143,16 @@ export function MusicCanvas({ settings, strokes, activeColor, onChange }: Props)
       }}
       onPointerUp={(event) => {
         if (!draft) return;
-        appendPoint(pointFromEvent(event));
-        const completed = draft.points.length > 0 ? draft : null;
-        if (completed) onChange([...strokes, completed]);
+        const finalPoint = pointFromEvent(event);
+        const previous = draft.points[draft.points.length - 1];
+        const points =
+          previous && previous.x === finalPoint.x && previous.y === finalPoint.y
+            ? draft.points
+            : [...draft.points, finalPoint];
+
+        if (points.length > 0) {
+          onChange([...strokes, { ...draft, points }]);
+        }
         setDraft(null);
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
