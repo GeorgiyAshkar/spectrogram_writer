@@ -215,7 +215,109 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       throw new Error(`Browser page errors: ${pageErrors.join(' | ')}`);
     }
 
-    console.log('music-ui-smoke: passed');
+    const mobilePage = await browser.newPage();
+    const mobileErrors = [];
+    mobilePage.on('pageerror', (error) => mobileErrors.push(String(error)));
+    await mobilePage.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+    await mobilePage.goto(baseUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    const mobileClickByAria = async (label) => {
+      const clicked = await mobilePage.evaluate((target) => {
+        const element = [...document.querySelectorAll('button')].find(
+          (button) => button.getAttribute('aria-label') === target,
+        );
+        if (!(element instanceof HTMLButtonElement)) return false;
+        element.click();
+        return true;
+      }, label);
+      if (!clicked) throw new Error(`Mobile button with aria-label "${label}" not found.`);
+    };
+
+    const mobileClickByText = async (text) => {
+      const clicked = await mobilePage.evaluate((target) => {
+        const element = [...document.querySelectorAll('button')].find(
+          (button) => button.textContent?.trim() === target,
+        );
+        if (!(element instanceof HTMLButtonElement)) return false;
+        element.click();
+        return true;
+      }, text);
+      if (!clicked) throw new Error(`Mobile button with text "${text}" not found.`);
+    };
+
+    await mobileClickByAria('Музыкальный режим');
+    await mobilePage.waitForSelector('.music-panel', { timeout: 5000 });
+    await mobilePage.waitForSelector('.music-draw-canvas', { timeout: 5000 });
+
+    const mobileLayout = await mobilePage.evaluate(() => {
+      const canvas = document.querySelector('.music-draw-canvas')?.getBoundingClientRect();
+      const panel = document.querySelector('.music-panel')?.getBoundingClientRect();
+      return {
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        bodyWidth: document.body.scrollWidth,
+        canvasWidth: canvas?.width ?? null,
+        panelWidth: panel?.width ?? null,
+      };
+    });
+
+    if (mobileLayout.documentWidth > mobileLayout.viewportWidth + 2) {
+      throw new Error(`Mobile document overflows horizontally: ${JSON.stringify(mobileLayout)}`);
+    }
+    if (mobileLayout.canvasWidth && mobileLayout.canvasWidth > mobileLayout.viewportWidth + 2) {
+      throw new Error(`Mobile music canvas exceeds viewport: ${JSON.stringify(mobileLayout)}`);
+    }
+
+    for (const label of ['Grid', 'Freehand', 'Pen', 'Eraser', 'Undo', 'Redo', 'Restart', 'Shuffle']) {
+      const exists = await mobilePage.evaluate(
+        (target) => [...document.querySelectorAll('button')].some(
+          (button) => button.getAttribute('aria-label') === target,
+        ),
+        label,
+      );
+      if (!exists) throw new Error(`Mobile control missing: ${label}`);
+    }
+
+    await mobileClickByText('The instrument');
+    await mobilePage.waitForSelector('.music-instrument-panel', { timeout: 5000 });
+    const instrumentPanelLayout = await mobilePage.$eval('.music-instrument-panel', (node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        viewportWidth: window.innerWidth,
+      };
+    });
+    if (instrumentPanelLayout.left < -2 || instrumentPanelLayout.right > instrumentPanelLayout.viewportWidth + 2) {
+      throw new Error(`Mobile instrument panel escapes viewport: ${JSON.stringify(instrumentPanelLayout)}`);
+    }
+
+    await mobileClickByText('Recolor');
+    await mobilePage.evaluate(() => {
+      const swatch = document.querySelector('button[aria-label="keys"]');
+      if (swatch instanceof HTMLButtonElement) swatch.click();
+    });
+    await mobilePage.waitForSelector('.music-recolor-picker', { timeout: 5000 });
+    const recolorLayout = await mobilePage.$eval('.music-recolor-picker', (node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        viewportWidth: window.innerWidth,
+      };
+    });
+    if (recolorLayout.left < -2 || recolorLayout.right > recolorLayout.viewportWidth + 2) {
+      throw new Error(`Mobile recolor picker escapes viewport: ${JSON.stringify(recolorLayout)}`);
+    }
+
+    if (mobileErrors.length) {
+      throw new Error(`Mobile browser page errors: ${mobileErrors.join(' | ')}`);
+    }
+
+    await mobilePage.close();
+    console.log('music-ui-smoke: desktop + mobile passed');
   } finally {
     await browser.close();
   }
