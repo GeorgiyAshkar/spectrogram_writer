@@ -576,8 +576,16 @@ export default function App() {
       : 'keys';
     setMusicInstrumentColors(sharedInstrumentColors);
     setActiveMusicInstrumentId(sharedInstrumentId);
-    setMusicColor(sharedInstrumentColors[sharedInstrumentId] ?? project.activeColor || DEFAULT_INSTRUMENT_COLORS.keys);
-    setMusicCustomColor(sharedInstrumentColors[sharedInstrumentId] ?? project.customColor || DEFAULT_INSTRUMENT_COLORS.keys);
+    setMusicColor(
+      sharedInstrumentColors[sharedInstrumentId] ??
+        project.activeColor ??
+        DEFAULT_INSTRUMENT_COLORS.keys,
+    );
+    setMusicCustomColor(
+      sharedInstrumentColors[sharedInstrumentId] ??
+        project.customColor ??
+        DEFAULT_INSTRUMENT_COLORS.keys,
+    );
 
     if (project.schemaVersion === 2) {
       setMusicBackgroundKind(project.background.kind);
@@ -673,9 +681,10 @@ export default function App() {
       const pointCount = 3 + Math.floor(randomUnit() * 5);
       const startX = randomUnit() * 0.16;
       const span = 0.35 + randomUnit() * 0.62;
-      const color = PARITY_INSTRUMENT_SWATCHES[
+      const swatch = PARITY_INSTRUMENT_SWATCHES[
         Math.floor(randomUnit() * PARITY_INSTRUMENT_SWATCHES.length)
-      ]?.color ?? DEFAULT_MUSIC_COLORS[0];
+      ] ?? PARITY_INSTRUMENT_SWATCHES[0];
+      const color = musicInstrumentColors[swatch.id] ?? swatch.color;
 
       const points = Array.from({ length: pointCount }, (_, pointIndex) => ({
         x: Math.min(1, startX + (span * pointIndex) / Math.max(1, pointCount - 1)),
@@ -685,7 +694,7 @@ export default function App() {
 
       return {
         id: `shuffle-${now}-${strokeIndex}`,
-        layerId: `color:${color.toLowerCase()}`,
+        layerId: `instrument:${swatch.id}`,
         color,
         createdAt: now + strokeIndex,
         programMode: musicSettings.programMode,
@@ -694,7 +703,26 @@ export default function App() {
     });
 
     commitMusicStrokes(next);
-  }, [commitMusicStrokes, musicSettings.programMode]);
+  }, [commitMusicStrokes, musicInstrumentColors, musicSettings.programMode]);
+
+  const resetInstrumentColors = useCallback(() => {
+    const defaults = { ...DEFAULT_INSTRUMENT_COLORS };
+    setMusicInstrumentColors(defaults);
+    const selectedColor = defaults[activeMusicInstrumentId];
+    setMusicColor(selectedColor);
+    setMusicCustomColor(selectedColor);
+
+    const nextStrokes = musicStrokes.map((stroke) => {
+      if (!stroke.layerId.startsWith('instrument:')) return stroke;
+      const instrumentId = stroke.layerId.slice('instrument:'.length) as ParityInstrumentId;
+      const color = defaults[instrumentId];
+      return color && color !== stroke.color ? { ...stroke, color } : stroke;
+    });
+    if (nextStrokes.some((stroke, index) => stroke !== musicStrokes[index])) {
+      commitMusicStrokes(nextStrokes);
+    }
+    setRecolorMode(false);
+  }, [activeMusicInstrumentId, commitMusicStrokes, musicStrokes]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1053,6 +1081,25 @@ export default function App() {
                 >
                   Shuffle
                 </button>
+                <button
+                  type="button"
+                  className={recolorMode ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-pressed={recolorMode}
+                  title="Change the colors — tap this, then any instrument color"
+                  onClick={() => setRecolorMode((current) => !current)}
+                >
+                  Recolor
+                </button>
+                {recolorMode ? (
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    title="The original colors"
+                    onClick={resetInstrumentColors}
+                  >
+                    Original colors
+                  </button>
+                ) : null}
               </div>
 
               {showMusicHelp ? (
