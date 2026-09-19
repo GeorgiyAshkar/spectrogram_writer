@@ -1,16 +1,22 @@
+import { readFile } from 'node:fs/promises';
+
 const url = 'https://playmusictheory.net/play';
 
-const response = await fetch(url, {
-  headers: {
-    'user-agent': 'spectrogram-writer-parity-probe/1.0',
-    accept: 'text/html,application/xhtml+xml',
-  },
-});
-
-console.log('status:', response.status);
-console.log('content-type:', response.headers.get('content-type'));
-
-const html = await response.text();
+let html;
+if (process.argv[2]) {
+  html = await readFile(process.argv[2], 'utf8');
+  console.log('source: rendered DOM file', process.argv[2]);
+} else {
+  const response = await fetch(url, {
+    headers: {
+      'user-agent': 'spectrogram-writer-parity-probe/1.0',
+      accept: 'text/html,application/xhtml+xml',
+    },
+  });
+  console.log('status:', response.status);
+  console.log('content-type:', response.headers.get('content-type'));
+  html = await response.text();
+}
 console.log('html-bytes:', Buffer.byteLength(html, 'utf8'));
 
 function decode(value) {
@@ -75,3 +81,18 @@ buttons.forEach((match, index) => {
     text: stripTags(match[2]),
   }));
 });
+
+
+console.log('\n=== MEDIA / CANVAS ===');
+for (const tagName of ['video', 'canvas']) {
+  const regex = new RegExp('<' + tagName + '\\b[^>]*>', 'gi');
+  const nodes = [...html.matchAll(regex)];
+  nodes.forEach((match, index) => {
+    console.log(JSON.stringify({
+      tag: tagName,
+      index,
+      attrs: attrs(match[0]),
+      context: stripTags(html.slice(Math.max(0, (match.index ?? 0) - 100), (match.index ?? 0) + 220)),
+    }));
+  });
+}
