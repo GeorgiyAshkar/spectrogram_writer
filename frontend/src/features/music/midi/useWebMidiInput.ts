@@ -56,8 +56,17 @@ export function useWebMidiInput({ enabled, onNoteOn, onNoteOff }: Options) {
     let cancelled = false;
     let access: MidiAccessLike | null = null;
     const wiredInputs = new Set<MidiInputLike>();
+    const activeNotes = new Map<string, { midi: number; deviceId: string }>();
+
+    const releaseActiveNotes = () => {
+      for (const { midi, deviceId } of activeNotes.values()) {
+        onNoteOff(midi, deviceId);
+      }
+      activeNotes.clear();
+    };
 
     const clearInputs = () => {
+      releaseActiveNotes();
       for (const input of wiredInputs) input.onmidimessage = null;
       wiredInputs.clear();
     };
@@ -78,9 +87,12 @@ export function useWebMidiInput({ enabled, onNoteOn, onNoteOff }: Options) {
           const command = statusByte & 0xf0;
           const velocity = velocityRaw / 127;
 
+          const noteKey = `${input.id}:${note}`;
           if (command === 0x90 && velocityRaw > 0) {
+            activeNotes.set(noteKey, { midi: note, deviceId: input.id });
             onNoteOn(note, velocity, input.id);
           } else if (command === 0x80 || (command === 0x90 && velocityRaw === 0)) {
+            activeNotes.delete(noteKey);
             onNoteOff(note, input.id);
           }
         };
