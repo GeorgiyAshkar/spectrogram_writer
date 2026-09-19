@@ -567,6 +567,10 @@ export default function App() {
     setMusicBackgroundKind('photo');
   };
 
+  const handleMusicCanvasReady = useCallback((canvas: HTMLCanvasElement | null) => {
+    musicCanvasElementRef.current = canvas;
+  }, []);
+
   const updateMusicSetting = <K extends keyof MusicSettings>(key: K, value: MusicSettings[K]) => {
     setMusicSettings((current) => ({ ...current, [key]: value }));
   };
@@ -1098,9 +1102,7 @@ export default function App() {
                 activeColor={musicColor}
                 background={musicCanvasBackground}
                 playheadProgress={realtimeMusic.progress}
-                onCanvasReady={(canvas) => {
-                  musicCanvasElementRef.current = canvas;
-                }}
+                onCanvasReady={handleMusicCanvasReady}
                 onChange={setMusicStrokes}
               />
 
