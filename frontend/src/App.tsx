@@ -18,6 +18,7 @@ import {
 import { MusicCanvas, type MusicCanvasBackground } from './features/music/canvas/MusicCanvas';
 import { renderNoteEventsToWavUrl } from './features/music/audio/renderWav';
 import { useRealtimeMusicTransport } from './features/music/audio/useRealtimeMusicTransport';
+import { buildAccompanimentEvents } from './features/music/audio/accompaniment';
 import { renderNoteEventsToMidiUrl } from './features/music/export/renderMidi';
 import { useWebMidiInput } from './features/music/midi/useWebMidiInput';
 import {
@@ -37,16 +38,15 @@ import {
 } from './services/musicGallery';
 import {
   DEFAULT_MUSIC_COLORS,
-  DRAWING_PRESETS,
+  PARITY_ACCOMPANIMENT_CONTROLS,
   PARITY_KEY_OPTIONS,
   PARITY_SCALE_OPTIONS,
   PARITY_BPM,
   PARITY_QUANTIZE_OPTIONS,
   PARITY_RANGE_OPTIONS,
-  PROVISIONAL_RHYTHM_STEP_BEATS,
+  PARITY_PROGRAMS,
   PARITY_SWING_OPTIONS,
   PARITY_TUNE_CENTS,
-  RHYTHM_PRESETS,
 } from './features/music/parityConfig';
 import './styles/app.css';
 
@@ -177,12 +177,20 @@ export default function App() {
     [musicSettings, musicStrokes],
   );
 
+  const accompanimentEvents = useMemo(
+    () => buildAccompanimentEvents(musicSettings),
+    [musicSettings],
+  );
+
   const activeMusicEvents = useMemo(
     () =>
-      [...canvasMusicEvents, ...virtualKeyboardEvents, ...midiRecordedEvents].sort(
-        (a, b) => a.startBeat - b.startBeat || a.midi - b.midi,
-      ),
-    [canvasMusicEvents, midiRecordedEvents, virtualKeyboardEvents],
+      [
+        ...canvasMusicEvents,
+        ...virtualKeyboardEvents,
+        ...midiRecordedEvents,
+        ...accompanimentEvents,
+      ].sort((a, b) => a.startBeat - b.startBeat || a.midi - b.midi),
+    [accompanimentEvents, canvasMusicEvents, midiRecordedEvents, virtualKeyboardEvents],
   );
   const musicPlaybackSettings = musicSettings;
 
@@ -607,14 +615,6 @@ export default function App() {
     setMusicSettings((current) => ({ ...current, [key]: value }));
   };
 
-  const applyRhythmPreset = (preset: MusicSettings['rhythmPreset']) => {
-    setMusicSettings((current) => ({
-      ...current,
-      rhythmPreset: preset,
-      quantizeStepBeats: PROVISIONAL_RHYTHM_STEP_BEATS[preset],
-    }));
-  };
-
   const tapTempo = () => {
     const now = performance.now();
     const recent = [...tapTimesRef.current.filter((value) => now - value < 4000), now].slice(-8);
@@ -915,38 +915,6 @@ export default function App() {
                     <button type="button" onClick={() => updateMusicSetting('octaveOffset', musicSettings.octaveOffset + 1)}>+</button>
                   </div>
                 </div>
-                <div className="music-control">
-                  <span>Draw</span>
-                  <div className="music-inline-buttons">
-                    {DRAWING_PRESETS.map((preset) => (
-                      <button
-                        type="button"
-                        key={preset}
-                        className={musicSettings.drawingResolutionPreset === preset ? 'is-active' : ''}
-                        aria-pressed={musicSettings.drawingResolutionPreset === preset}
-                        onClick={() => updateMusicSetting('drawingResolutionPreset', preset)}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="music-control">
-                  <span>Rhythm</span>
-                  <div className="music-inline-buttons">
-                    {RHYTHM_PRESETS.map((preset) => (
-                      <button
-                        type="button"
-                        key={preset}
-                        className={musicSettings.rhythmPreset === preset ? 'is-active' : ''}
-                        aria-pressed={musicSettings.rhythmPreset === preset}
-                        onClick={() => applyRhythmPreset(preset)}
-                      >
-                        {'•'.repeat(preset)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <label className="music-control">
                   <span>Tempo</span>
                   <div className="music-tempo">
@@ -1090,6 +1058,47 @@ export default function App() {
                 </div>
               </div>
               ) : null}
+
+              <div className="music-reference-programs">
+                <div className="music-inline-buttons" aria-label="Programs">
+                  {PARITY_PROGRAMS.map((program) => (
+                    <button
+                      type="button"
+                      key={program.value}
+                      title={program.tooltip}
+                      aria-label={program.tooltip}
+                      className={musicSettings.programMode === program.value ? 'is-active' : ''}
+                      aria-pressed={musicSettings.programMode === program.value}
+                      onClick={() => updateMusicSetting('programMode', program.value)}
+                    >
+                      {program.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="music-inline-buttons" aria-label="Accompaniment">
+                  {PARITY_ACCOMPANIMENT_CONTROLS.map((control) => {
+                    const active = musicSettings[control.setting];
+                    return (
+                      <button
+                        type="button"
+                        key={control.setting}
+                        title={control.tooltip}
+                        aria-label={control.tooltip}
+                        className={active ? 'is-active' : ''}
+                        aria-pressed={active}
+                        onClick={() =>
+                          setMusicSettings((current) => ({
+                            ...current,
+                            [control.setting]: !current[control.setting],
+                          }))
+                        }
+                      >
+                        {control.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="music-palette" aria-label="Палитра">
                 {DEFAULT_MUSIC_COLORS.map((color) => (
