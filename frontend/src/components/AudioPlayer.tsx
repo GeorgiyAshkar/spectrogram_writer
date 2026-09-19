@@ -9,14 +9,10 @@ type AudioPlayerProps = {
   onDownloadSnapshot: (baseName: string) => void;
   onClearCanvas: () => void;
   musicModeEnabled: boolean;
-  musicUndoDisabled: boolean;
-  musicRedoDisabled: boolean;
   musicHasContent: boolean;
   musicHasExportContent: boolean;
   musicIsPlaying: boolean;
   musicProgress: number;
-  onUndoMusic: () => void;
-  onRedoMusic: () => void;
   onToggleMusicPlayback: () => Promise<void>;
   onSeekMusic: (progress: number) => Promise<void>;
 };
@@ -32,14 +28,10 @@ export function AudioPlayer({
   onDownloadSnapshot,
   onClearCanvas,
   musicModeEnabled,
-  musicUndoDisabled,
-  musicRedoDisabled,
   musicHasContent,
   musicHasExportContent,
   musicIsPlaying,
   musicProgress,
-  onUndoMusic,
-  onRedoMusic,
   onToggleMusicPlayback,
   onSeekMusic,
 }: AudioPlayerProps) {
@@ -250,31 +242,6 @@ export function AudioPlayer({
           </button>
         </>
       ) : null}
-      {musicModeEnabled ? (
-        <>
-          <button
-            type="button"
-            className="button-secondary draw-panel__clear-btn header-player__clear music-undo-button"
-            onClick={onUndoMusic}
-            disabled={musicUndoDisabled}
-            title="Undo"
-            aria-label="Undo"
-          >
-            ↶
-          </button>
-          <button
-            type="button"
-            className="button-secondary draw-panel__clear-btn header-player__clear music-undo-button"
-            onClick={onRedoMusic}
-            disabled={musicRedoDisabled}
-            title="Redo"
-            aria-label="Redo"
-          >
-            ↷
-          </button>
-        </>
-      ) : null}
-
       <audio ref={audioRef} src={audioUrl ?? undefined} preload="metadata" />
     </div>
   );
