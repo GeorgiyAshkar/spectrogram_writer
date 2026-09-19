@@ -61,6 +61,8 @@ export interface MusicSettings {
   bassEnabled: boolean;
   drumsEnabled: boolean;
   arpeggioEnabled: boolean;
+  /** Freehand keeps the drawn geometry but follows Y as continuous pitch. */
+  freehandEnabled: boolean;
 }
 
 export interface MusicProject {
@@ -86,4 +88,5 @@ export const DEFAULT_MUSIC_SETTINGS: MusicSettings = {
   bassEnabled: false,
   drumsEnabled: false,
   arpeggioEnabled: false,
+  freehandEnabled: false,
 };
