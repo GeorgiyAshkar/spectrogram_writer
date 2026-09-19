@@ -22,7 +22,11 @@ import {
   DRAWING_PRESETS,
   PARITY_KEY_OPTIONS,
   PARITY_SCALE_OPTIONS,
+  PROVISIONAL_BPM,
+  PROVISIONAL_QUANTIZE_OPTIONS,
   PROVISIONAL_RANGE_OPTIONS,
+  PROVISIONAL_RHYTHM_STEP_BEATS,
+  PROVISIONAL_SWING_OPTIONS,
   RHYTHM_PRESETS,
 } from './features/music/parityConfig';
 import './styles/app.css';
@@ -53,6 +57,7 @@ export default function App() {
   const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
+  const tapTimesRef = useRef<number[]>([]);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -92,16 +97,16 @@ export default function App() {
     [musicSequence],
   );
 
-  const activeMusicEvents = musicStrokes.length > 0 ? canvasMusicEvents : keyboardMusicEvents;
+  const activeMusicEvents = useMemo(
+    () => [...canvasMusicEvents, ...keyboardMusicEvents].sort((a, b) => a.startBeat - b.startBeat || a.midi - b.midi),
+    [canvasMusicEvents, keyboardMusicEvents],
+  );
   const musicPlaybackSettings = useMemo(
     () => ({
       ...musicSettings,
-      loopLengthBeats:
-        musicStrokes.length > 0
-          ? musicSettings.loopLengthBeats
-          : Math.max(musicSettings.loopLengthBeats, musicSequence.length * 0.5 + 0.5),
+      loopLengthBeats: Math.max(musicSettings.loopLengthBeats, musicSequence.length * 0.5 + 0.5),
     }),
-    [musicSequence.length, musicSettings, musicStrokes.length],
+    [musicSequence.length, musicSettings],
   );
 
   const buildMusicWav = async () => {
@@ -131,6 +136,38 @@ export default function App() {
   const updateMusicSetting = <K extends keyof MusicSettings>(key: K, value: MusicSettings[K]) => {
     setMusicSettings((current) => ({ ...current, [key]: value }));
   };
+
+  const applyRhythmPreset = (preset: MusicSettings['rhythmPreset']) => {
+    setMusicSettings((current) => ({
+      ...current,
+      rhythmPreset: preset,
+      quantizeStepBeats: PROVISIONAL_RHYTHM_STEP_BEATS[preset],
+    }));
+  };
+
+  const tapTempo = () => {
+    const now = performance.now();
+    const recent = [...tapTimesRef.current.filter((value) => now - value < 4000), now].slice(-8);
+    tapTimesRef.current = recent;
+    if (recent.length < 2) return;
+
+    const intervals = recent.slice(1).map((value, index) => value - recent[index]).sort((a, b) => a - b);
+    const middle = Math.floor(intervals.length / 2);
+    const median =
+      intervals.length % 2 === 0
+        ? (intervals[middle - 1] + intervals[middle]) / 2
+        : intervals[middle];
+
+    const bpm = Math.round(60000 / Math.max(1, median));
+    updateMusicSetting('bpm', Math.min(PROVISIONAL_BPM.max, Math.max(PROVISIONAL_BPM.min, bpm)));
+  };
+
+  useEffect(() => {
+    setMusicAudioUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, [activeMusicEvents, musicPlaybackSettings]);
 
   const playMusicSequence = async () => {
     if (!activeMusicEvents.length || isMusicPlaying) return;
@@ -382,12 +419,55 @@ export default function App() {
                         key={preset}
                         className={musicSettings.rhythmPreset === preset ? 'is-active' : ''}
                         aria-pressed={musicSettings.rhythmPreset === preset}
-                        onClick={() => updateMusicSetting('rhythmPreset', preset)}
+                        onClick={() => applyRhythmPreset(preset)}
                       >
                         {'•'.repeat(preset)}
                       </button>
                     ))}
                   </div>
+                </div>
+                <label className="music-control">
+                  <span>Tempo</span>
+                  <div className="music-tempo">
+                    <input
+                      type="number"
+                      min={PROVISIONAL_BPM.min}
+                      max={PROVISIONAL_BPM.max}
+                      value={musicSettings.bpm}
+                      onChange={(e) => updateMusicSetting('bpm', Math.min(PROVISIONAL_BPM.max, Math.max(PROVISIONAL_BPM.min, Number(e.target.value))))}
+                    />
+                    <button type="button" onClick={tapTempo}>Tap</button>
+                  </div>
+                </label>
+                <label className="music-control">
+                  <span>Quantize</span>
+                  <select
+                    value={musicSettings.quantizeStepBeats ?? 'off'}
+                    onChange={(e) => updateMusicSetting('quantizeStepBeats', e.target.value === 'off' ? null : Number(e.target.value))}
+                  >
+                    {PROVISIONAL_QUANTIZE_OPTIONS.map((option) => (
+                      <option key={option.label} value={option.value ?? 'off'}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="music-control">
+                  <span>Swing</span>
+                  <select value={musicSettings.swing} onChange={(e) => updateMusicSetting('swing', Number(e.target.value))}>
+                    {PROVISIONAL_SWING_OPTIONS.map((option) => (
+                      <option key={option.label} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="music-control">
+                  <span>Click</span>
+                  <button
+                    type="button"
+                    className={musicSettings.metronomeEnabled ? 'music-toggle is-active' : 'music-toggle'}
+                    aria-pressed={musicSettings.metronomeEnabled}
+                    onClick={() => updateMusicSetting('metronomeEnabled', !musicSettings.metronomeEnabled)}
+                  >
+                    {musicSettings.metronomeEnabled ? 'On' : 'Off'}
+                  </button>
                 </div>
               </div>
 
