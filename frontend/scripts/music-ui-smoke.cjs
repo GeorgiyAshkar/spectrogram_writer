@@ -116,11 +116,80 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     );
     if (!freehandActive) throw new Error('Freehand did not become active.');
 
+    const gridInitial = await page.evaluate(
+      () => [...document.querySelectorAll('button')].some(
+        (button) => button.getAttribute('aria-label') === 'Grid' && button.classList.contains('is-active'),
+      ),
+    );
+    if (!gridInitial) throw new Error('Grid must start enabled.');
+
+    await clickByAria('Grid');
+    const gridDisabled = await page.evaluate(
+      () => [...document.querySelectorAll('button')].some(
+        (button) => button.getAttribute('aria-label') === 'Grid' && !button.classList.contains('is-active'),
+      ),
+    );
+    if (!gridDisabled) throw new Error('Grid did not toggle off.');
+    await clickByAria('Grid');
+
+    for (const accompaniment of ['Bass', 'Drums', 'Arpeggio']) {
+      await clickByAria(accompaniment);
+      const active = await page.evaluate(
+        (label) => [...document.querySelectorAll('button')].some(
+          (button) => button.getAttribute('aria-label') === label && button.classList.contains('is-active'),
+        ),
+        accompaniment,
+      );
+      if (!active) throw new Error(`${accompaniment} did not become active.`);
+    }
+
     await clickByText('The instrument');
     await page.waitForSelector('.music-instrument-panel', { timeout: 5000 });
-    const instrumentSelects = await page.$$('.music-instrument-panel select');
+    const instrumentSelects = await page.$('.music-instrument-panel select');
     if (instrumentSelects.length < 4) {
       throw new Error(`The instrument opened with only ${instrumentSelects.length} selects.`);
+    }
+
+    const parityDefaults = await page.evaluate(() => {
+      const labels = [...document.querySelectorAll('.music-instrument-panel label')];
+      const byCaption = (caption) => {
+        const label = labels.find((node) => node.querySelector('span')?.textContent?.trim() === caption);
+        const control = label?.querySelector('select, input');
+        if (!control) return null;
+        return {
+          value: control.value,
+          readOnly: control instanceof HTMLInputElement ? control.readOnly : undefined,
+          options: control instanceof HTMLSelectElement
+            ? [...control.options].map((option) => option.textContent?.trim())
+            : undefined,
+        };
+      };
+
+      return {
+        key: byCaption('Key'),
+        scale: byCaption('Scale'),
+        range: byCaption('Range'),
+        quantize: byCaption('Quantize'),
+        swing: byCaption('Swing'),
+        tempoInputs: [...document.querySelectorAll('.music-instrument-panel input[aria-label="Tempo BPM"]')]
+          .map((input) => ({
+            value: input.value,
+            readOnly: input.readOnly,
+          })),
+      };
+    });
+
+    if (parityDefaults.key?.value !== 'C') throw new Error(`Unexpected default Key: ${parityDefaults.key?.value}`);
+    if (parityDefaults.scale?.value !== 'majorPentatonic') throw new Error(`Unexpected default Scale: ${parityDefaults.scale?.value}`);
+    if (parityDefaults.range?.value !== '3') throw new Error(`Unexpected default Range: ${parityDefaults.range?.value}`);
+    if (parityDefaults.quantize?.options?.join('|') !== '1/4|1/8|1/8 triplet|1/16|1/16 triplet|1/32') {
+      throw new Error(`Unexpected Quantize options: ${parityDefaults.quantize?.options?.join('|')}`);
+    }
+    if (parityDefaults.swing?.options?.join('|') !== 'Off|Light|Medium|Hard') {
+      throw new Error(`Unexpected Swing options: ${parityDefaults.swing?.options?.join('|')}`);
+    }
+    if (!parityDefaults.tempoInputs.some((input) => input.value === '120' && input.readOnly)) {
+      throw new Error(`Readonly Tempo 120 display missing: ${JSON.stringify(parityDefaults.tempoInputs)}`);
     }
 
     await clickByText('Recolor');
