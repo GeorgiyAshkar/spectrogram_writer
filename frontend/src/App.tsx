@@ -1243,7 +1243,7 @@ export default function App() {
 
               <div className="music-reference-programs">
                 <div className="music-inline-buttons" aria-label="Programs">
-                  {PARITY_PROGRAMS.map((program) => (
+                  {PARITY_PROGRAMS.filter((program) => !program.hiddenInReference).map((program) => (
                     <button
                       type="button"
                       key={program.value}
