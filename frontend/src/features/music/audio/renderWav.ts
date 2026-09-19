@@ -38,11 +38,8 @@ export function renderNoteEventsToWavBlob(
       const frequency = midiToFrequency(midi, settings.tuningCents);
       phase += (2 * Math.PI * frequency) / sampleRate;
 
-      const attack = Math.min(1, t / 0.015);
-      const timeToEnd = durationSeconds - t;
-      const release = Math.min(1, Math.max(0, timeToEnd / 0.06));
-      const envelope = Math.min(attack, release);
-      pcm[sampleIndex] += sampleWaveform(voice.waveform, phase) * gain * envelope;
+      const envelope = envelopeAt(voice, t, durationSeconds);
+      pcm[sampleIndex] += sampleVoice(voice, phase) * gain * envelope;
     }
   }
 
