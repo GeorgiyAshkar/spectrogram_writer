@@ -165,9 +165,16 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] SQLite thumbnail migration
 - [x] responsive visual gallery cards
 
-### Reference controls confirmed but not yet implemented
+### Freehand / Freestyle
+- [x] Freehand control
+- [x] Freehand leaves canvas geometry unchanged
+- [x] Freehand maps Y to continuous fractional pitch
+- [x] Freehand realtime glissando ramps
+- [x] Freehand WAV glissando ramps
+- [x] old drafts default Freehand to Off
+- [x] Freehand regression tests
+- [ ] exact reference Freehand Y→Hz curve — clean-room linear range mapping currently used
 - [ ] Freestyle — exact transformation still VERIFY
-- [ ] Freehand — exact transformation still VERIFY
 
 ## Verification
 
@@ -216,10 +223,10 @@ Measured facts are recorded in:
 ## Next work
 
 1. experimentally determine Freestyle behavior;
-2. experimentally determine Freehand behavior;
-3. probe octave min/max;
+2. determine whether the reference applies any nonlinear curve to Freehand Y→Hz;
+3. resolve octave min/max outside the currently locked public entitlement state;
 4. compare named instrument audio behavior and refine configurable voice profiles;
 5. verify metronome export policy;
-6. verify MIDI structure;
+6. verify MIDI structure, especially Freehand pitch-bend behavior;
 7. browser/mobile smoke testing;
 8. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
