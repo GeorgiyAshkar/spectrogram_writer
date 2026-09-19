@@ -1058,6 +1058,7 @@ export default function App() {
                   type="button"
                   className={musicTool === 'pen' ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicTool === 'pen'}
+                  aria-label="Pen"
                   title="Pen — Draw. Every line is a sound."
                   onClick={() => setMusicTool('pen')}
                 >
@@ -1067,6 +1068,7 @@ export default function App() {
                   type="button"
                   className={musicTool === 'eraser' ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicTool === 'eraser'}
+                  aria-label="Eraser"
                   title="Eraser — drag across a line"
                   onClick={() => setMusicTool('eraser')}
                 >
@@ -1076,6 +1078,7 @@ export default function App() {
                   type="button"
                   className="button-secondary"
                   disabled={musicUndoHistory.length === 0}
+                  aria-label="Undo"
                   title="Undo the last drawing action"
                   onClick={undoMusic}
                 >
@@ -1085,6 +1088,7 @@ export default function App() {
                   type="button"
                   className="button-secondary"
                   disabled={musicRedoHistory.length === 0}
+                  aria-label="Redo"
                   title="Redo a drawing action"
                   onClick={redoMusic}
                 >
@@ -1094,6 +1098,7 @@ export default function App() {
                   type="button"
                   className="button-secondary"
                   disabled={musicStrokes.length === 0}
+                  aria-label="Restart"
                   title="Restart — clear the drawing; the beat keeps going"
                   onClick={restartMusicDrawing}
                 >
@@ -1102,6 +1107,7 @@ export default function App() {
                 <button
                   type="button"
                   className="button-secondary"
+                  aria-label="Shuffle"
                   title="Shuffle — a new drawing, at random"
                   onClick={shuffleMusicDrawing}
                 >
@@ -1111,6 +1117,7 @@ export default function App() {
                   type="button"
                   className={recolorMode ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={recolorMode}
+                  aria-label="Change the colors"
                   title="Change the colors — tap this, then any instrument color"
                   onClick={() => {
                     setRecolorMode((current) => {
