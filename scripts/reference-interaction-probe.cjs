@@ -83,6 +83,37 @@ try {
     return state;
   };
 
+  const domClick = async (selector) => page.evaluate((target) => {
+    const element = document.querySelector(target);
+    if (!(element instanceof HTMLElement)) return false;
+    element.click();
+    return true;
+  }, selector);
+
+  const canvasDigest = async () => page.evaluate(() => {
+    const canvas = document.getElementById('c');
+    if (!(canvas instanceof HTMLCanvasElement)) return null;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    const { width, height } = canvas;
+    const data = ctx.getImageData(0, 0, width, height).data;
+    let hash = 2166136261 >>> 0;
+    let nonTransparent = 0;
+    let nonWhite = 0;
+    const stride = Math.max(4, Math.floor(data.length / 25000 / 4) * 4);
+    for (let i = 0; i < data.length; i += stride) {
+      const r = data[i] ?? 0;
+      const g = data[i + 1] ?? 0;
+      const b = data[i + 2] ?? 0;
+      const a = data[i + 3] ?? 0;
+      if (a > 0) nonTransparent += 1;
+      if (a > 0 && (r < 245 || g < 245 || b < 245)) nonWhite += 1;
+      hash ^= r | (g << 8) | (b << 16) | (a << 24);
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+    return { width, height, hash, nonTransparent, nonWhite };
+  });
+
   await snapshot('initial');
 
   for (const id of ['p1', 'p2', 'p3']) {
@@ -93,7 +124,7 @@ try {
       console.log(JSON.stringify({ label: 'program-click', id, visible: false }));
       continue;
     }
-    await el.click();
+    await domClick('#' + id);
     await new Promise((resolve) => setTimeout(resolve, 150));
     const state = await page.evaluate(() => ({
       programs: ['p1', 'p2', 'p3'].map((id) => {
@@ -108,19 +139,46 @@ try {
   }
 
   const gridBefore = await page.$eval('#gridBtn', (el) => el.className);
-  await page.click('#gridBtn');
+  await domClick('#gridBtn');
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const gridAfter = await page.$eval('#gridBtn', (el) => el.className);
   console.log(JSON.stringify({ label: 'grid-toggle', before: gridBefore, after: gridAfter }));
 
-  const colorsBefore = await page.$$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
-  await page.click('#shuffle');
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const colorsAfter = await page.$$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
-  console.log(JSON.stringify({ label: 'shuffle-colors', before: colorsBefore, after: colorsAfter }));
+  const colorsBefore = await page.$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
+  const canvasBeforeShuffle = await canvasDigest();
+  await domClick('#shuffle');
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  const colorsAfter = await page.$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
+  const canvasAfterShuffle = await canvasDigest();
+  console.log(JSON.stringify({
+    label: 'shuffle',
+    colorsBefore,
+    colorsAfter,
+    canvasBefore: canvasBeforeShuffle,
+    canvasAfter: canvasAfterShuffle,
+  }));
+
+  const recolorBefore = await canvasDigest();
+  await domClick('#recolorBtn');
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const recolorState = await page.$eval('#recolorBtn', (el) => el.className);
+  await domClick('.swatch[aria-label="pluck"]');
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  const recolorAfter = await canvasDigest();
+  console.log(JSON.stringify({
+    label: 'recolor-existing-drawing',
+    buttonClassAfterArm: recolorState,
+    before: recolorBefore,
+    after: recolorAfter,
+  }));
 
   for (const id of ['lockBtn', 'freeBtn']) {
-    const before = await page.$eval('#' + id, (el) => ({ className: el.className, ariaLabel: el.getAttribute('aria-label') }));
-    await page.click('#' + id);
+    const before = await page.$eval('#' + id, (el) => ({
+      className: el.className,
+      ariaLabel: el.getAttribute('aria-label'),
+      display: getComputedStyle(el).display,
+    }));
+    const clicked = await domClick('#' + id);
     await new Promise((resolve) => setTimeout(resolve, 100));
     const after = await page.evaluate(() => ({
       lock: {
@@ -132,8 +190,28 @@ try {
         ariaLabel: document.getElementById('freeBtn')?.getAttribute('aria-label'),
       },
     }));
-    console.log(JSON.stringify({ label: 'mode-click', id, before, after }));
+    console.log(JSON.stringify({ label: 'mode-click', id, clicked, before, after }));
   }
+
+  const octaveState = async () => page.evaluate(() => {
+    const down = document.getElementById('octDown');
+    const up = document.getElementById('octUp');
+    const parent = down?.parentElement;
+    return {
+      parentText: parent?.innerText?.replace(/\s+/g, ' ').trim() ?? null,
+      downDisabled: down instanceof HTMLButtonElement ? down.disabled : null,
+      upDisabled: up instanceof HTMLButtonElement ? up.disabled : null,
+    };
+  });
+
+  const octaveInitial = await octaveState();
+  for (let i = 0; i < 20; i += 1) await domClick('#octDown');
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const octaveMin = await octaveState();
+  for (let i = 0; i < 40; i += 1) await domClick('#octUp');
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const octaveMax = await octaveState();
+  console.log(JSON.stringify({ label: 'octave-bounds', initial: octaveInitial, min: octaveMin, max: octaveMax }));
 
   await snapshot('final');
 } finally {
