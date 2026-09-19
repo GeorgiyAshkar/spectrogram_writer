@@ -6,6 +6,7 @@ type Props = {
   settings: MusicSettings;
   strokes: Stroke[];
   activeColor: string;
+  playheadProgress?: number;
   onChange: (strokes: Stroke[]) => void;
 };
 
@@ -46,7 +47,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.restore();
 }
 
-export function MusicCanvas({ settings, strokes, activeColor, onChange }: Props) {
+export function MusicCanvas({ settings, strokes, activeColor, playheadProgress = 0, onChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const draftRef = useRef<Stroke | null>(null);
@@ -97,7 +98,18 @@ export function MusicCanvas({ settings, strokes, activeColor, onChange }: Props)
 
     strokes.forEach((stroke) => drawStroke(ctx, stroke));
     if (draft) drawStroke(ctx, draft);
-  }, [draft, pitchRange, settings.loopLengthBeats, strokes]);
+
+    const playheadX = Math.min(1, Math.max(0, playheadProgress)) * WIDTH;
+    ctx.save();
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.72;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 0);
+    ctx.lineTo(playheadX, HEIGHT);
+    ctx.stroke();
+    ctx.restore();
+  }, [draft, pitchRange, playheadProgress, settings.loopLengthBeats, strokes]);
 
   const pointFromEvent = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
     const rect = event.currentTarget.getBoundingClientRect();
