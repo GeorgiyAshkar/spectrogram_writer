@@ -92,3 +92,16 @@ export const DEFAULT_INSTRUMENT_COLORS: Record<ParityInstrumentId, string> =
   Object.fromEntries(
     PARITY_INSTRUMENT_SWATCHES.map((swatch) => [swatch.id, swatch.color]),
   ) as Record<ParityInstrumentId, string>;
+
+
+export const PARITY_RECOLOR_PRESETS = [
+  '#1d9e75', '#0e7a5a', '#7bc9a8',
+  '#3fb0c0', '#2c8c8c', '#8fd3dc',
+  '#3e5ec6', '#2a3f8f', '#87a5e8',
+  '#7f77dd', '#5a4fb8', '#b3aeed',
+  '#de7bae', '#c2497f', '#f2b5d2',
+  '#d85a30', '#a83a1c', '#f09a75',
+  '#ef9f27', '#c77e12', '#f6c877',
+  '#f4be82', '#b98a54', '#8a6238',
+  '#33312b', '#6b675c', '#a7a294',
+] as const;
