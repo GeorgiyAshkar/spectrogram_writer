@@ -74,7 +74,9 @@ export default function App() {
   const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
   const [virtualKeyboardEvents, setVirtualKeyboardEvents] = useState<NoteEvent[]>([]);
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
-  const [redoMusicStrokes, setRedoMusicStrokes] = useState<Stroke[]>([]);
+  const [musicUndoHistory, setMusicUndoHistory] = useState<Stroke[][]>([]);
+  const [musicRedoHistory, setMusicRedoHistory] = useState<Stroke[][]>([]);
+  const [musicTool, setMusicTool] = useState<'pen' | 'eraser'>('pen');
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
   const [musicCustomColor, setMusicCustomColor] = useState<string>('#111827');
   const [midiEnabled, setMidiEnabled] = useState(false);
@@ -120,6 +122,8 @@ export default function App() {
     if (draft) {
       setMusicSettings(draft.settings);
       setMusicStrokes(draft.strokes);
+      setMusicUndoHistory([]);
+      setMusicRedoHistory([]);
       setVirtualKeyboardEvents(draft.virtualKeyboardEvents);
       setMidiRecordedEvents(draft.midiRecordedEvents);
       setMusicColor(draft.activeColor);
@@ -529,7 +533,8 @@ export default function App() {
     pendingVirtualNotesRef.current.clear();
     setMusicSettings(project.settings);
     setMusicStrokes(project.strokes);
-    setRedoMusicStrokes([]);
+    setMusicUndoHistory([]);
+    setMusicRedoHistory([]);
     setVirtualKeyboardEvents(project.virtualKeyboardEvents ?? []);
     setMidiRecordedEvents(project.midiRecordedEvents ?? []);
     setMusicColor(project.activeColor || DEFAULT_MUSIC_COLORS[0]);
@@ -575,28 +580,82 @@ export default function App() {
     }
   };
 
-  const handleMusicStrokesChange = (next: Stroke[]) => {
-    setMusicStrokes(next);
-    setRedoMusicStrokes([]);
-  };
-
-  const undoMusic = () => {
+  const commitMusicStrokes = useCallback((next: Stroke[]) => {
     setMusicStrokes((current) => {
-      if (current.length === 0) return current;
-      const last = current[current.length - 1];
-      setRedoMusicStrokes((redo) => [...redo, last]);
-      return current.slice(0, -1);
+      if (current === next) return current;
+      setMusicUndoHistory((history) => [...history.slice(-99), current]);
+      setMusicRedoHistory([]);
+      return next;
     });
-  };
+  }, []);
 
-  const redoMusic = () => {
-    setRedoMusicStrokes((current) => {
-      if (current.length === 0) return current;
-      const stroke = current[current.length - 1];
-      setMusicStrokes((strokes) => [...strokes, stroke]);
-      return current.slice(0, -1);
+  const undoMusic = useCallback(() => {
+    setMusicUndoHistory((history) => {
+      if (history.length === 0) return history;
+      const previous = history[history.length - 1];
+      setMusicStrokes((current) => {
+        setMusicRedoHistory((redo) => [...redo.slice(-99), current]);
+        return previous;
+      });
+      return history.slice(0, -1);
     });
-  };
+  }, []);
+
+  const redoMusic = useCallback(() => {
+    setMusicRedoHistory((history) => {
+      if (history.length === 0) return history;
+      const next = history[history.length - 1];
+      setMusicStrokes((current) => {
+        setMusicUndoHistory((undo) => [...undo.slice(-99), current]);
+        return next;
+      });
+      return history.slice(0, -1);
+    });
+  }, []);
+
+  const restartMusicDrawing = useCallback(() => {
+    if (musicStrokes.length === 0) return;
+    commitMusicStrokes([]);
+  }, [commitMusicStrokes, musicStrokes]);
+
+  const shuffleMusicDrawing = useCallback(() => {
+    const randomUnit = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const values = new Uint32Array(1);
+        crypto.getRandomValues(values);
+        return values[0] / 0xffffffff;
+      }
+      return Math.random();
+    };
+
+    const strokeCount = 5 + Math.floor(randomUnit() * 6);
+    const now = Date.now();
+    const next: Stroke[] = Array.from({ length: strokeCount }, (_, strokeIndex) => {
+      const pointCount = 3 + Math.floor(randomUnit() * 5);
+      const startX = randomUnit() * 0.16;
+      const span = 0.35 + randomUnit() * 0.62;
+      const color = PARITY_INSTRUMENT_SWATCHES[
+        Math.floor(randomUnit() * PARITY_INSTRUMENT_SWATCHES.length)
+      ]?.color ?? DEFAULT_MUSIC_COLORS[0];
+
+      const points = Array.from({ length: pointCount }, (_, pointIndex) => ({
+        x: Math.min(1, startX + (span * pointIndex) / Math.max(1, pointCount - 1)),
+        y: 0.08 + randomUnit() * 0.84,
+        t: pointIndex * 80,
+      }));
+
+      return {
+        id: `shuffle-${now}-${strokeIndex}`,
+        layerId: `color:${color.toLowerCase()}`,
+        color,
+        createdAt: now + strokeIndex,
+        programMode: musicSettings.programMode,
+        points,
+      };
+    });
+
+    commitMusicStrokes(next);
+  }, [commitMusicStrokes, musicSettings.programMode]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -618,7 +677,7 @@ export default function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activePanel]);
+  }, [activePanel, redoMusic, undoMusic]);
 
   const clearMusic = () => {
     const recorder = mediaRecorderRef.current;
@@ -627,7 +686,8 @@ export default function App() {
     realtimeMusic.stop();
     clearMusicDraft();
     setMusicStrokes([]);
-    setRedoMusicStrokes([]);
+    setMusicUndoHistory([]);
+    setMusicRedoHistory([]);
     setVirtualKeyboardEvents([]);
     setMidiRecordedEvents([]);
     pendingMidiNotesRef.current.clear();
@@ -853,8 +913,8 @@ export default function App() {
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
-            musicUndoDisabled={musicStrokes.length === 0}
-            musicRedoDisabled={redoMusicStrokes.length === 0}
+            musicUndoDisabled={musicUndoHistory.length === 0}
+            musicRedoDisabled={musicRedoHistory.length === 0}
             musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
             musicHasExportContent={activeMusicEvents.length > 0}
             musicIsPlaying={realtimeMusic.isPlaying}
@@ -1333,7 +1393,8 @@ export default function App() {
                 playheadProgress={realtimeMusic.progress}
                 showGrid={showMusicGrid}
                 onCanvasReady={handleMusicCanvasReady}
-                onChange={handleMusicStrokesChange}
+                tool={musicTool}
+                onChange={commitMusicStrokes}
               />
 
               <div className="music-event-summary">
