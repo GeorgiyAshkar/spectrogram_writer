@@ -108,3 +108,19 @@ export function mapYToMidi(y: number, pitchRange: readonly number[]): number {
   const highToLowIndex = Math.round(clamped * (pitchRange.length - 1));
   return pitchRange[pitchRange.length - 1 - highToLowIndex];
 }
+
+
+/**
+ * Clean-room approximation of the reference Freehand behavior.
+ * Unlike mapYToMidi(), this does not snap to scale degrees.
+ */
+export function mapYToContinuousMidi(y: number, pitchRange: readonly number[]): number {
+  if (pitchRange.length === 0) {
+    throw new Error('Cannot map Y to continuous pitch: pitch range is empty.');
+  }
+
+  const low = pitchRange[0];
+  const high = pitchRange[pitchRange.length - 1];
+  const clamped = Math.min(1, Math.max(0, y));
+  return high - clamped * (high - low);
+}
