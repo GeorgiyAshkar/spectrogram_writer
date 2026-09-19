@@ -82,7 +82,7 @@ export default function App() {
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
   const [takeMimeType, setTakeMimeType] = useState('video/webm');
   const [takeError, setTakeError] = useState<string | null>(null);
-  const [showInstrumentPanel, setShowInstrumentPanel] = useState(true);
+  const [showInstrumentPanel, setShowInstrumentPanel] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
   const [showMusicHelp, setShowMusicHelp] = useState(false);
   const [showSharePanel, setShowSharePanel] = useState(false);
@@ -784,8 +784,6 @@ export default function App() {
             onUndoMusic={undoMusic}
             onToggleMusicPlayback={realtimeMusic.togglePlayback}
             onSeekMusic={(progress) => realtimeMusic.seek(progress * musicPlaybackSettings.loopLengthBeats)}
-            onDownloadMusicWav={downloadMusicWav}
-            onDownloadMusicMidi={downloadMusicMidi}
           />
           {activePanel === 'music' ? (
             <div className="music-panel">
@@ -1011,6 +1009,25 @@ export default function App() {
                     onChange={(e) => chooseMusicPhoto(e.target.files?.[0] ?? null)}
                   />
                 </label>
+                <div className="music-control music-export-control">
+                  <span>Export</span>
+                  <div className="music-inline-buttons">
+                    <button
+                      type="button"
+                      onClick={downloadMusicWav}
+                      disabled={activeMusicEvents.length === 0}
+                    >
+                      WAV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={downloadMusicMidi}
+                      disabled={activeMusicEvents.length === 0}
+                    >
+                      MIDI
+                    </button>
+                  </div>
+                </div>
                 </div>
               </div>
               ) : null}
