@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -38,3 +40,21 @@ class GenerationRequest(BaseModel):
     adsr_release: float = 0.05
     sample_masked: bool = False
     image_base64: str | None = None
+
+
+
+class MusicShareCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=120)
+    author: str = Field(..., min_length=1, max_length=80)
+    project: dict[str, Any]
+
+
+class MusicShareSummary(BaseModel):
+    id: str
+    title: str
+    author: str
+    created_at: str
+
+
+class MusicShareDetail(MusicShareSummary):
+    project: dict[str, Any]
