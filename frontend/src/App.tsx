@@ -913,14 +913,10 @@ export default function App() {
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
-            musicUndoDisabled={musicUndoHistory.length === 0}
-            musicRedoDisabled={musicRedoHistory.length === 0}
             musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
             musicHasExportContent={activeMusicEvents.length > 0}
             musicIsPlaying={realtimeMusic.isPlaying}
             musicProgress={realtimeMusic.progress}
-            onUndoMusic={undoMusic}
-            onRedoMusic={redoMusic}
             onToggleMusicPlayback={realtimeMusic.togglePlayback}
             onSeekMusic={(progress) => realtimeMusic.seek(progress * musicPlaybackSettings.loopLengthBeats)}
           />
@@ -961,6 +957,62 @@ export default function App() {
                   onClick={() => setShowMusicGrid((current) => !current)}
                 >
                   Grid
+                </button>
+              </div>
+
+              <div className="music-edit-toolbar" aria-label="Drawing tools">
+                <button
+                  type="button"
+                  className={musicTool === 'pen' ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-pressed={musicTool === 'pen'}
+                  title="Pen — Draw. Every line is a sound."
+                  onClick={() => setMusicTool('pen')}
+                >
+                  Pen
+                </button>
+                <button
+                  type="button"
+                  className={musicTool === 'eraser' ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-pressed={musicTool === 'eraser'}
+                  title="Eraser — drag across a line"
+                  onClick={() => setMusicTool('eraser')}
+                >
+                  Eraser
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={musicUndoHistory.length === 0}
+                  title="Undo the last drawing action"
+                  onClick={undoMusic}
+                >
+                  ↶
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={musicRedoHistory.length === 0}
+                  title="Redo a drawing action"
+                  onClick={redoMusic}
+                >
+                  ↷
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={musicStrokes.length === 0}
+                  title="Restart — clear the drawing; the beat keeps going"
+                  onClick={restartMusicDrawing}
+                >
+                  Restart
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  title="Shuffle — a new drawing, at random"
+                  onClick={shuffleMusicDrawing}
+                >
+                  Shuffle
                 </button>
               </div>
 
