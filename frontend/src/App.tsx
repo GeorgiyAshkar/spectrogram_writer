@@ -597,7 +597,11 @@ export default function App() {
     realtimeMusic.stop();
     pendingMidiNotesRef.current.clear();
     pendingVirtualNotesRef.current.clear();
-    setMusicSettings(project.settings);
+    setMusicSettings({
+      ...DEFAULT_MUSIC_SETTINGS,
+      ...project.settings,
+      freehandEnabled: project.settings.freehandEnabled ?? false,
+    });
     setMusicStrokes(project.strokes);
     setMusicUndoHistory([]);
     setMusicRedoHistory([]);
