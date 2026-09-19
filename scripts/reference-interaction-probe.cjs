@@ -284,8 +284,17 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     if (toggleId) {
-      const visible = await page.$eval('#' + toggleId, (el) => getComputedStyle(el).display !== 'none');
-      if (visible) await page.click('#' + toggleId);
+      const toggleState = await page.evaluate((id) => {
+        const el = document.getElementById(id);
+        if (!el) return { found: false, visible: false };
+        const visible = getComputedStyle(el).display !== 'none';
+        if (visible && el instanceof HTMLElement) el.click();
+        return { found: true, visible };
+      }, toggleId);
+      if (!toggleState.found || !toggleState.visible) {
+        console.log(JSON.stringify({ label: 'draw-variant-skip', variant: label, toggleId, toggleState }));
+        return;
+      }
       await new Promise((resolve) => setTimeout(resolve, 120));
     }
 
