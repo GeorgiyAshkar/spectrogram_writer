@@ -49,6 +49,8 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     await page.waitForSelector('.music-draw-canvas', { timeout: 5000 });
 
     const canvas = await page.$('.music-draw-canvas');
+    await canvas?.evaluate((node) => node.scrollIntoView({ block: 'center', inline: 'center' }));
+    await new Promise((resolve) => setTimeout(resolve, 120));
     const box = await canvas?.boundingBox();
     if (!box) throw new Error('Music canvas is not measurable.');
 
@@ -62,12 +64,21 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     }
     await page.mouse.up();
 
-    await page.waitForFunction(
-      () => [...document.querySelectorAll('.music-event-summary span')].some(
-        (node) => /Линий:\s*1/.test(node.textContent || ''),
-      ),
-      { timeout: 5000 },
-    );
+    try {
+      await page.waitForFunction(
+        () => [...document.querySelectorAll('.music-event-summary span')].some(
+          (node) => /Линий:\s*1/.test(node.textContent || ''),
+        ),
+        { timeout: 5000 },
+      );
+    } catch (error) {
+      const diagnostics = await page.evaluate(() => ({
+        summary: [...document.querySelectorAll('.music-event-summary span')].map((node) => node.textContent),
+        canvasRect: document.querySelector('.music-draw-canvas')?.getBoundingClientRect().toJSON?.() ?? null,
+        scrollY: window.scrollY,
+      }));
+      throw new Error(`Drawing did not create a stroke: ${JSON.stringify(diagnostics)}; ${error}`);
+    }
 
     const undoButton = await page.$('button[title="Undo the last drawing action"]');
     if (!undoButton) throw new Error('Undo button not found.');
