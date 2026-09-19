@@ -20,13 +20,12 @@ type Props = {
 const WIDTH = 960;
 const HEIGHT = 420;
 
-function snapPoint(point: Point, preset: MusicSettings['drawingResolutionPreset']): Point {
-  if (preset === 1) return point;
+function snapPoint(point: Point, programMode: MusicSettings['programMode']): Point {
+  if (programMode !== 2) return point;
 
-  // Engineering defaults until exact parity grid sizes are measured.
-  const columns = preset === 2 ? 32 : 16;
-  const rows = preset === 2 ? 24 : 12;
-
+  // Pixel mode density is an isolated clean-room rendering choice.
+  const columns = 32;
+  const rows = 24;
   return {
     ...point,
     x: Math.round(point.x * columns) / columns,
@@ -37,12 +36,12 @@ function snapPoint(point: Point, preset: MusicSettings['drawingResolutionPreset'
 function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   if (stroke.points.length === 0) return;
 
-  const preset = stroke.drawingResolutionPreset ?? 1;
+  const programMode = stroke.programMode ?? stroke.drawingResolutionPreset ?? 1;
   ctx.save();
 
-  if (preset > 1) {
-    const columns = preset === 2 ? 32 : 16;
-    const rows = preset === 2 ? 24 : 12;
+  if (programMode === 2) {
+    const columns = 32;
+    const rows = 24;
     const cellWidth = WIDTH / columns;
     const cellHeight = HEIGHT / rows;
     const visited = new Set<string>();
@@ -249,7 +248,7 @@ export function MusicCanvas({
       t: performance.now() - pointerStartedAt.current,
       pressure: event.pressure || undefined,
     };
-    return snapPoint(point, settings.drawingResolutionPreset);
+    return snapPoint(point, settings.programMode);
   };
 
   const appendPoint = (point: Point) => {
@@ -283,7 +282,7 @@ export function MusicCanvas({
           layerId: `color:${activeColor.toLowerCase()}`,
           color: activeColor,
           createdAt: Date.now(),
-          drawingResolutionPreset: settings.drawingResolutionPreset,
+          programMode: settings.programMode,
           points: [point],
         };
         draftRef.current = nextDraft;
