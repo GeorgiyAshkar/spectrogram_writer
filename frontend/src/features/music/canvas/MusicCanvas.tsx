@@ -25,16 +25,50 @@ type Props = {
 const WIDTH = 960;
 const HEIGHT = 420;
 
-function snapPoint(point: Point, programMode: MusicSettings['programMode']): Point {
+const PIXEL_COLUMNS = 48;
+const PIXEL_FILL_RATIO = 18 / 19;
+
+function pixelCellSide(): number {
+  return (WIDTH / PIXEL_COLUMNS) * PIXEL_FILL_RATIO;
+}
+
+function pixelRowCenter(row: number, rowCount: number): number {
+  const safeRows = Math.max(1, Math.floor(rowCount));
+  if (safeRows === 1) return 0.5;
+
+  const halfCell = pixelCellSide() / (2 * HEIGHT);
+  const step = (1 - 2 * halfCell) / (safeRows - 1);
+  return halfCell + Math.min(safeRows - 1, Math.max(0, row)) * step;
+}
+
+function pixelRowIndex(y: number, rowCount: number): number {
+  const safeRows = Math.max(1, Math.floor(rowCount));
+  if (safeRows === 1) return 0;
+
+  const halfCell = pixelCellSide() / (2 * HEIGHT);
+  const step = (1 - 2 * halfCell) / (safeRows - 1);
+  return Math.min(
+    safeRows - 1,
+    Math.max(0, Math.round((Math.min(1, Math.max(0, y)) - halfCell) / step)),
+  );
+}
+
+function snapPoint(
+  point: Point,
+  programMode: MusicSettings['programMode'],
+  pixelRowCount: number,
+): Point {
   if (programMode !== 2) return point;
 
-  // Pixel mode density is an isolated clean-room rendering choice.
-  const columns = 32;
-  const rows = 24;
+  const col = Math.min(
+    PIXEL_COLUMNS - 1,
+    Math.max(0, Math.floor(Math.min(0.999999, Math.max(0, point.x)) * PIXEL_COLUMNS)),
+  );
+  const row = pixelRowIndex(point.y, pixelRowCount);
   return {
     ...point,
-    x: Math.round(point.x * columns) / columns,
-    y: Math.round(point.y * rows) / rows,
+    x: (col + 0.5) / PIXEL_COLUMNS,
+    y: pixelRowCenter(row, pixelRowCount),
   };
 }
 
@@ -45,43 +79,94 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.save();
 
   if (programMode === 2) {
-    const columns = 32;
-    const rows = 24;
-    const cellWidth = WIDTH / columns;
-    const cellHeight = HEIGHT / rows;
+    if (!stroke.pixelRowCount) {
+      // Legacy Program-2 strokes were saved on the old 32 × 24 clean-room grid.
+      const columns = 32;
+      const rows = 24;
+      const cellWidth = WIDTH / columns;
+      const cellHeight = HEIGHT / rows;
+      const visited = new Set<string>();
+
+      const paintLegacyCell = (x: number, y: number) => {
+        const col = Math.min(columns, Math.max(0, Math.round(x * columns)));
+        const row = Math.min(rows, Math.max(0, Math.round(y * rows)));
+        const key = `${col}:${row}`;
+        if (visited.has(key)) return;
+        visited.add(key);
+
+        const cx = (col / columns) * WIDTH;
+        const cy = (row / rows) * HEIGHT;
+        ctx.fillStyle = stroke.color;
+        ctx.fillRect(
+          cx - cellWidth * 0.44,
+          cy - cellHeight * 0.44,
+          cellWidth * 0.88,
+          cellHeight * 0.88,
+        );
+      };
+
+      stroke.points.forEach((point, index) => {
+        paintLegacyCell(point.x, point.y);
+        if (index === 0) return;
+
+        const previous = stroke.points[index - 1];
+        const dx = (point.x - previous.x) * columns;
+        const dy = (point.y - previous.y) * rows;
+        const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))));
+        for (let step = 1; step < steps; step += 1) {
+          const ratio = step / steps;
+          paintLegacyCell(
+            previous.x + (point.x - previous.x) * ratio,
+            previous.y + (point.y - previous.y) * ratio,
+          );
+        }
+      });
+
+      ctx.restore();
+      return;
+    }
+
+    const rowCount = Math.max(1, Math.floor(stroke.pixelRowCount));
+    const side = pixelCellSide();
     const visited = new Set<string>();
 
-    const paintCell = (x: number, y: number) => {
-      const col = Math.min(columns, Math.max(0, Math.round(x * columns)));
-      const row = Math.min(rows, Math.max(0, Math.round(y * rows)));
-      const key = `${col}:${row}`;
+    const coordinates = (point: Point) => {
+      const col = Math.min(
+        PIXEL_COLUMNS - 1,
+        Math.max(0, Math.floor(Math.min(0.999999, Math.max(0, point.x)) * PIXEL_COLUMNS)),
+      );
+      return {
+        col,
+        row: pixelRowIndex(point.y, rowCount),
+      };
+    };
+
+    const paintCell = (col: number, row: number) => {
+      const safeCol = Math.min(PIXEL_COLUMNS - 1, Math.max(0, col));
+      const safeRow = Math.min(rowCount - 1, Math.max(0, row));
+      const key = `${safeCol}:${safeRow}`;
       if (visited.has(key)) return;
       visited.add(key);
 
-      const cx = (col / columns) * WIDTH;
-      const cy = (row / rows) * HEIGHT;
+      const cx = ((safeCol + 0.5) / PIXEL_COLUMNS) * WIDTH;
+      const cy = pixelRowCenter(safeRow, rowCount) * HEIGHT;
       ctx.fillStyle = stroke.color;
-      ctx.fillRect(
-        cx - cellWidth * 0.44,
-        cy - cellHeight * 0.44,
-        cellWidth * 0.88,
-        cellHeight * 0.88,
-      );
+      ctx.fillRect(cx - side / 2, cy - side / 2, side, side);
     };
 
     stroke.points.forEach((point, index) => {
-      paintCell(point.x, point.y);
+      const current = coordinates(point);
+      paintCell(current.col, current.row);
       if (index === 0) return;
 
-      const previous = stroke.points[index - 1];
-      const dx = (point.x - previous.x) * columns;
-      const dy = (point.y - previous.y) * rows;
-      const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))));
+      const previous = coordinates(stroke.points[index - 1]);
+      const dx = current.col - previous.col;
+      const dy = current.row - previous.row;
+      const steps = Math.max(1, Math.max(Math.abs(dx), Math.abs(dy)));
       for (let step = 1; step < steps; step += 1) {
-        const ratio = step / steps;
         paintCell(
-          previous.x + (point.x - previous.x) * ratio,
-          previous.y + (point.y - previous.y) * ratio,
+          Math.round(previous.col + (dx * step) / steps),
+          Math.round(previous.row + (dy * step) / steps),
         );
       }
     });
@@ -283,7 +368,7 @@ export function MusicCanvas({
       t: performance.now() - pointerStartedAt.current,
       pressure: event.pressure || undefined,
     };
-    return snapPoint(point, settings.programMode);
+    return snapPoint(point, settings.programMode, pitchRange.length);
   };
 
   const appendPoint = (point: Point) => {
@@ -389,6 +474,7 @@ export function MusicCanvas({
           color: activeColor,
           createdAt: Date.now(),
           programMode: settings.programMode,
+          pixelRowCount: settings.programMode === 2 ? pitchRange.length : undefined,
           points: [point],
         };
         draftRef.current = nextDraft;
