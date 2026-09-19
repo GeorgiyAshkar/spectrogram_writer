@@ -11,6 +11,7 @@ type AudioPlayerProps = {
   musicModeEnabled: boolean;
   musicUndoDisabled: boolean;
   musicHasContent: boolean;
+  musicHasExportContent: boolean;
   musicIsPlaying: boolean;
   musicProgress: number;
   onUndoMusic: () => void;
@@ -32,6 +33,7 @@ export function AudioPlayer({
   musicModeEnabled,
   musicUndoDisabled,
   musicHasContent,
+  musicHasExportContent,
   musicIsPlaying,
   musicProgress,
   onUndoMusic,
@@ -65,6 +67,13 @@ export function AudioPlayer({
       audio.removeEventListener('loadedmetadata', onMeta);
     };
   }, []);
+
+  useEffect(() => {
+    if (musicModeEnabled && audioRef.current) {
+      audioRef.current.pause();
+      setPendingAutoplay(false);
+    }
+  }, [musicModeEnabled]);
 
   useEffect(() => {
     if (musicModeEnabled) return;
@@ -216,7 +225,7 @@ export function AudioPlayer({
         type="button"
         className="button-secondary draw-panel__clear-btn header-player__download"
         onClick={downloadWav}
-        disabled={isPreparingAudio || (musicModeEnabled ? !musicHasContent : !audioUrl)}
+        disabled={isPreparingAudio || (musicModeEnabled ? !musicHasExportContent : !audioUrl)}
       >
         Скачать WAV
       </button>
