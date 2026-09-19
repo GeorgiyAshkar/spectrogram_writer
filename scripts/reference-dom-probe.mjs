@@ -14,7 +14,7 @@ const html = await response.text();
 console.log('html-bytes:', Buffer.byteLength(html, 'utf8'));
 
 function decode(value) {
-  return value
+  return String(value)
     .replaceAll('&nbsp;', ' ')
     .replaceAll('&amp;', '&')
     .replaceAll('&quot;', '"')
