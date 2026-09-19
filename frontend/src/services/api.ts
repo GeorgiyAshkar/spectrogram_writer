@@ -9,7 +9,7 @@ function resolveApiBase(): string {
   return '/api';
 }
 
-const API_BASE = resolveApiBase();
+export const API_BASE = resolveApiBase();
 const LOGO_URL = `${API_BASE}/branding/logo`;
 
 async function parseError(response: Response): Promise<string> {
