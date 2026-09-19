@@ -10,13 +10,35 @@ type AudioPlayerProps = {
   onClearCanvas: () => void;
   musicModeEnabled: boolean;
   musicUndoDisabled: boolean;
+  musicHasContent: boolean;
+  musicIsPlaying: boolean;
+  musicProgress: number;
   onUndoMusic: () => void;
-  onPlayMusicSequence: () => Promise<void>;
+  onToggleMusicPlayback: () => Promise<void>;
+  onSeekMusic: (progress: number) => Promise<void>;
+  onDownloadMusicWav: () => void;
 };
 
 const WAVE_SAMPLES = 220;
 
-export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onDownloadSnapshot, onClearCanvas, musicModeEnabled, musicUndoDisabled, onUndoMusic, onPlayMusicSequence }: AudioPlayerProps) {
+export function AudioPlayer({
+  audioUrl,
+  isPreparingAudio,
+  onRequestAudio,
+  onToggleEraser,
+  eraserEnabled,
+  onDownloadSnapshot,
+  onClearCanvas,
+  musicModeEnabled,
+  musicUndoDisabled,
+  musicHasContent,
+  musicIsPlaying,
+  musicProgress,
+  onUndoMusic,
+  onToggleMusicPlayback,
+  onSeekMusic,
+  onDownloadMusicWav,
+}: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
@@ -45,23 +67,25 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
   }, []);
 
   useEffect(() => {
+    if (musicModeEnabled) return;
     if (!pendingAutoplay || !audioUrl || !audioRef.current) return;
     void audioRef.current.play();
     setPendingAutoplay(false);
-  }, [audioUrl, pendingAutoplay]);
+  }, [audioUrl, musicModeEnabled, pendingAutoplay]);
 
 
   useEffect(() => {
+    if (musicModeEnabled) return;
     if (!audioRef.current || audioUrl) return;
     audioRef.current.pause();
     audioRef.current.currentTime = 0;
     setIsPlaying(false);
     setPosition(0);
-  }, [audioUrl]);
+  }, [audioUrl, musicModeEnabled]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!audioUrl) {
+    if (musicModeEnabled || !audioUrl) {
       setPeaks([]);
       setDuration(0);
       setPosition(0);
@@ -93,22 +117,16 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
     return () => {
       cancelled = true;
     };
-  }, [audioUrl]);
+  }, [audioUrl, musicModeEnabled]);
 
   const togglePlay = async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
     if (musicModeEnabled) {
-      if (audioUrl) {
-        if (audio.paused) await audio.play();
-        else audio.pause();
-        return;
-      }
-      setPendingAutoplay(true);
-      await onPlayMusicSequence();
+      await onToggleMusicPlayback();
       return;
     }
+
+    const audio = audioRef.current;
+    if (!audio) return;
     if (!audioUrl) {
       setPendingAutoplay(true);
       await onRequestAudio();
@@ -125,7 +143,11 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
       .catch(() => setPlayIcon('/icons/play.svg'));
   }, []);
 
-  const progress = useMemo(() => (duration > 0 ? (position / duration) * 100 : 0), [duration, position]);
+  const progress = useMemo(
+    () => (musicModeEnabled ? Math.min(100, Math.max(0, musicProgress * 100)) : duration > 0 ? (position / duration) * 100 : 0),
+    [duration, musicModeEnabled, musicProgress, position],
+  );
+  const displayIsPlaying = musicModeEnabled ? musicIsPlaying : isPlaying;
 
     const buildTimestampFileName = () => {
     const now = new Date();
@@ -134,6 +156,10 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
   };
 
   const downloadWav = () => {
+    if (musicModeEnabled) {
+      onDownloadMusicWav();
+      return;
+    }
     if (!audioUrl) return;
     const baseName = buildTimestampFileName();
     const link = document.createElement('a');
@@ -142,13 +168,20 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    if (!musicModeEnabled) onDownloadSnapshot(baseName);
+    onDownloadSnapshot(baseName);
   };
 
   return (
     <div className="header-player">
-      <button type="button" className="button-secondary panel-tab panel-tab--icon header-player__play" onClick={() => void togglePlay()} disabled={isPreparingAudio} title="Воспроизвести/Пауза" aria-label="Воспроизвести/Пауза">
-        {isPlaying ? <span className="header-player__play-icon" aria-hidden="true">⏸️</span> : <img src={playIcon} alt="" aria-hidden="true" className="header-player__play-icon-image" />}
+      <button
+        type="button"
+        className="button-secondary panel-tab panel-tab--icon header-player__play"
+        onClick={() => void togglePlay()}
+        disabled={isPreparingAudio || (musicModeEnabled && !musicHasContent)}
+        title="Воспроизвести/Пауза"
+        aria-label="Воспроизвести/Пауза"
+      >
+        {displayIsPlaying ? <span className="header-player__play-icon" aria-hidden="true">⏸️</span> : <img src={playIcon} alt="" aria-hidden="true" className="header-player__play-icon-image" />}
       </button>
 
       <div className="waveform-block">
@@ -162,11 +195,15 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
           <input
             type="range"
             min={0}
-            max={duration || 1}
-            step={0.01}
-            value={position}
+            max={musicModeEnabled ? 1 : duration || 1}
+            step={0.001}
+            value={musicModeEnabled ? Math.min(1, Math.max(0, musicProgress)) : position}
             onChange={(e) => {
               const next = Number(e.target.value);
+              if (musicModeEnabled) {
+                void onSeekMusic(next);
+                return;
+              }
               setPosition(next);
               if (audioRef.current) audioRef.current.currentTime = next;
             }}
@@ -179,7 +216,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
         type="button"
         className="button-secondary draw-panel__clear-btn header-player__download"
         onClick={downloadWav}
-        disabled={!audioUrl || isPreparingAudio}
+        disabled={isPreparingAudio || (musicModeEnabled ? !musicHasContent : !audioUrl)}
       >
         Скачать WAV
       </button>
