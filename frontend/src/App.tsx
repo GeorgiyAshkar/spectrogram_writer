@@ -102,6 +102,7 @@ export default function App() {
   const [musicDraftStatus, setMusicDraftStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [isTakeRecording, setIsTakeRecording] = useState(false);
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
+  const [takeBlob, setTakeBlob] = useState<Blob | null>(null);
   const [takeMimeType, setTakeMimeType] = useState('video/webm');
   const [takeError, setTakeError] = useState<string | null>(null);
   const [showInstrumentPanel, setShowInstrumentPanel] = useState(false);
@@ -428,6 +429,7 @@ export default function App() {
         URL.revokeObjectURL(takeUrl);
         setTakeUrl(null);
       }
+      setTakeBlob(null);
 
       const videoStream = canvas.captureStream(30);
       const audioStream = await realtimeMusic.getCaptureStream();
@@ -460,6 +462,7 @@ export default function App() {
         const finalType = recorder.mimeType || mimeType || 'video/webm';
         const blob = new Blob(takeChunksRef.current, { type: finalType });
         setTakeMimeType(finalType);
+        setTakeBlob(blob);
         setTakeUrl(URL.createObjectURL(blob));
         setIsTakeRecording(false);
         takeChunksRef.current = [];
@@ -496,6 +499,36 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const shareTake = async () => {
+    if (!takeBlob) {
+      downloadTake();
+      return;
+    }
+
+    const extension = takeMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const filename = `music_take_${new Date().toISOString().replace(/[:.]/g, '-') }.${extension}`;
+    const file = new File([takeBlob], filename, { type: takeMimeType || takeBlob.type || 'video/webm' });
+    const nav = navigator as Navigator & {
+      canShare?: (data?: ShareData) => boolean;
+    };
+
+    try {
+      if (typeof navigator.share === 'function' && (!nav.canShare || nav.canShare({ files: [file] }))) {
+        await navigator.share({
+          files: [file],
+          title: 'play_music_theory take',
+        });
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setTakeError(error instanceof Error ? error.message : 'Не удалось поделиться take.');
+      return;
+    }
+
+    downloadTake();
   };
 
   const buildShareProject = (): MusicShareProjectV2 => ({
@@ -1406,9 +1439,14 @@ export default function App() {
                   {isTakeRecording ? 'stop' : 'record'}
                 </button>
                 {takeUrl ? (
-                  <button type="button" className="button-secondary" onClick={downloadTake}>
-                    Скачать take
-                  </button>
+                  <>
+                    <button type="button" className="button-secondary" onClick={() => void shareTake()}>
+                      share take
+                    </button>
+                    <button type="button" className="button-secondary" onClick={downloadTake}>
+                      Скачать take
+                    </button>
+                  </>
                 ) : null}
                 <button
                   type="button"
