@@ -18,6 +18,15 @@ import {
 } from '../src/features/music/audio/voiceProfiles';
 import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
 import { buildAccompanimentEvents } from '../src/features/music/audio/accompaniment';
+import {
+  generateRandomDrawing,
+  recolorInstrumentStrokes,
+  restoreDefaultInstrumentColors,
+} from '../src/features/music/drawing/drawingTools';
+import {
+  DEFAULT_INSTRUMENT_COLORS,
+  PARITY_INSTRUMENT_SWATCHES,
+} from '../src/features/music/parityConfig';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -132,6 +141,51 @@ function testAccompaniment() {
   assert(arpeggio.length > 0 && arpeggio.every((event) => event.layerId === 'accompaniment:arpeggio'), 'Arpeggio control must create arpeggio events');
 }
 
+function testDrawingTools() {
+  let index = 0;
+  const sequence = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+  const random = () => sequence[index++ % sequence.length];
+
+  const shuffled = generateRandomDrawing(
+    { programMode: 2 },
+    { ...DEFAULT_INSTRUMENT_COLORS },
+    random,
+    1234,
+  );
+
+  assert(shuffled.length >= 5 && shuffled.length <= 10, 'Shuffle must create a bounded random drawing');
+  assert(shuffled.every((stroke) => stroke.programMode === 2), 'Shuffle must preserve the active program mode');
+  assert(shuffled.every((stroke) => stroke.layerId.startsWith('instrument:')), 'Shuffle strokes must keep stable instrument identity');
+
+  const target = shuffled[0];
+  const instrumentId = target.layerId.replace('instrument:', '') as keyof typeof DEFAULT_INSTRUMENT_COLORS;
+  const recolored = recolorInstrumentStrokes(shuffled, instrumentId, '#123456');
+  assert(
+    recolored.filter((stroke) => stroke.layerId === target.layerId).every((stroke) => stroke.color === '#123456'),
+    'Recolor must update every stroke of the selected instrument',
+  );
+  assert(
+    recolored.filter((stroke) => stroke.layerId !== target.layerId).every((stroke, i) => {
+      const original = shuffled.filter((candidate) => candidate.layerId !== target.layerId)[i];
+      return !original || stroke.color === original.color;
+    }),
+    'Recolor must leave other instruments untouched',
+  );
+
+  const restored = restoreDefaultInstrumentColors(recolored);
+  for (const swatch of PARITY_INSTRUMENT_SWATCHES) {
+    assert(restored.colors[swatch.id] === swatch.color, `${swatch.id} must restore the exact reference color`);
+  }
+  assert(
+    restored.strokes.every((stroke) => {
+      if (!stroke.layerId.startsWith('instrument:')) return true;
+      const id = stroke.layerId.replace('instrument:', '') as keyof typeof DEFAULT_INSTRUMENT_COLORS;
+      return stroke.color === DEFAULT_INSTRUMENT_COLORS[id];
+    }),
+    'Reset colors must recolor existing instrument strokes to reference defaults',
+  );
+}
+
 function testDraftMigration() {
   const {
     programMode: _programMode,
@@ -217,6 +271,7 @@ testRhythm();
 testStrokeCompiler();
 testVoiceProfiles();
 testAccompaniment();
+testDrawingTools();
 testDraftMigration();
 testExports();
 
