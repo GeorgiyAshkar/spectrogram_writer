@@ -90,6 +90,37 @@ try {
     return true;
   }, selector);
 
+  const canvasSwatchHistogram = async () => page.evaluate(() => {
+    const canvas = document.getElementById('c');
+    if (!(canvas instanceof HTMLCanvasElement)) return null;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+
+    const swatches = [...document.querySelectorAll('.swatch')].map((el) => {
+      const color = getComputedStyle(el).backgroundColor;
+      const match = color.match(/\d+/g)?.map(Number) ?? [];
+      return {
+        label: el.getAttribute('aria-label') ?? '',
+        rgb: match.slice(0, 3),
+      };
+    });
+    const counts = Object.fromEntries(swatches.map((swatch) => [swatch.label, 0]));
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      const r = pixels[index];
+      const g = pixels[index + 1];
+      const b = pixels[index + 2];
+      for (const swatch of swatches) {
+        if (swatch.rgb[0] === r && swatch.rgb[1] === g && swatch.rgb[2] === b) {
+          counts[swatch.label] += 1;
+          break;
+        }
+      }
+    }
+    return counts;
+  });
+
   const canvasDigest = async () => page.evaluate(() => {
     const canvas = document.getElementById('c');
     if (!(canvas instanceof HTMLCanvasElement)) return null;
@@ -159,17 +190,21 @@ try {
   }));
 
   const recolorBefore = await canvasDigest();
+  const recolorHistogramBefore = await canvasSwatchHistogram();
   await domClick('#recolorBtn');
   await new Promise((resolve) => setTimeout(resolve, 80));
   const recolorState = await page.$eval('#recolorBtn', (el) => el.className);
   await domClick('.swatch[aria-label="pluck"]');
   await new Promise((resolve) => setTimeout(resolve, 120));
   const recolorAfter = await canvasDigest();
+  const recolorHistogramAfter = await canvasSwatchHistogram();
   console.log(JSON.stringify({
     label: 'recolor-existing-drawing',
     buttonClassAfterArm: recolorState,
     before: recolorBefore,
     after: recolorAfter,
+    histogramBefore: recolorHistogramBefore,
+    histogramAfter: recolorHistogramAfter,
   }));
 
   for (const id of ['lockBtn', 'freeBtn']) {
