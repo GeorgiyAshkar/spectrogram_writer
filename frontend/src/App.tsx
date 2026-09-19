@@ -10,6 +10,7 @@ import type { GenerationFormData } from './types/config';
 import {
   compileStrokes,
   DEFAULT_MUSIC_SETTINGS,
+  midiToNoteName,
   noteNameToMidi,
   type MusicSettings,
   type NoteEvent,
@@ -55,8 +56,8 @@ export default function App() {
   const [headerControlsHidden, setHeaderControlsHidden] = useState(false);
   const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
   const [eraserEnabled, setEraserEnabled] = useState(false);
-  const [musicSequence, setMusicSequence] = useState<string[]>([]);
   const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
+  const [virtualKeyboardEvents, setVirtualKeyboardEvents] = useState<NoteEvent[]>([]);
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
   const [musicCustomColor, setMusicCustomColor] = useState<string>('#111827');
@@ -68,6 +69,9 @@ export default function App() {
   const pendingMidiNotesRef = useRef(
     new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
   );
+  const pendingVirtualNotesRef = useRef(
+    new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
+  );
   const realtimePlayingRef = useRef(false);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
@@ -76,44 +80,23 @@ export default function App() {
       setInputSource(next);
     }
   };
-  const octaves = [1, 2, 3, 4, 5];
+  const keyboardOctaves = useMemo(
+    () => [2, 3, 4].map((octave) => octave + musicSettings.octaveOffset),
+    [musicSettings.octaveOffset],
+  );
   const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-
-  const noteOrder = Array.from({ length: 5 }, (_, octaveOffset) => octaveOffset + 1)
-    .flatMap((octave) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((note) => `${note}${octave}`));
-  const noteYOffset = noteOrder.reduce<Record<string, number>>((acc, note, idx) => {
-    acc[note] = 8 + idx * 1.35;
-    return acc;
-  }, {});
 
   const canvasMusicEvents = useMemo(
     () => compileStrokes(musicStrokes, musicSettings),
     [musicSettings, musicStrokes],
   );
 
-  const keyboardMusicEvents = useMemo<NoteEvent[]>(
-    () =>
-      musicSequence.flatMap((note, noteIndex) => {
-        const midi = noteNameToMidi(note);
-        if (midi === null) return [];
-        return [{
-          id: `keyboard:${noteIndex}`,
-          layerId: 'keyboard',
-          midi,
-          velocity: 0.82,
-          startBeat: (noteIndex * 0.5) % Math.max(0.001, musicSettings.loopLengthBeats),
-          durationBeats: 0.42,
-        }];
-      }),
-    [musicSequence, musicSettings.loopLengthBeats],
-  );
-
   const activeMusicEvents = useMemo(
     () =>
-      [...canvasMusicEvents, ...keyboardMusicEvents, ...midiRecordedEvents].sort(
+      [...canvasMusicEvents, ...virtualKeyboardEvents, ...midiRecordedEvents].sort(
         (a, b) => a.startBeat - b.startBeat || a.midi - b.midi,
       ),
-    [canvasMusicEvents, keyboardMusicEvents, midiRecordedEvents],
+    [canvasMusicEvents, midiRecordedEvents, virtualKeyboardEvents],
   );
   const musicPlaybackSettings = musicSettings;
 
@@ -224,22 +207,25 @@ export default function App() {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
-  const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
-
   const undoMusic = () => {
     if (musicStrokes.length > 0) {
       setMusicStrokes((current) => current.slice(0, -1));
       return;
     }
-    setMusicSequence((current) => current.slice(0, -1));
+    if (virtualKeyboardEvents.length > 0) {
+      setVirtualKeyboardEvents((current) => current.slice(0, -1));
+      return;
+    }
+    setMidiRecordedEvents((current) => current.slice(0, -1));
   };
 
   const clearMusic = () => {
     realtimeMusic.stop();
     setMusicStrokes([]);
-    setMusicSequence([]);
+    setVirtualKeyboardEvents([]);
     setMidiRecordedEvents([]);
     pendingMidiNotesRef.current.clear();
+    pendingVirtualNotesRef.current.clear();
   };
 
   const chooseMusicPhoto = (file: File | null) => {
@@ -458,7 +444,7 @@ export default function App() {
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
-            musicUndoDisabled={musicStrokes.length === 0 && musicSequence.length === 0}
+            musicUndoDisabled={musicStrokes.length === 0 && virtualKeyboardEvents.length === 0 && midiRecordedEvents.length === 0}
             musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
             musicHasExportContent={activeMusicEvents.length > 0}
             musicIsPlaying={realtimeMusic.isPlaying}
@@ -660,7 +646,7 @@ export default function App() {
                     }}
                   />
                 </label>
-                <button type="button" className="button-secondary" onClick={clearMusic} disabled={musicStrokes.length === 0 && musicSequence.length === 0}>
+                <button type="button" className="button-secondary" onClick={clearMusic} disabled={activeMusicEvents.length === 0}>
                   Очистить
                 </button>
               </div>
@@ -683,27 +669,68 @@ export default function App() {
                 <span>MIDI-событий: <strong>{midiRecordedEvents.length}</strong></span>
               </div>
 
-              <div className="music-staff" aria-label="Нотный стан">
-                {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
-                <div className="music-staff__notes">
-                  {musicSequence.map((note, idx) => <span key={`${note}-${idx}`} className="music-staff__note" style={{ bottom: `${noteYOffset[note] ?? 20}px`, left: `${4 + idx * 3.2}%` }}>{note}</span>)}
-                </div>
-              </div>
               <div className="music-octaves">
-                {octaves.map((octave) => (
+                {keyboardOctaves.map((octave) => (
                   <div key={octave} className="music-octave">
                     <div className="music-octave__title">Октава {octave}</div>
                     <div className="music-piano">
                       <div className="music-piano__white">
                         {whiteKeys.map((key) => {
                           const note = `${key}${octave}`;
-                          return <button key={note} type="button" className="music-key music-key--white" onClick={() => addMusicNote(note)}>{note}</button>;
+                          return (
+                            <button
+                              key={note}
+                              type="button"
+                              className="music-key music-key--white"
+                              onPointerDown={(e) => {
+                                e.currentTarget.setPointerCapture(e.pointerId);
+                                handleVirtualNoteOn(note);
+                              }}
+                              onPointerUp={(e) => {
+                                handleVirtualNoteOff(note);
+                                if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+                              }}
+                              onPointerCancel={() => handleVirtualNoteOff(note)}
+                              onKeyDown={(e) => {
+                                if (!e.repeat && (e.key === 'Enter' || e.key === ' ')) handleVirtualNoteOn(note);
+                              }}
+                              onKeyUp={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') handleVirtualNoteOff(note);
+                              }}
+                            >
+                              {note}
+                            </button>
+                          );
                         })}
                       </div>
                       <div className="music-piano__black">
                         {[{ key: 'C#', col: 1 }, { key: 'D#', col: 2 }, { key: 'F#', col: 4 }, { key: 'G#', col: 5 }, { key: 'A#', col: 6 }].map((item) => {
                           const note = `${item.key}${octave}`;
-                          return <button key={note} type="button" className="music-key music-key--black" style={{ gridColumn: item.col }} onClick={() => addMusicNote(note)}>{note}</button>;
+                          return (
+                            <button
+                              key={note}
+                              type="button"
+                              className="music-key music-key--black"
+                              style={{ gridColumn: item.col }}
+                              onPointerDown={(e) => {
+                                e.currentTarget.setPointerCapture(e.pointerId);
+                                handleVirtualNoteOn(note);
+                              }}
+                              onPointerUp={(e) => {
+                                handleVirtualNoteOff(note);
+                                if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+                              }}
+                              onPointerCancel={() => handleVirtualNoteOff(note)}
+                              onKeyDown={(e) => {
+                                if (!e.repeat && (e.key === 'Enter' || e.key === ' ')) handleVirtualNoteOn(note);
+                              }}
+                              onKeyUp={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') handleVirtualNoteOff(note);
+                              }}
+                            >
+                              {note}
+                            </button>
+                          );
                         })}
                       </div>
                     </div>
