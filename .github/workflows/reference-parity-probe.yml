@@ -7,6 +7,7 @@ on:
       - playmusictheory
     paths:
       - scripts/reference-dom-probe.mjs
+      - scripts/reference-interaction-probe.cjs
       - .github/workflows/reference-parity-probe.yml
 
 jobs:
@@ -39,6 +40,10 @@ jobs:
             https://playmusictheory.net/play > /tmp/playmusictheory-rendered.html
       - name: Probe rendered reference DOM
         run: node scripts/reference-dom-probe.mjs /tmp/playmusictheory-rendered.html
+      - name: Install interaction probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
+      - name: Probe public interactions
+        run: node scripts/reference-interaction-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Render reference DOM in headless Chrome
         run: |
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
