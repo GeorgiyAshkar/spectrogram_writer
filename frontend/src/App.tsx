@@ -26,6 +26,13 @@ import {
   saveMusicDraft,
 } from './features/music/persistence/musicDraft';
 import {
+  fetchMusicPiece,
+  listMusicGallery,
+  publishMusicPiece,
+  type GallerySummary,
+  type MusicShareProject,
+} from './services/musicGallery';
+import {
   DEFAULT_MUSIC_COLORS,
   DRAWING_PRESETS,
   PARITY_KEY_OPTIONS,
@@ -75,6 +82,16 @@ export default function App() {
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
   const [takeMimeType, setTakeMimeType] = useState('video/webm');
   const [takeError, setTakeError] = useState<string | null>(null);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareAuthor, setShareAuthor] = useState('');
+  const [shareStatus, setShareStatus] = useState<'idle' | 'publishing' | 'published' | 'error'>('idle');
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [publishedPieceId, setPublishedPieceId] = useState<string | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<GallerySummary[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   const tapTimesRef = useRef<number[]>([]);
   const pendingMidiNotesRef = useRef(
     new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
@@ -301,6 +318,12 @@ export default function App() {
     [takeUrl],
   );
 
+  useEffect(() => {
+    const pieceId = new URLSearchParams(window.location.search).get('piece');
+    if (!pieceId) return;
+    void openSharedPiece(pieceId, false);
+  }, []);
+
   const downloadMusicWav = () => {
     if (!activeMusicEvents.length) return;
     const url = renderNoteEventsToWavUrl(activeMusicEvents, musicPlaybackSettings);
@@ -416,6 +439,101 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const buildShareProject = (): MusicShareProject => ({
+    schemaVersion: 1,
+    settings: musicSettings,
+    strokes: musicStrokes,
+    virtualKeyboardEvents,
+    midiRecordedEvents,
+    activeColor: musicColor,
+    customColor: musicCustomColor,
+    backgroundKind: musicBackgroundKind === 'sky' ? 'sky' : 'paper',
+  });
+
+  const publishCurrentProject = async () => {
+    if (!shareTitle.trim() || !shareAuthor.trim()) return;
+    setShareStatus('publishing');
+    setShareError(null);
+    try {
+      const result = await publishMusicPiece(
+        shareTitle.trim(),
+        shareAuthor.trim(),
+        buildShareProject(),
+      );
+      setPublishedPieceId(result.id);
+      setShareStatus('published');
+    } catch (error) {
+      setShareStatus('error');
+      setShareError(error instanceof Error ? error.message : 'Не удалось опубликовать проект.');
+    }
+  };
+
+  const copyPublishedLink = async () => {
+    if (!publishedPieceId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('piece', publishedPieceId);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+    } catch {
+      window.prompt('Скопируйте ссылку', url.toString());
+    }
+  };
+
+  const refreshGallery = async () => {
+    setGalleryLoading(true);
+    setGalleryError(null);
+    try {
+      setGalleryItems(await listMusicGallery());
+    } catch (error) {
+      setGalleryError(error instanceof Error ? error.message : 'Не удалось загрузить галерею.');
+    } finally {
+      setGalleryLoading(false);
+    }
+  };
+
+  const applySharedProject = (project: MusicShareProject) => {
+    if (project.schemaVersion !== 1) {
+      setGalleryError('Эта версия проекта пока не поддерживается.');
+      return;
+    }
+
+    realtimeMusic.stop();
+    pendingMidiNotesRef.current.clear();
+    pendingVirtualNotesRef.current.clear();
+    setMusicSettings(project.settings);
+    setMusicStrokes(project.strokes);
+    setVirtualKeyboardEvents(project.virtualKeyboardEvents ?? []);
+    setMidiRecordedEvents(project.midiRecordedEvents ?? []);
+    setMusicColor(project.activeColor || DEFAULT_MUSIC_COLORS[0]);
+    setMusicCustomColor(project.customColor || '#111827');
+    setMusicBackgroundKind(project.backgroundKind === 'sky' ? 'sky' : 'paper');
+    setMusicPhotoUrl(null);
+  };
+
+  const openSharedPiece = async (id: string, requireConfirmation = true) => {
+    if (
+      requireConfirmation &&
+      activeMusicEvents.length > 0 &&
+      !window.confirm('Открыть работу из галереи? Текущий проект будет заменён, но его последняя версия уже сохранена локально.')
+    ) {
+      return;
+    }
+
+    setGalleryLoading(true);
+    setGalleryError(null);
+    try {
+      const detail = await fetchMusicPiece(id);
+      applySharedProject(detail.project);
+      setShareTitle(detail.title);
+      setShareAuthor(detail.author);
+      setShowGallery(false);
+    } catch (error) {
+      setGalleryError(error instanceof Error ? error.message : 'Не удалось открыть работу.');
+    } finally {
+      setGalleryLoading(false);
+    }
   };
 
   const undoMusic = () => {
@@ -876,10 +994,103 @@ export default function App() {
                     Скачать take
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => {
+                    setShowSharePanel((current) => !current);
+                    setShareStatus('idle');
+                    setShareError(null);
+                  }}
+                >
+                  share
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => {
+                    setShowGallery((current) => !current);
+                    if (!showGallery) void refreshGallery();
+                  }}
+                >
+                  gallery
+                </button>
                 <button type="button" className="button-secondary" onClick={clearMusic} disabled={activeMusicEvents.length === 0}>
                   Очистить
                 </button>
               </div>
+
+              {showSharePanel ? (
+                <div className="music-share-panel">
+                  <label>
+                    <span>title</span>
+                    <input
+                      type="text"
+                      maxLength={120}
+                      value={shareTitle}
+                      onChange={(e) => {
+                        setShareTitle(e.target.value);
+                        setShareStatus('idle');
+                      }}
+                    />
+                  </label>
+                  <label>
+                    <span>your name / handle</span>
+                    <input
+                      type="text"
+                      maxLength={80}
+                      value={shareAuthor}
+                      onChange={(e) => {
+                        setShareAuthor(e.target.value);
+                        setShareStatus('idle');
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    disabled={!shareTitle.trim() || !shareAuthor.trim() || shareStatus === 'publishing'}
+                    onClick={() => void publishCurrentProject()}
+                  >
+                    {shareStatus === 'publishing' ? 'Публикация…' : 'Опубликовать'}
+                  </button>
+                  {publishedPieceId ? (
+                    <button type="button" className="button-secondary" onClick={() => void copyPublishedLink()}>
+                      Скопировать ссылку
+                    </button>
+                  ) : null}
+                  {shareError ? <span className="error-banner">{shareError}</span> : null}
+                  {shareStatus === 'published' ? <span>Опубликовано</span> : null}
+                </div>
+              ) : null}
+
+              {showGallery ? (
+                <div className="music-gallery">
+                  <div className="music-gallery__header">
+                    <strong>Gallery</strong>
+                    <button type="button" className="button-secondary" onClick={() => void refreshGallery()}>
+                      Обновить
+                    </button>
+                  </div>
+                  {galleryLoading ? <span>Загрузка…</span> : null}
+                  {galleryError ? <span className="error-banner">{galleryError}</span> : null}
+                  {!galleryLoading && galleryItems.length === 0 && !galleryError ? <span>Пока нет опубликованных работ.</span> : null}
+                  <div className="music-gallery__items">
+                    {galleryItems.map((item) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className="music-gallery__item"
+                        onClick={() => void openSharedPiece(item.id)}
+                      >
+                        <strong>{item.title}</strong>
+                        <span>{item.author}</span>
+                        <small>{new Date(item.created_at).toLocaleString()}</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <MusicCanvas
                 settings={musicSettings}
