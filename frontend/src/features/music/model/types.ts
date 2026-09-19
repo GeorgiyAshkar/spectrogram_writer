@@ -40,6 +40,7 @@ export interface MusicSettings {
   bpm: number;
   quantizeStepBeats: number | null;
   swing: number;
+  metronomeEnabled: boolean;
   tuningCents: number;
   drawingResolutionPreset: DrawingResolutionPreset;
   rhythmPreset: RhythmPreset;
@@ -62,6 +63,7 @@ export const DEFAULT_MUSIC_SETTINGS: MusicSettings = {
   bpm: 120,
   quantizeStepBeats: null,
   swing: 0,
+  metronomeEnabled: false,
   tuningCents: 0,
   drawingResolutionPreset: 1,
   rhythmPreset: 1,
