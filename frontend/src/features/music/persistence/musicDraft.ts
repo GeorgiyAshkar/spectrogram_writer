@@ -35,6 +35,8 @@ export type MusicDraftV2 = {
   midiRecordedEvents: NoteEvent[];
   activeColor: string;
   customColor: string;
+  activeInstrumentId?: string;
+  instrumentColors?: Record<string, string>;
   background: PersistedBackground;
   savedAt: string;
 };
@@ -70,6 +72,13 @@ function isMusicDraftV2(value: unknown): value is MusicDraftV2 {
   if (!Array.isArray(value.virtualKeyboardEvents)) return false;
   if (!Array.isArray(value.midiRecordedEvents)) return false;
   if (typeof value.activeColor !== 'string' || typeof value.customColor !== 'string') return false;
+  if (value.activeInstrumentId !== undefined && typeof value.activeInstrumentId !== 'string') return false;
+  if (value.instrumentColors !== undefined) {
+    if (!isObject(value.instrumentColors)) return false;
+    for (const color of Object.values(value.instrumentColors)) {
+      if (typeof color !== 'string') return false;
+    }
+  }
   if (!isPersistedBackground(value.background)) return false;
   return typeof value.savedAt === 'string';
 }
