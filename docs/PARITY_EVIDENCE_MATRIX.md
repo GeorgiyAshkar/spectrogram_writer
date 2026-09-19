@@ -2,112 +2,131 @@
 
 **Reference date:** 2026-09-19  
 **Primary web reference:** https://playmusictheory.net/play  
-**Official app reference:** https://apps.apple.com/us/app/play-music-theory/id6800616114
+**Official app reference:** https://apps.apple.com/us/app/play-music-theory/id6800616114  
+**Measurement method:** public server DOM + rendered DOM + interaction probe in headless Chrome. No copied source implementation is used as application code.
 
-This matrix separates verified behavior from implementation defaults.
+## Confirmed reference controls and values
 
-| Area | Evidence status | Evidence | Current implementation |
-|---|---|---|---|
-| Drawing -> sound | CONFIRMED | Official product description: “Listen to your drawings”; current web UI | Implemented |
-| X -> time | CONFIRMED/OBSERVED | Playback scans drawing left-to-right; playhead screenshots | Implemented |
-| Y -> pitch | CONFIRMED/OBSERVED | Note grid + visual instrument behavior | Implemented |
-| Key | CONFIRMED | Current web UI + app v1.1 changelog | Implemented |
-| Scale | CONFIRMED | Current web UI + app v1.1 | Major / Minor implemented |
-| Major / Minor | CONFIRMED | App v1.1 changelog explicitly names both | Implemented |
-| Range | CONTROL CONFIRMED, VALUES VERIFY | Current web UI shows Range select | Provisional 1/2/3 |
-| Octave +/- | CONFIRMED | Current web UI | Implemented |
-| Octave min/max | VERIFY | Not exposed by indexed DOM | Configurable UI, no final parity clamp |
-| Paper | CONFIRMED | Current web UI + app v1.0.4 | Implemented |
-| Sky | CONFIRMED | App v1.0.4 | Implemented |
-| Photo background | CONFIRMED | App v1.0.3/v1.0.4 | Implemented |
-| Tune | CONTROL CONFIRMED, SEMANTICS VERIFY | Current web UI | Implemented as provisional global cents |
-| Tempo | CONFIRMED | Web UI + app v1.1 | Implemented |
-| Tap tempo | CONFIRMED | Current web UI help/controls | Implemented |
-| BPM exact range/default | VERIFY | Not exposed by indexed DOM | Provisional 30–300 / 120 |
-| Quantize | CONFIRMED | Current web UI + app v1.1 “quantize ticks” | Implemented |
-| Quantize exact options | VERIFY | Select options unavailable via indexed DOM | Provisional Off/1/4/1/8/1/16 |
-| Swing | CONFIRMED | Current web UI | Implemented |
-| Swing exact ratios | VERIFY | Select options unavailable via indexed DOM | Provisional Off/Light/Heavy |
-| Click | CONFIRMED | Current web UI help/controls | Realtime metronome implemented |
-| MIDI in | CONFIRMED | Current web UI help/controls | Web MIDI implemented |
-| Three-octave keyboard | CONFIRMED | App v1.1 changelog | Implemented |
-| Key button | STRONG OBSERVATION | Current web DOM exposes a separate Key button; likely keyboard trigger | Used to toggle virtual keyboard |
-| 1/2/3 | PARTIALLY CONFIRMED | Official screenshots + secondary hands-on observation | Drawing resolution presets |
-| Exact preset 3 mapping | VERIFY | No measurable public value | Configurable |
-| •/••/••• | STRONG OBSERVATION | Current web UI + secondary hands-on observation | Rhythm preset abstraction |
-| Exact dot mapping | VERIFY | No measurable public values | Configurable |
-| Palette | CONFIRMED | Official screenshots/current UI | Implemented |
-| Custom color + | WEB CONFIRMED/SEMANTICS PARTIAL | Web DOM has + and color input; help says colors can be customized | Native color input |
-| Undo last line | CONFIRMED | App v1.1.1 changelog: last line; Cmd-Z on iPad | Implemented as stroke-only undo |
-| Redo | NOT CURRENT PARITY | Current App Store review requests redo | Not implemented |
-| The instrument | CONFIRMED | Current web UI + app v1.1 | Collapsible panel |
-| Instrument default closed | CONFIRMED HIGH-LEVEL | App changelog: switch “opens it” | Default closed |
-| WAV export | CONFIRMED | Current web UI + app v1.1 loop export | Implemented |
-| MIDI export | CONFIRMED | Current web UI | Implemented |
-| WAV metronome inclusion | VERIFY | Public sources do not say | Excluded by default |
-| MIDI track format | VERIFY | Public sources do not expose file structure | Standard MIDI format 0 |
-| Record / take | CONFIRMED | Current web UI + app v1.0.3/v1.0.4 | Canvas + Web Audio MediaRecorder |
-| Take saved before sharing | CONFIRMED | App v1.0.4 | Browser take is materialized before sharing |
-| Share title | CONFIRMED | Current web UI | Implemented |
-| Share author/handle | CONFIRMED | Current web UI | Implemented |
-| Gallery | CONFIRMED (WEB) | https://playmusictheory.net/gallery | Implemented MVP |
-| Gallery exact editing behavior | VERIFY | Public index does not expose interaction | Safe load with confirmation |
-| Help ? | CONFIRMED | Current web UI + app v1.0.2 | Implemented |
-| Help content | CONFIRMED HIGH-LEVEL | Current web help text | Implemented with own wording |
+| Area | Reference behavior / exact values | Current implementation |
+|---|---|---|
+| Key | C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B | Implemented |
+| Default key | C | Implemented |
+| Scale | Major pentatonic, Minor pentatonic, Major, Minor, Harmonic minor, Dorian, Phrygian, Lydian, Mixolydian, Blues | Implemented |
+| Default scale | Major pentatonic | Implemented |
+| Range | 1 octave, 2 octaves, 3 octaves | Implemented |
+| Default Range | 3 octaves | Implemented |
+| Octave | - / numeric offset / + | Implemented |
+| Tune | -50..+50 cents, step 1, default 0 | Implemented |
+| Tempo | 60..200 BPM, step 1, default 120 | Implemented |
+| Tempo number | exact BPM display is readonly in current web | Implemented |
+| Tap | tempo tap control | Implemented |
+| Quantize | 1/4, 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32 | Implemented |
+| Default Quantize | 1/8 triplet | Implemented |
+| Swing | Off=0, Light=0.1, Medium=0.2, Hard=0.33 | Implemented |
+| Swing rule | straight grids only; triplet grids keep their own feel | Implemented |
+| Click | metronome toggle | Implemented |
+| MIDI in | external MIDI keyboard into the loop | Implemented |
+| Export | WAV + MIDI inside The instrument | Implemented |
+| Program 1 | Drawing mode | Implemented |
+| Program 2 | Pixel mode | Implemented |
+| Program 3 | Video mode: “Map a photo to each instrument”; currently display:none in public rendered UI | Hidden to match current reference |
+| • | Bass | Implemented as accompaniment layer |
+| •• | Drums | Implemented as accompaniment layer |
+| ••• | Arpeggio | Implemented as accompaniment layer |
+| Stacking beats | Bass hint explicitly says “Stack any of the three.” | Controls are independently stackable |
+| Pen | “Draw. Every line is a sound.” | Implemented |
+| Eraser | “Erase. Drag across a line.” | Implemented |
+| Undo | “Undo the last line.” | Implemented |
+| Redo | “Redo a line you took back.” | Implemented |
+| Restart | “Clear the drawing. The beat keeps going.” | Implemented without stopping transport |
+| Shuffle | “A new drawing, at random.” | Implemented; palette is preserved |
+| Recolor | “Change the colors: tap this, then any color.” | Implemented |
+| Original colors | explicit reset control exists | Implemented |
+| Grid | “every note and beat under the ink”; rendered reference starts On | Implemented, default On |
+| Three-octave keyboard | confirmed in official app changelog | Implemented |
+| Key button | separate current-web button next to mode controls | Used to show/hide virtual keyboard |
+| Background | Paper / Sky / user Photo | Implemented |
+| Photo fit | Fill / Fit / Stretch | Implemented |
+| Photo preprocessing | reference downsizes photos only past ~2000 px and uses JPEG 0.9 | Implemented |
+| Record | record/take control | Implemented |
+| Share take | separate share control appears after take | Take materialization implemented; direct share surface still differs |
+| Share title | maxlength 48 | Implemented frontend/backend |
+| Share name/handle | maxlength 120 | Implemented frontend/backend |
+| Gallery | public gallery | Implemented MVP with thumbnail cards |
+| Help | ? control | Implemented |
 
-## Official version history relevant to parity
+## Exact instrument palette
 
-### 1.1.1
-- Undo returns the last line.
-- Command-Z on iPad.
+The rendered web UI exposes stable instrument identity separately from color:
 
-### 1.1
-- “The instrument” feature bundle.
-- Keys.
-- Major and minor.
-- Octaves.
-- Quantize ticks.
-- Tempo.
-- Three-octave keyboard.
-- Loop export.
+| Instrument ID | Reference color |
+|---|---|
+| keys | rgb(29, 158, 117) / #1d9e75 |
+| pluck | rgb(216, 90, 48) / #d85a30 |
+| bell | rgb(127, 119, 221) / #7f77dd |
+| marimba | rgb(239, 159, 39) / #ef9f27 |
+| flute | rgb(62, 94, 198) / #3e5ec6 |
+| strings | rgb(222, 123, 174) / #de7bae |
+| chime | rgb(133, 190, 232) / #85bee8 |
+| bass | rgb(51, 49, 43) / #33312b |
+| 8bit | rgb(244, 190, 130) / #f4be82 |
 
-### 1.0.4
-- Background card: paper, sky, or photo.
-- Take is saved the moment it ends, before sharing.
+The application now stores instrument identity as `instrument:<id>`, while color remains customizable. This is important because Recolor must not change the selected sound identity.
 
-### 1.0.3
-- Every line plays, regardless of line count.
-- User photo background.
-- Take saving.
+**Exact synthesis recipes are still unknown.** Current oscillator/envelope choices are clean-room approximations behind a configurable voice-profile layer.
 
-### 1.0.2
-- Help via question-mark control.
+## Confirmed interaction observations
 
-## Important negative evidence
+### Shuffle
+A click changes the canvas drawing while all nine swatch colors remain unchanged. Therefore Shuffle is a random drawing generator, not a palette randomizer.
 
-The current official App Store reviews still request some features rather than describing them as available. These should not be treated as current parity requirements:
+### Recolor
+The current web exposes:
+- a dedicated “Change the colors” control;
+- a custom color surface;
+- a separate “The original colors” reset.
 
-- redo;
-- more brush/eraser sizes;
-- additional synth sounds;
-- individual sound mute/solo.
+Our implementation keeps instrument IDs stable and recolors existing strokes belonging to the selected instrument.
 
-The web product may differ from the iOS app in some areas, especially custom color and gallery. Web behavior takes precedence because the target is `playmusictheory.net/play`.
+### Grid
+The rendered reference starts with `gridBtn` in an `on` state. Grid is therefore default-on.
 
-## Unresolved exact-value audit
+### Program 3
+The DOM contains:
+- Program 3;
+- tooltip “Video mode”;
+- hint “Video mode. Map a photo to each instrument.”
 
-The following remain intentionally configurable in `frontend/src/features/music/parityConfig.ts` until a true interactive browser/DevTools audit can inspect actual select values and input bounds:
+But the current rendered public UI applies `display:none` to Program 3. The clone therefore keeps it hidden rather than exposing an incomplete feature as current parity.
 
-1. Range options.
-2. Octave min/max.
-3. Tune meaning/range.
-4. BPM min/max/default.
-5. Quantize select values.
-6. Swing select values/ratios.
-7. drawing preset 3 exact resolution.
-8. dot preset exact rhythm mapping.
-9. color -> timbre relationship, if any.
-10. WAV metronome policy.
-11. MIDI export track structure.
+## Confirmed but semantically unresolved controls
 
-Do not promote provisional values to “confirmed” without direct measurement.
+The current rendered DOM contains independent controls:
+
+- `Freestyle` (`lockBtn`);
+- `Freehand` (`freeBtn`).
+
+Interaction probing confirms they can be toggled independently, but the public UI does not expose enough descriptive text to determine their exact sound/drawing transformation with confidence.
+
+**Status: VERIFY behavior before implementation.**
+
+## Still unresolved exact behavior
+
+1. Octave min/max clamp.
+2. Exact waveform/envelope/harmonic recipe for each of the nine named instruments.
+3. Exact Bass/Drums/Arpeggio musical patterns; control identities are exact, patterns in our clone are clean-room approximations.
+4. Exact MIDI input interaction with scale/freestyle modes.
+5. Whether metronome Click is included in reference WAV export.
+6. Exact reference MIDI file track/channel structure.
+7. Exact browser take codec/container policy.
+8. Exact behavior of Freestyle.
+9. Exact behavior of Freehand.
+10. Exact color-picker model beyond observable recolor/reset interaction.
+11. Exact public-gallery open/edit permissions and lifecycle.
+
+## Compatibility decisions
+
+- Existing saved color-based strokes remain readable.
+- New strokes use stable `instrument:<id>` layer IDs.
+- Old drafts are migrated instead of being rejected.
+- Unknown reference synthesis details are kept behind configuration, not encoded as alleged parity facts.
