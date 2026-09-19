@@ -255,7 +255,7 @@ export default function App() {
   );
 
   const midiInput = useWebMidiInput({
-    enabled: midiEnabled,
+    enabled: midiEnabled && activePanel === 'music',
     onNoteOn: handleMidiNoteOn,
     onNoteOff: handleMidiNoteOff,
   });
@@ -269,7 +269,11 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (activePanel !== 'music') realtimeMusic.stop();
+    if (activePanel === 'music') return;
+    realtimePlayingRef.current = false;
+    pendingMidiNotesRef.current.clear();
+    pendingVirtualNotesRef.current.clear();
+    realtimeMusic.stop();
   }, [activePanel, realtimeMusic.stop]);
 
   useEffect(
