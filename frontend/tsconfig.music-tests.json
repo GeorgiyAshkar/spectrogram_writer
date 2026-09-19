@@ -14,6 +14,7 @@
     "src/features/music/audio/renderWav.ts",
     "src/features/music/export/renderMidi.ts",
     "tests/music-domain-smoke.ts",
-    "src/features/music/persistence/musicDraft.ts"
+    "src/features/music/persistence/musicDraft.ts",
+    "src/features/music/audio/accompaniment.ts"
   ]
 }
