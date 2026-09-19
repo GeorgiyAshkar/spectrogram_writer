@@ -280,7 +280,7 @@ export function MusicCanvas({
             typeof crypto.randomUUID === 'function'
               ? crypto.randomUUID()
               : `stroke-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          layerId: 'default',
+          layerId: `color:${activeColor.toLowerCase()}`,
           color: activeColor,
           createdAt: Date.now(),
           drawingResolutionPreset: settings.drawingResolutionPreset,
