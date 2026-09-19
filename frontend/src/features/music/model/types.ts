@@ -10,8 +10,9 @@ export type ScaleName =
   | 'mixolydian'
   | 'blues';
 
-export type DrawingResolutionPreset = 1 | 2 | 3;
-export type RhythmPreset = 1 | 2 | 3;
+export type ProgramMode = 1 | 2 | 3;
+/** @deprecated Legacy name kept only for loading older saved strokes. */
+export type DrawingResolutionPreset = ProgramMode;
 
 export interface Point {
   /** Normalized horizontal coordinate: 0 = loop start, 1 = loop end. */
@@ -30,7 +31,9 @@ export interface Stroke {
   color: string;
   points: Point[];
   createdAt: number;
-  /** Snapshot of the visual drawing preset used when this stroke was created. */
+  /** Program used when this stroke was created. */
+  programMode?: ProgramMode;
+  /** @deprecated Legacy v1/v2 field, read only during migration/render fallback. */
   drawingResolutionPreset?: DrawingResolutionPreset;
 }
 
@@ -54,8 +57,10 @@ export interface MusicSettings {
   swing: number;
   metronomeEnabled: boolean;
   tuningCents: number;
-  drawingResolutionPreset: DrawingResolutionPreset;
-  rhythmPreset: RhythmPreset;
+  programMode: ProgramMode;
+  bassEnabled: boolean;
+  drumsEnabled: boolean;
+  arpeggioEnabled: boolean;
 }
 
 export interface MusicProject {
@@ -77,6 +82,8 @@ export const DEFAULT_MUSIC_SETTINGS: MusicSettings = {
   swing: 0,
   metronomeEnabled: false,
   tuningCents: 0,
-  drawingResolutionPreset: 1,
-  rhythmPreset: 1,
+  programMode: 1,
+  bassEnabled: false,
+  drumsEnabled: false,
+  arpeggioEnabled: false,
 };
