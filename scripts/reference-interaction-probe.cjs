@@ -147,6 +147,32 @@ try {
 
   await snapshot('initial');
 
+  const readOctaveState = async () => page.evaluate(() => {
+    const down = document.getElementById('octDown');
+    const up = document.getElementById('octUp');
+    const parent = down?.parentElement;
+    return {
+      text: parent?.textContent?.replace(/\s+/g, ' ').trim() ?? null,
+      downDisabled: down instanceof HTMLButtonElement ? down.disabled : null,
+      upDisabled: up instanceof HTMLButtonElement ? up.disabled : null,
+    };
+  });
+
+  const octaveStates = [];
+  octaveStates.push({ step: 'initial', ...(await readOctaveState()) });
+  for (let i = 0; i < 12; i += 1) {
+    await page.click('#octDown');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    octaveStates.push({ step: `down-${i + 1}`, ...(await readOctaveState()) });
+  }
+  for (let i = 0; i < 24; i += 1) {
+    await page.click('#octUp');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    octaveStates.push({ step: `up-${i + 1}`, ...(await readOctaveState()) });
+  }
+  console.log(JSON.stringify({ label: 'octave-clamp', states: octaveStates }));
+
+
   for (const id of ['p1', 'p2', 'p3']) {
     const el = await page.$('#' + id);
     if (!el) continue;
