@@ -1,4 +1,5 @@
 name: Reference parity DOM probe
+# probe-version: instrument-v2
 
 on:
   workflow_dispatch:
