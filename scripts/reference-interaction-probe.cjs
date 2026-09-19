@@ -596,6 +596,97 @@ try {
   await measureAudioVariant('freehand', 'freeBtn');
 
 
+
+
+  async function measureBacktrackVariant(label, freestyle) {
+    const page2 = await browser.newPage();
+    await page2.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    try {
+      await page2.goto('https://playmusictheory.net/play', {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      if (freestyle) {
+        await page2.evaluate(() => {
+          const el = document.getElementById('lockBtn');
+          if (el instanceof HTMLElement) el.click();
+        });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const canvas = await page2.$('#c');
+      const box = await canvas?.boundingBox();
+      if (!box) throw new Error('Backtrack probe canvas unavailable.');
+
+      const anchors = [
+        { x: 0.15, y: 0.25 },
+        { x: 0.68, y: 0.43 },
+        { x: 0.34, y: 0.66 },
+        { x: 0.86, y: 0.78 },
+      ];
+
+      const points = [];
+      for (let segment = 0; segment < anchors.length - 1; segment += 1) {
+        const a = anchors[segment];
+        const b = anchors[segment + 1];
+        for (let i = segment === 0 ? 0 : 1; i <= 20; i += 1) {
+          const t = i / 20;
+          points.push({
+            x: box.x + box.width * (a.x + (b.x - a.x) * t),
+            y: box.y + box.height * (a.y + (b.y - a.y) * t),
+          });
+        }
+      }
+
+      await page2.mouse.move(points[0].x, points[0].y);
+      await page2.mouse.down();
+      for (const point of points.slice(1)) {
+        await page2.mouse.move(point.x, point.y, { steps: 1 });
+      }
+      await page2.mouse.up();
+      await new Promise((resolve) => setTimeout(resolve, 140));
+
+      const result = await page2.$eval('#c', (node) => {
+        const data = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
+        let hash = 2166136261;
+        let nonWhite = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (a > 0 && (r < 245 || g < 245 || b < 245)) nonWhite += 1;
+          hash ^= r; hash = Math.imul(hash, 16777619);
+          hash ^= g; hash = Math.imul(hash, 16777619);
+          hash ^= b; hash = Math.imul(hash, 16777619);
+          hash ^= a; hash = Math.imul(hash, 16777619);
+        }
+        return {
+          width: node.width,
+          height: node.height,
+          hash: hash >>> 0,
+          nonWhite,
+          freestyleClass: document.getElementById('lockBtn')?.className ?? null,
+        };
+      });
+
+      console.log(JSON.stringify({
+        label: 'backtrack-variant',
+        variant: label,
+        freestyle,
+        result,
+      }));
+    } finally {
+      await page2.close();
+    }
+  }
+
+  await measureBacktrackVariant('default', false);
+  await measureBacktrackVariant('freestyle', true);
+
+
   await snapshot('final');
 } finally {
   await browser.close();
