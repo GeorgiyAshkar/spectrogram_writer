@@ -1,9 +1,12 @@
 import type { MusicSettings, NoteEvent, Stroke } from '../features/music/model';
 import { API_BASE } from './api';
 
-export type ShareableBackgroundKind = 'paper' | 'sky';
+export type ShareableBackground =
+  | { kind: 'paper' }
+  | { kind: 'sky' }
+  | { kind: 'photo'; dataUrl: string };
 
-export type MusicShareProject = {
+export type MusicShareProjectV1 = {
   schemaVersion: 1;
   settings: MusicSettings;
   strokes: Stroke[];
@@ -11,8 +14,21 @@ export type MusicShareProject = {
   midiRecordedEvents: NoteEvent[];
   activeColor: string;
   customColor: string;
-  backgroundKind: ShareableBackgroundKind;
+  backgroundKind: 'paper' | 'sky';
 };
+
+export type MusicShareProjectV2 = {
+  schemaVersion: 2;
+  settings: MusicSettings;
+  strokes: Stroke[];
+  virtualKeyboardEvents: NoteEvent[];
+  midiRecordedEvents: NoteEvent[];
+  activeColor: string;
+  customColor: string;
+  background: ShareableBackground;
+};
+
+export type MusicShareProject = MusicShareProjectV1 | MusicShareProjectV2;
 
 export type GallerySummary = {
   id: string;
@@ -37,7 +53,7 @@ async function readError(response: Response): Promise<string> {
 export async function publishMusicPiece(
   title: string,
   author: string,
-  project: MusicShareProject,
+  project: MusicShareProjectV2,
 ): Promise<GallerySummary> {
   const response = await fetch(`${API_BASE}/music/gallery`, {
     method: 'POST',
