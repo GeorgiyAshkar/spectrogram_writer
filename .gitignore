@@ -4,3 +4,6 @@ __pycache__/
 build/
 data/*.sqlite3
 data/*.sqlite3-*
+frontend/node_modules/
+frontend/dist/
+*.pyc
