@@ -1044,3 +1044,58 @@ button:disabled {
   border-color: #4b3b2f;
   box-shadow: inset 0 0 0 2px #4b3b2f;
 }
+
+
+.music-photo-picker {
+  position: relative;
+}
+
+.music-photo-picker__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.music-photo-picker input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.music-color-add {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px dashed #8b8174;
+  background: #fff;
+  color: #5f4633;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.music-color-add.is-active {
+  box-shadow: 0 0 0 3px #5f4633;
+}
+
+.music-color-add input[type='color'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .music-color-add {
+    width: 40px;
+    height: 40px;
+  }
+}
