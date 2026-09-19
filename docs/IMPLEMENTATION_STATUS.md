@@ -191,6 +191,9 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] focused TypeScript music check
 - [x] music-domain smoke tests
 - [x] full frontend build
+- [x] production browser smoke
+- [x] production mobile smoke at 390×844
+- [x] no mobile horizontal document overflow in the tested music flow
 - [x] Python gallery unit tests
 
 ### Music smoke tests
