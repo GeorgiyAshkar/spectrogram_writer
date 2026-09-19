@@ -16,6 +16,7 @@ type Props = {
   background: MusicCanvasBackground;
   playheadProgress?: number;
   showGrid?: boolean;
+  tool?: 'pen' | 'eraser';
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
   onChange: (strokes: Stroke[]) => void;
 };
@@ -112,6 +113,7 @@ export function MusicCanvas({
   background,
   playheadProgress = 0,
   showGrid = false,
+  tool = 'pen',
   onCanvasReady,
   onChange,
 }: Props) {
@@ -119,6 +121,9 @@ export function MusicCanvas({
   const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const draftRef = useRef<Stroke | null>(null);
+  const [erasedStrokeIds, setErasedStrokeIds] = useState<Set<string>>(new Set());
+  const erasedStrokeIdsRef = useRef<Set<string>>(new Set());
+  const erasingRef = useRef(false);
   const pointerStartedAt = useRef(0);
 
   const pitchRange = useMemo(
@@ -251,7 +256,9 @@ export function MusicCanvas({
       ctx.restore();
     }
 
-    strokes.forEach((stroke) => drawStroke(ctx, stroke));
+    strokes
+      .filter((stroke) => !erasedStrokeIds.has(stroke.id))
+      .forEach((stroke) => drawStroke(ctx, stroke));
     if (draft) drawStroke(ctx, draft);
 
     const playheadX = Math.min(1, Math.max(0, playheadProgress)) * WIDTH;
@@ -264,7 +271,7 @@ export function MusicCanvas({
     ctx.lineTo(playheadX, HEIGHT);
     ctx.stroke();
     ctx.restore();
-  }, [background, backgroundImage, draft, pitchRange, playheadProgress, settings.loopLengthBeats, showGrid, strokes]);
+  }, [background, backgroundImage, draft, erasedStrokeIds, pitchRange, playheadProgress, settings.loopLengthBeats, showGrid, strokes]);
 
   const pointFromEvent = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -289,17 +296,88 @@ export function MusicCanvas({
     setDraft(next);
   };
 
+  const eraseAtPoint = (point: Point) => {
+    const threshold = 18;
+    const px = point.x * WIDTH;
+    const py = point.y * HEIGHT;
+
+    const distanceToSegment = (
+      x: number,
+      y: number,
+      ax: number,
+      ay: number,
+      bx: number,
+      by: number,
+    ) => {
+      const dx = bx - ax;
+      const dy = by - ay;
+      const lengthSquared = dx * dx + dy * dy;
+      if (lengthSquared <= 1e-9) return Math.hypot(x - ax, y - ay);
+      const t = Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / lengthSquared));
+      return Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+    };
+
+    const next = new Set(erasedStrokeIdsRef.current);
+    for (const stroke of strokes) {
+      if (next.has(stroke.id) || stroke.points.length === 0) continue;
+
+      let hit = stroke.points.length === 1
+        ? Math.hypot(px - stroke.points[0].x * WIDTH, py - stroke.points[0].y * HEIGHT) <= threshold
+        : false;
+
+      for (let index = 1; !hit && index < stroke.points.length; index += 1) {
+        const a = stroke.points[index - 1];
+        const b = stroke.points[index];
+        hit = distanceToSegment(
+          px,
+          py,
+          a.x * WIDTH,
+          a.y * HEIGHT,
+          b.x * WIDTH,
+          b.y * HEIGHT,
+        ) <= threshold;
+      }
+
+      if (hit) next.add(stroke.id);
+    }
+
+    if (next.size !== erasedStrokeIdsRef.current.size) {
+      erasedStrokeIdsRef.current = next;
+      setErasedStrokeIds(new Set(next));
+    }
+  };
+
+  const finishEraserGesture = () => {
+    if (!erasingRef.current) return;
+    erasingRef.current = false;
+    const erased = erasedStrokeIdsRef.current;
+    if (erased.size > 0) {
+      onChange(strokes.filter((stroke) => !erased.has(stroke.id)));
+    }
+    erasedStrokeIdsRef.current = new Set();
+    setErasedStrokeIds(new Set());
+  };
+
   return (
     <canvas
       ref={canvasRef}
       width={WIDTH}
       height={HEIGHT}
-      className="music-draw-canvas"
+      className={tool === 'eraser' ? 'music-draw-canvas is-erasing' : 'music-draw-canvas'}
       aria-label="Музыкальный холст: горизонталь задаёт время, вертикаль — высоту ноты"
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId);
         pointerStartedAt.current = performance.now();
         const point = pointFromEvent(event);
+
+        if (tool === 'eraser') {
+          erasingRef.current = true;
+          erasedStrokeIdsRef.current = new Set();
+          setErasedStrokeIds(new Set());
+          eraseAtPoint(point);
+          return;
+        }
+
         const nextDraft: Stroke = {
           id:
             typeof crypto.randomUUID === 'function'
@@ -315,10 +393,24 @@ export function MusicCanvas({
         setDraft(nextDraft);
       }}
       onPointerMove={(event) => {
+        const point = pointFromEvent(event);
+        if (tool === 'eraser' && erasingRef.current) {
+          eraseAtPoint(point);
+          return;
+        }
         if (!draftRef.current) return;
-        appendPoint(pointFromEvent(event));
+        appendPoint(point);
       }}
       onPointerUp={(event) => {
+        if (tool === 'eraser') {
+          eraseAtPoint(pointFromEvent(event));
+          finishEraserGesture();
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+          return;
+        }
+
         const current = draftRef.current;
         if (!current) return;
 
@@ -339,6 +431,7 @@ export function MusicCanvas({
         }
       }}
       onPointerCancel={() => {
+        if (tool === 'eraser') finishEraserGesture();
         draftRef.current = null;
         setDraft(null);
       }}
