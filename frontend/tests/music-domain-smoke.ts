@@ -146,6 +146,10 @@ function testFreehandCompiler() {
     'Freehand must produce fractional MIDI pitches between scale notes',
   );
   assert(
+    freehand.some((event) => event.endMidi !== undefined && Math.abs(event.endMidi - event.midi) > 1e-6),
+    'Freehand must preserve continuous pitch ramps inside note events',
+  );
+  assert(
     freehand.length > normal.length,
     'Freehand must sample pitch more densely than discrete drawing',
   );
