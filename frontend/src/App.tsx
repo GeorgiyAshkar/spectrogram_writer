@@ -7,7 +7,24 @@ import { PreviewCard } from './components/PreviewCard';
 import { SettingsSection } from './components/SettingsSection';
 import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
-import { noteNameToFrequency } from './features/music/model';
+import {
+  compileStrokes,
+  DEFAULT_MUSIC_SETTINGS,
+  noteNameToMidi,
+  type MusicSettings,
+  type NoteEvent,
+  type Stroke,
+} from './features/music/model';
+import { MusicCanvas } from './features/music/canvas/MusicCanvas';
+import { renderNoteEventsToWavUrl } from './features/music/audio/renderWav';
+import {
+  DEFAULT_MUSIC_COLORS,
+  DRAWING_PRESETS,
+  PARITY_KEY_OPTIONS,
+  PARITY_SCALE_OPTIONS,
+  PROVISIONAL_RANGE_OPTIONS,
+  RHYTHM_PRESETS,
+} from './features/music/parityConfig';
 import './styles/app.css';
 
 const initialState: GenerationFormData = defaults as GenerationFormData;
@@ -33,6 +50,9 @@ export default function App() {
   const [musicSequence, setMusicSequence] = useState<string[]>([]);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
+  const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
+  const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
+  const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -50,66 +70,70 @@ export default function App() {
     return acc;
   }, {});
 
+  const canvasMusicEvents = useMemo(
+    () => compileStrokes(musicStrokes, musicSettings),
+    [musicSettings, musicStrokes],
+  );
+
+  const keyboardMusicEvents = useMemo<NoteEvent[]>(
+    () =>
+      musicSequence.flatMap((note, noteIndex) => {
+        const midi = noteNameToMidi(note);
+        if (midi === null) return [];
+        return [{
+          id: `keyboard:${noteIndex}`,
+          layerId: 'keyboard',
+          midi,
+          velocity: 0.82,
+          startBeat: noteIndex * 0.5,
+          durationBeats: 0.42,
+        }];
+      }),
+    [musicSequence],
+  );
+
+  const activeMusicEvents = musicStrokes.length > 0 ? canvasMusicEvents : keyboardMusicEvents;
+  const musicPlaybackSettings = useMemo(
+    () => ({
+      ...musicSettings,
+      loopLengthBeats:
+        musicStrokes.length > 0
+          ? musicSettings.loopLengthBeats
+          : Math.max(musicSettings.loopLengthBeats, musicSequence.length * 0.5 + 0.5),
+    }),
+    [musicSequence.length, musicSettings, musicStrokes.length],
+  );
+
   const buildMusicWav = async () => {
-    if (!musicSequence.length) return null;
-    const sampleRate = 44100;
-    const noteDuration = 0.42;
-    const tail = 0.06;
-    const totalDuration = musicSequence.length * noteDuration + tail;
-    const totalSamples = Math.floor(totalDuration * sampleRate);
-    const pcm = new Float32Array(totalSamples);
-
-    musicSequence.forEach((note, noteIndex) => {
-      const freq = noteNameToFrequency(note);
-      if (freq === null) return;
-      const startSample = Math.floor(noteIndex * noteDuration * sampleRate);
-      const endSample = Math.min(totalSamples, startSample + Math.floor(noteDuration * sampleRate));
-      for (let i = startSample; i < endSample; i += 1) {
-        const t = (i - startSample) / sampleRate;
-        const phase = 2 * Math.PI * freq * t;
-        const envIn = Math.min(1, t / 0.03);
-        const envOut = Math.max(0, (noteDuration - t) / 0.08);
-        const env = Math.min(envIn, envOut);
-        const loudnessComp = 0.42 * Math.pow(220 / freq, 0.45);
-        pcm[i] += Math.sin(phase) * env * loudnessComp;
-      }
-    });
-
-    const bytes = new ArrayBuffer(44 + totalSamples * 2);
-    const view = new DataView(bytes);
-    const writeStr = (offset: number, value: string) => {
-      for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
-    };
-
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + totalSamples * 2, true);
-    writeStr(8, 'WAVE');
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, 'data');
-    view.setUint32(40, totalSamples * 2, true);
-
-    let offset = 44;
-    for (let i = 0; i < totalSamples; i += 1) {
-      const sample = Math.max(-1, Math.min(1, pcm[i]));
-      view.setInt16(offset, sample * 32767, true);
-      offset += 2;
-    }
-
-    return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+    if (!activeMusicEvents.length) return null;
+    return renderNoteEventsToWavUrl(activeMusicEvents, musicPlaybackSettings);
   };
 
   const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
-  const removeLastMusicNote = () => setMusicSequence((current) => current.slice(0, -1));
+
+  const undoMusic = () => {
+    if (musicStrokes.length > 0) {
+      setMusicStrokes((current) => current.slice(0, -1));
+      return;
+    }
+    setMusicSequence((current) => current.slice(0, -1));
+  };
+
+  const clearMusic = () => {
+    setMusicStrokes([]);
+    setMusicSequence([]);
+    if (musicAudioUrl) {
+      URL.revokeObjectURL(musicAudioUrl);
+      setMusicAudioUrl(null);
+    }
+  };
+
+  const updateMusicSetting = <K extends keyof MusicSettings>(key: K, value: MusicSettings[K]) => {
+    setMusicSettings((current) => ({ ...current, [key]: value }));
+  };
 
   const playMusicSequence = async () => {
-    if (!musicSequence.length || isMusicPlaying) return;
+    if (!activeMusicEvents.length || isMusicPlaying) return;
     setIsMusicPlaying(true);
     try {
       if (musicAudioUrl) URL.revokeObjectURL(musicAudioUrl);
@@ -300,12 +324,103 @@ export default function App() {
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
-            musicSequence={musicSequence}
-            onRemoveLastMusicNote={removeLastMusicNote}
+            musicUndoDisabled={musicStrokes.length === 0 && musicSequence.length === 0}
+            onUndoMusic={undoMusic}
             onPlayMusicSequence={playMusicSequence}
           />
           {activePanel === 'music' ? (
             <div className="music-panel">
+              <div className="music-parity-controls">
+                <label className="music-control">
+                  <span>Key</span>
+                  <select value={musicSettings.key} onChange={(e) => updateMusicSetting('key', e.target.value)}>
+                    {PARITY_KEY_OPTIONS.map((key) => <option key={key} value={key}>{key}</option>)}
+                  </select>
+                </label>
+                <label className="music-control">
+                  <span>Scale</span>
+                  <select value={musicSettings.scale} onChange={(e) => updateMusicSetting('scale', e.target.value as MusicSettings['scale'])}>
+                    {PARITY_SCALE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                <label className="music-control">
+                  <span>Range</span>
+                  <select value={musicSettings.rangeOctaves} onChange={(e) => updateMusicSetting('rangeOctaves', Number(e.target.value))}>
+                    {PROVISIONAL_RANGE_OPTIONS.map((range) => <option key={range} value={range}>{range}</option>)}
+                  </select>
+                </label>
+                <div className="music-control">
+                  <span>Octave</span>
+                  <div className="music-inline-buttons">
+                    <button type="button" onClick={() => updateMusicSetting('octaveOffset', musicSettings.octaveOffset - 1)}>−</button>
+                    <strong>{musicSettings.octaveOffset}</strong>
+                    <button type="button" onClick={() => updateMusicSetting('octaveOffset', musicSettings.octaveOffset + 1)}>+</button>
+                  </div>
+                </div>
+                <div className="music-control">
+                  <span>Draw</span>
+                  <div className="music-inline-buttons">
+                    {DRAWING_PRESETS.map((preset) => (
+                      <button
+                        type="button"
+                        key={preset}
+                        className={musicSettings.drawingResolutionPreset === preset ? 'is-active' : ''}
+                        aria-pressed={musicSettings.drawingResolutionPreset === preset}
+                        onClick={() => updateMusicSetting('drawingResolutionPreset', preset)}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="music-control">
+                  <span>Rhythm</span>
+                  <div className="music-inline-buttons">
+                    {RHYTHM_PRESETS.map((preset) => (
+                      <button
+                        type="button"
+                        key={preset}
+                        className={musicSettings.rhythmPreset === preset ? 'is-active' : ''}
+                        aria-pressed={musicSettings.rhythmPreset === preset}
+                        onClick={() => updateMusicSetting('rhythmPreset', preset)}
+                      >
+                        {'•'.repeat(preset)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="music-palette" aria-label="Палитра">
+                {DEFAULT_MUSIC_COLORS.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    className={musicColor === color ? 'music-color is-active' : 'music-color'}
+                    style={{ background: color }}
+                    aria-label={`Цвет ${color}`}
+                    aria-pressed={musicColor === color}
+                    onClick={() => setMusicColor(color)}
+                  />
+                ))}
+                <button type="button" className="button-secondary" onClick={clearMusic} disabled={musicStrokes.length === 0 && musicSequence.length === 0}>
+                  Очистить
+                </button>
+              </div>
+
+              <MusicCanvas
+                settings={musicSettings}
+                strokes={musicStrokes}
+                activeColor={musicColor}
+                onChange={setMusicStrokes}
+              />
+
+              <div className="music-event-summary">
+                <span>Линий: <strong>{musicStrokes.length}</strong></span>
+                <span>Событий: <strong>{canvasMusicEvents.length}</strong></span>
+                <span>BPM: <strong>{musicSettings.bpm}</strong></span>
+              </div>
+
               <div className="music-staff" aria-label="Нотный стан">
                 {[...Array(5)].map((_, index) => <span key={index} className="music-staff__line" />)}
                 <div className="music-staff__notes">
