@@ -16,6 +16,7 @@ import {
   resolveVoiceProfile,
   sampleWaveform,
 } from '../src/features/music/audio/voiceProfiles';
+import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -83,6 +84,43 @@ function testVoiceProfiles() {
   approx(sampleWaveform('sawtooth', Math.PI), 0, 1e-9, 'Sawtooth midpoint sample');
 }
 
+function testDraftMigration() {
+  const legacy = normalizeMusicDraft({
+    schemaVersion: 1,
+    settings: DEFAULT_MUSIC_SETTINGS,
+    strokes: [],
+    virtualKeyboardEvents: [],
+    midiRecordedEvents: [],
+    activeColor: '#171717',
+    customColor: '#111827',
+    backgroundKind: 'sky',
+    savedAt: '2026-09-19T00:00:00.000Z',
+  });
+
+  assert(legacy?.schemaVersion === 2, 'Legacy draft must migrate to schema v2');
+  assert(legacy?.background.kind === 'sky', 'Legacy sky background must survive migration');
+
+  const photoDataUrl = 'data:image/jpeg;base64,AA==';
+  const current = normalizeMusicDraft({
+    schemaVersion: 2,
+    settings: DEFAULT_MUSIC_SETTINGS,
+    strokes: [],
+    virtualKeyboardEvents: [],
+    midiRecordedEvents: [],
+    activeColor: '#171717',
+    customColor: '#111827',
+    background: { kind: 'photo', dataUrl: photoDataUrl },
+    savedAt: '2026-09-19T00:00:00.000Z',
+  });
+
+  assert(current?.background.kind === 'photo', 'Photo background must validate in schema v2');
+  if (current?.background.kind === 'photo') {
+    assert(current.background.dataUrl === photoDataUrl, 'Photo data must survive validation');
+  }
+
+  assert(normalizeMusicDraft({ schemaVersion: 999 }) === null, 'Unknown schema must be rejected');
+}
+
 function testExports() {
   const settings = {
     ...DEFAULT_MUSIC_SETTINGS,
@@ -114,6 +152,7 @@ testTheory();
 testRhythm();
 testStrokeCompiler();
 testVoiceProfiles();
+testDraftMigration();
 testExports();
 
 console.log('music-domain-smoke: all checks passed');
