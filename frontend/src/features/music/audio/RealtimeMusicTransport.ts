@@ -3,6 +3,11 @@ import type { MusicSettings, NoteEvent } from '../model/types';
 
 type ScheduledSource = OscillatorNode;
 
+type LiveVoice = {
+  oscillator: OscillatorNode;
+  gain: GainNode;
+};
+
 const LOOKAHEAD_MS = 25;
 const SCHEDULE_AHEAD_SECONDS = 0.12;
 const START_DELAY_SECONDS = 0.025;
@@ -19,6 +24,7 @@ export class RealtimeMusicTransport {
   private settings: MusicSettings;
   private timer: number | null = null;
   private scheduledSources = new Set<ScheduledSource>();
+  private liveVoices = new Map<string, LiveVoice>();
   private playing = false;
   private pausedBeat = 0;
   private anchorBeat = 0;
@@ -102,6 +108,45 @@ export class RealtimeMusicTransport {
 
   isPlaying(): boolean {
     return this.playing;
+  }
+
+  async noteOn(midi: number, velocity = 0.8, voiceId = String(midi)): Promise<void> {
+    const context = await this.ensureContext();
+    if (!this.masterGain) return;
+
+    this.noteOff(midi, voiceId);
+
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = midiToFrequency(midi, this.settings.tuningCents);
+
+    const now = context.currentTime;
+    const peakGain = Math.max(0.0002, Math.min(1, velocity) * 0.28);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.012);
+
+    oscillator.connect(gain);
+    gain.connect(this.masterGain);
+    oscillator.start(now);
+
+    this.liveVoices.set(voiceId, { oscillator, gain });
+  }
+
+  noteOff(_midi: number, voiceId = String(_midi)): void {
+    const voice = this.liveVoices.get(voiceId);
+    if (!voice || !this.context) return;
+
+    const now = this.context.currentTime;
+    const stopTime = now + 0.05;
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setTargetAtTime(0.0001, now, 0.012);
+    try {
+      voice.oscillator.stop(stopTime);
+    } catch {
+      // Voice may already be stopped.
+    }
+    this.liveVoices.delete(voiceId);
   }
 
   getPositionBeat(): number {
@@ -257,6 +302,17 @@ export class RealtimeMusicTransport {
     this.scheduledSources.clear();
   }
 
+  private stopLiveVoices(): void {
+    for (const [voiceId, voice] of this.liveVoices) {
+      try {
+        voice.oscillator.stop();
+      } catch {
+        // Voice may already be stopped.
+      }
+      this.liveVoices.delete(voiceId);
+    }
+  }
+
   private clearScheduler(): void {
     if (this.timer !== null) {
       window.clearInterval(this.timer);
@@ -266,6 +322,7 @@ export class RealtimeMusicTransport {
 
   async dispose(): Promise<void> {
     this.stop();
+    this.stopLiveVoices();
     if (this.context) {
       await this.context.close();
       this.context = null;
