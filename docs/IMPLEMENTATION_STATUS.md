@@ -39,11 +39,14 @@
 - [x] beat grid
 - [x] color strokes
 - [x] drawing-resolution presets 1/2/3
+- [x] preset snapshot stored per stroke
+- [x] presets 2/3 rendered as grid/pixel strokes
 - [x] realtime playhead
 - [x] Paper background
 - [x] Sky background
 - [x] user Photo background
-- [x] undo last music input
+- [x] stroke-only undo matching reference behavior
+- [x] Cmd/Ctrl+Z stroke undo
 - [x] clear workspace
 
 ### Controls
@@ -55,7 +58,8 @@
 - [x] custom color `+`
 - [x] drawing preset 1/2/3
 - [x] rhythm preset •/••/•••
-- [x] Tempo
+- [x] Tempo numeric input
+- [x] linked Tempo range slider
 - [x] Tap tempo
 - [x] Quantize
 - [x] Swing
@@ -151,6 +155,20 @@
 - [x] schema-version check on load
 - [x] responsive share/gallery layout
 
+### Verification / CI
+- [x] focused TypeScript music check
+- [x] executable music-domain smoke tests
+- [x] theory mapping assertions
+- [x] quantize/swing assertions
+- [x] StrokeCompiler assertions
+- [x] WAV/MIDI export smoke assertions
+- [x] backend SQLite gallery unit tests
+- [x] GitHub Actions frontend + backend workflow
+- [x] clean checkout uses npm ci
+- [x] frontend build verified green in CI
+- [x] backend tests verified green in CI
+- [x] tracked frontend/node_modules removed
+
 ### Compatibility
 - [x] existing spectrogram text/upload/draw workflow preserved
 - [x] old spectrogram WAV pipeline preserved
@@ -213,6 +231,10 @@ Backend gallery code uses only Python stdlib SQLite plus the FastAPI/Pydantic st
 ## Remaining work
 
 ### Exact parity audit
+
+Evidence tracking: `docs/PARITY_EVIDENCE_MATRIX.md`
+
+
 - [ ] exact Key labels/enharmonics
 - [ ] exact Range values
 - [ ] Octave min/max
@@ -220,7 +242,7 @@ Backend gallery code uses only Python stdlib SQLite plus the FastAPI/Pydantic st
 - [ ] exact Quantize values
 - [ ] exact Swing values
 - [ ] exact BPM limits/default
-- [ ] exact drawing preset 3 mapping
+- [ ] exact drawing preset 3 grid density (visual pixel behavior is implemented)
 - [ ] exact •/••/••• mapping
 - [ ] exact custom-color `+` interaction
 - [ ] color -> sound mapping
