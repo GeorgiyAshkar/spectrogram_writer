@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import defaults from '../../defaults.json';
 import { FormField } from './components/FormField';
 import { Header } from './components/Header';
@@ -18,6 +18,8 @@ import {
 import { MusicCanvas, type MusicCanvasBackground } from './features/music/canvas/MusicCanvas';
 import { renderNoteEventsToWavUrl } from './features/music/audio/renderWav';
 import { useRealtimeMusicTransport } from './features/music/audio/useRealtimeMusicTransport';
+import { renderNoteEventsToMidiUrl } from './features/music/export/renderMidi';
+import { useWebMidiInput } from './features/music/midi/useWebMidiInput';
 import {
   DEFAULT_MUSIC_COLORS,
   DRAWING_PRESETS,
@@ -58,9 +60,15 @@ export default function App() {
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
   const [musicCustomColor, setMusicCustomColor] = useState<string>('#111827');
+  const [midiEnabled, setMidiEnabled] = useState(false);
+  const [midiRecordedEvents, setMidiRecordedEvents] = useState<NoteEvent[]>([]);
   const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
   const [musicPhotoUrl, setMusicPhotoUrl] = useState<string | null>(null);
   const tapTimesRef = useRef<number[]>([]);
+  const pendingMidiNotesRef = useRef(
+    new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
+  );
+  const realtimePlayingRef = useRef(false);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -101,8 +109,11 @@ export default function App() {
   );
 
   const activeMusicEvents = useMemo(
-    () => [...canvasMusicEvents, ...keyboardMusicEvents].sort((a, b) => a.startBeat - b.startBeat || a.midi - b.midi),
-    [canvasMusicEvents, keyboardMusicEvents],
+    () =>
+      [...canvasMusicEvents, ...keyboardMusicEvents, ...midiRecordedEvents].sort(
+        (a, b) => a.startBeat - b.startBeat || a.midi - b.midi,
+      ),
+    [canvasMusicEvents, keyboardMusicEvents, midiRecordedEvents],
   );
   const musicPlaybackSettings = useMemo(
     () => ({
@@ -113,6 +124,63 @@ export default function App() {
   );
 
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
+
+  useEffect(() => {
+    realtimePlayingRef.current = realtimeMusic.isPlaying;
+  }, [realtimeMusic.isPlaying]);
+
+  const handleMidiNoteOn = useCallback(
+    (midi: number, velocity: number, deviceId: string) => {
+      const voiceId = `${deviceId}:${midi}`;
+      void realtimeMusic.noteOn(midi, velocity, voiceId);
+
+      if (!realtimePlayingRef.current) return;
+      pendingMidiNotesRef.current.set(voiceId, {
+        midi,
+        startBeat: realtimeMusic.getPositionBeat(),
+        velocity,
+        id: `midi-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      });
+    },
+    [realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
+  );
+
+  const handleMidiNoteOff = useCallback(
+    (midi: number, deviceId: string) => {
+      const voiceId = `${deviceId}:${midi}`;
+      realtimeMusic.noteOff(midi, voiceId);
+
+      const pending = pendingMidiNotesRef.current.get(voiceId);
+      if (!pending) return;
+      pendingMidiNotesRef.current.delete(voiceId);
+
+      const endBeat = realtimeMusic.getPositionBeat();
+      const loopLength = Math.max(0.001, musicPlaybackSettings.loopLengthBeats);
+      let durationBeats = endBeat - pending.startBeat;
+      if (durationBeats < 0) durationBeats += loopLength;
+      durationBeats = Math.max(0.0625, durationBeats);
+
+      setMidiRecordedEvents((current) => [
+        ...current,
+        {
+          id: pending.id,
+          layerId: 'midi',
+          midi: pending.midi,
+          velocity: pending.velocity,
+          startBeat: pending.startBeat,
+          durationBeats,
+        },
+      ]);
+    },
+    [musicPlaybackSettings.loopLengthBeats, realtimeMusic.getPositionBeat, realtimeMusic.noteOff],
+  );
+
+  const midiInput = useWebMidiInput({
+    enabled: midiEnabled,
+    onNoteOn: handleMidiNoteOn,
+    onNoteOff: handleMidiNoteOff,
+  });
+
   const musicCanvasBackground = useMemo<MusicCanvasBackground>(
     () =>
       musicBackgroundKind === 'photo'
@@ -147,6 +215,21 @@ export default function App() {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
+  const downloadMusicMidi = () => {
+    if (!activeMusicEvents.length) return;
+    const url = renderNoteEventsToMidiUrl(activeMusicEvents, musicPlaybackSettings);
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const filename = `music_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.mid`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
 
   const undoMusic = () => {
@@ -161,6 +244,8 @@ export default function App() {
     realtimeMusic.stop();
     setMusicStrokes([]);
     setMusicSequence([]);
+    setMidiRecordedEvents([]);
+    pendingMidiNotesRef.current.clear();
   };
 
   const chooseMusicPhoto = (file: File | null) => {
@@ -388,6 +473,7 @@ export default function App() {
             onToggleMusicPlayback={realtimeMusic.togglePlayback}
             onSeekMusic={(progress) => realtimeMusic.seek(progress * musicPlaybackSettings.loopLengthBeats)}
             onDownloadMusicWav={downloadMusicWav}
+            onDownloadMusicMidi={downloadMusicMidi}
           />
           {activePanel === 'music' ? (
             <div className="music-panel">
@@ -493,6 +579,25 @@ export default function App() {
                     {musicSettings.metronomeEnabled ? 'On' : 'Off'}
                   </button>
                 </div>
+                <div className="music-control">
+                  <span>MIDI in</span>
+                  <button
+                    type="button"
+                    className={midiEnabled ? 'music-toggle is-active' : 'music-toggle'}
+                    aria-pressed={midiEnabled}
+                    onClick={() => {
+                      if (midiEnabled) {
+                        for (const [voiceId, pending] of pendingMidiNotesRef.current) {
+                          realtimeMusic.noteOff(pending.midi, voiceId);
+                        }
+                        pendingMidiNotesRef.current.clear();
+                      }
+                      setMidiEnabled((current) => !current);
+                    }}
+                  >
+                    {midiEnabled ? 'On' : 'Off'}
+                  </button>
+                </div>
                 <label className="music-control">
                   <span> tune </span>
                   <input
@@ -579,6 +684,9 @@ export default function App() {
                 <span>Линий: <strong>{musicStrokes.length}</strong></span>
                 <span>Событий: <strong>{canvasMusicEvents.length}</strong></span>
                 <span>BPM: <strong>{musicSettings.bpm}</strong></span>
+                <span>MIDI: <strong>{midiInput.status}</strong></span>
+                {midiInput.devices.length > 0 ? <span>Устройства: <strong>{midiInput.devices.join(', ')}</strong></span> : null}
+                <span>MIDI-событий: <strong>{midiRecordedEvents.length}</strong></span>
               </div>
 
               <div className="music-staff" aria-label="Нотный стан">
