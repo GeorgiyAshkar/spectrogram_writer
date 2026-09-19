@@ -11,6 +11,7 @@ export function renderNoteEventsToWavBlob(
   events: readonly NoteEvent[],
   settings: Pick<MusicSettings, 'bpm' | 'loopLengthBeats' | 'tuningCents' | 'metronomeEnabled'>,
   sampleRate = 44100,
+  includeMetronome = false,
 ): Blob {
   const bpm = Math.max(1, settings.bpm);
   const secondsPerBeat = 60 / bpm;
@@ -37,7 +38,7 @@ export function renderNoteEventsToWavBlob(
     }
   }
 
-  if (settings.metronomeEnabled) {
+  if (includeMetronome && settings.metronomeEnabled) {
     const beatCount = Math.ceil(settings.loopLengthBeats);
     for (let beat = 0; beat < beatCount; beat += 1) {
       const startSeconds = beat * secondsPerBeat;
@@ -91,6 +92,7 @@ export function renderNoteEventsToWavUrl(
   events: readonly NoteEvent[],
   settings: Pick<MusicSettings, 'bpm' | 'loopLengthBeats' | 'tuningCents' | 'metronomeEnabled'>,
   sampleRate = 44100,
+  includeMetronome = false,
 ): string {
-  return URL.createObjectURL(renderNoteEventsToWavBlob(events, settings, sampleRate));
+  return URL.createObjectURL(renderNoteEventsToWavBlob(events, settings, sampleRate, includeMetronome));
 }
