@@ -1037,6 +1037,16 @@ export default function App() {
                 >
                   Grid
                 </button>
+                <button
+                  type="button"
+                  className={musicSettings.freehandEnabled ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-pressed={musicSettings.freehandEnabled}
+                  aria-label="Freehand"
+                  title="Freehand — continuous pitch follows the drawn Y position"
+                  onClick={() => updateMusicSetting('freehandEnabled', !musicSettings.freehandEnabled)}
+                >
+                  Freehand
+                </button>
               </div>
 
               <div className="music-edit-toolbar" aria-label="Drawing tools">
