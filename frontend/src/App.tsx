@@ -281,6 +281,9 @@ export default function App() {
     realtimePlayingRef.current = false;
     pendingMidiNotesRef.current.clear();
     pendingVirtualNotesRef.current.clear();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    mediaRecorderRef.current = null;
     realtimeMusic.stop();
   }, [activePanel, realtimeMusic.stop]);
 
@@ -428,6 +431,9 @@ export default function App() {
   };
 
   const clearMusic = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    mediaRecorderRef.current = null;
     realtimeMusic.stop();
     clearMusicDraft();
     setMusicStrokes([]);
