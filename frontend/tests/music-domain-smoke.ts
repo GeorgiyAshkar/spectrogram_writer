@@ -1,0 +1,106 @@
+import {
+  DEFAULT_MUSIC_SETTINGS,
+  buildPitchRange,
+  compileStroke,
+  mapYToMidi,
+  midiToFrequency,
+  noteNameToMidi,
+  quantizeBeat,
+  applySwing,
+  type Stroke,
+} from '../src/features/music/model';
+import { renderNoteEventsToMidiBlob } from '../src/features/music/export/renderMidi';
+import { renderNoteEventsToWavBlob } from '../src/features/music/audio/renderWav';
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+function approx(actual: number, expected: number, tolerance: number, message: string) {
+  assert(Math.abs(actual - expected) <= tolerance, `${message}: expected ${expected}, got ${actual}`);
+}
+
+function testTheory() {
+  assert(noteNameToMidi('C4') === 60, 'C4 must be MIDI 60');
+  assert(noteNameToMidi('A4') === 69, 'A4 must be MIDI 69');
+  assert(noteNameToMidi('Db4') === 61, 'Db4 must resolve enharmonically');
+  assert(noteNameToMidi('bad') === null, 'Invalid note must return null');
+  approx(midiToFrequency(69), 440, 1e-9, 'A4 frequency');
+
+  const range = buildPitchRange('C', 'major', 4, 1);
+  assert(
+    JSON.stringify(range) === JSON.stringify([60, 62, 64, 65, 67, 69, 71]),
+    'C major range must contain the expected seven notes',
+  );
+  assert(mapYToMidi(0, range) === 71, 'Top of canvas must map to highest note');
+  assert(mapYToMidi(1, range) === 60, 'Bottom of canvas must map to lowest note');
+}
+
+function testRhythm() {
+  approx(quantizeBeat(0.74, 0.5), 0.5, 1e-9, 'Quantize below midpoint');
+  approx(quantizeBeat(0.76, 0.5), 1.0, 1e-9, 'Quantize above midpoint');
+  approx(quantizeBeat(0.76, null), 0.76, 1e-9, 'Quantize off');
+  approx(applySwing(0.5, 0.5, 0.5), 0.625, 1e-9, 'Odd subdivision swing delay');
+  approx(applySwing(1.0, 0.5, 0.5), 1.0, 1e-9, 'Even subdivision remains straight');
+}
+
+function testStrokeCompiler() {
+  const settings = {
+    ...DEFAULT_MUSIC_SETTINGS,
+    rangeOctaves: 1,
+    loopLengthBeats: 4,
+    quantizeStepBeats: null,
+    swing: 0,
+  };
+
+  const stroke: Stroke = {
+    id: 'stroke-1',
+    layerId: 'default',
+    color: '#000000',
+    createdAt: 0,
+    points: [
+      { x: 0, y: 1, t: 0 },
+      { x: 1, y: 1, t: 1000 },
+    ],
+  };
+
+  const events = compileStroke(stroke, settings, { sampleStepBeats: 0.25, baseOctave: 3 });
+  assert(events.length === 1, 'Flat stroke should merge into one note event');
+  assert(events[0].midi === 48, 'Bottom flat stroke should map to C3');
+  approx(events[0].startBeat, 0, 1e-9, 'Flat stroke start beat');
+  assert(events[0].durationBeats >= 3.9, 'Flat stroke should span essentially the whole loop');
+}
+
+function testExports() {
+  const settings = {
+    ...DEFAULT_MUSIC_SETTINGS,
+    bpm: 120,
+    loopLengthBeats: 4,
+    metronomeEnabled: true,
+  };
+  const events = [
+    {
+      id: 'n1',
+      layerId: 'default',
+      midi: 60,
+      velocity: 0.8,
+      startBeat: 0,
+      durationBeats: 1,
+    },
+  ];
+
+  const wav = renderNoteEventsToWavBlob(events, settings);
+  assert(wav.type === 'audio/wav', 'WAV export MIME type');
+  assert(wav.size > 44, 'WAV export must contain audio data beyond RIFF header');
+
+  const midi = renderNoteEventsToMidiBlob(events, settings);
+  assert(midi.type === 'audio/midi', 'MIDI export MIME type');
+  assert(midi.size > 20, 'MIDI export must contain header and track data');
+}
+
+testTheory();
+testRhythm();
+testStrokeCompiler();
+testExports();
+
+console.log('music-domain-smoke: all checks passed');
