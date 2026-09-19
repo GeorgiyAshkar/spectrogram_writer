@@ -17,6 +17,7 @@ import {
 } from './features/music/model';
 import { MusicCanvas } from './features/music/canvas/MusicCanvas';
 import { renderNoteEventsToWavUrl } from './features/music/audio/renderWav';
+import { useRealtimeMusicTransport } from './features/music/audio/useRealtimeMusicTransport';
 import {
   DEFAULT_MUSIC_COLORS,
   DRAWING_PRESETS,
@@ -52,8 +53,6 @@ export default function App() {
   const [drawCanvasHeight, setDrawCanvasHeight] = useState(340);
   const [eraserEnabled, setEraserEnabled] = useState(false);
   const [musicSequence, setMusicSequence] = useState<string[]>([]);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
   const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
@@ -109,9 +108,21 @@ export default function App() {
     [musicSequence.length, musicSettings],
   );
 
-  const buildMusicWav = async () => {
-    if (!activeMusicEvents.length) return null;
-    return renderNoteEventsToWavUrl(activeMusicEvents, musicPlaybackSettings);
+  const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
+
+  const downloadMusicWav = () => {
+    if (!activeMusicEvents.length) return;
+    const url = renderNoteEventsToWavUrl(activeMusicEvents, musicPlaybackSettings);
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const filename = `music_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.wav`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const addMusicNote = (note: string) => setMusicSequence((current) => [...current, note]);
@@ -125,12 +136,9 @@ export default function App() {
   };
 
   const clearMusic = () => {
+    realtimeMusic.stop();
     setMusicStrokes([]);
     setMusicSequence([]);
-    if (musicAudioUrl) {
-      URL.revokeObjectURL(musicAudioUrl);
-      setMusicAudioUrl(null);
-    }
   };
 
   const updateMusicSetting = <K extends keyof MusicSettings>(key: K, value: MusicSettings[K]) => {
@@ -162,24 +170,6 @@ export default function App() {
     updateMusicSetting('bpm', Math.min(PROVISIONAL_BPM.max, Math.max(PROVISIONAL_BPM.min, bpm)));
   };
 
-  useEffect(() => {
-    setMusicAudioUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return null;
-    });
-  }, [activeMusicEvents, musicPlaybackSettings]);
-
-  const playMusicSequence = async () => {
-    if (!activeMusicEvents.length || isMusicPlaying) return;
-    setIsMusicPlaying(true);
-    try {
-      if (musicAudioUrl) URL.revokeObjectURL(musicAudioUrl);
-      const nextUrl = await buildMusicWav();
-      setMusicAudioUrl(nextUrl);
-    } finally {
-      setIsMusicPlaying(false);
-    }
-  };
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawState = useRef<{ active: boolean }>({ active: false });
   const drawCanvasWrapRef = useRef<HTMLDivElement | null>(null);
@@ -353,8 +343,8 @@ export default function App() {
         />
         <section className="panel playback-panel">
           <AudioPlayer
-            audioUrl={activePanel === 'music' ? musicAudioUrl : audioUrl}
-            isPreparingAudio={isDownloading || isMusicPlaying}
+            audioUrl={audioUrl}
+            isPreparingAudio={isDownloading}
             onRequestAudio={playAudio}
             onToggleEraser={toggleEraser}
             eraserEnabled={eraserEnabled}
@@ -362,8 +352,13 @@ export default function App() {
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
             musicUndoDisabled={musicStrokes.length === 0 && musicSequence.length === 0}
+            musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
+            musicIsPlaying={realtimeMusic.isPlaying}
+            musicProgress={realtimeMusic.progress}
             onUndoMusic={undoMusic}
-            onPlayMusicSequence={playMusicSequence}
+            onToggleMusicPlayback={realtimeMusic.togglePlayback}
+            onSeekMusic={(progress) => realtimeMusic.seek(progress * musicPlaybackSettings.loopLengthBeats)}
+            onDownloadMusicWav={downloadMusicWav}
           />
           {activePanel === 'music' ? (
             <div className="music-panel">
@@ -492,6 +487,7 @@ export default function App() {
                 settings={musicSettings}
                 strokes={musicStrokes}
                 activeColor={musicColor}
+                playheadProgress={realtimeMusic.progress}
                 onChange={setMusicStrokes}
               />
 
