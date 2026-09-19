@@ -64,3 +64,14 @@ export const PROVISIONAL_RHYTHM_STEP_BEATS: Record<RhythmPreset, number | null> 
   2: 0.5,
   3: 0.25,
 };
+
+
+/**
+ * Tune is modeled as global cents offset until the exact original input semantics
+ * are measured interactively.
+ */
+export const PROVISIONAL_TUNE_CENTS = {
+  min: -100,
+  max: 100,
+  step: 1,
+} as const;
