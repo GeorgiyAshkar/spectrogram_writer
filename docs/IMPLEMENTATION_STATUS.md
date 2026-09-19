@@ -16,7 +16,7 @@
 - [x] normalized `Point`
 - [x] vector `Stroke`
 - [x] canonical `NoteEvent`
-- [x] project type
+- [x] project versioning baseline
 - [x] note name -> MIDI
 - [x] MIDI -> frequency
 - [x] Major / Minor pitch ranges
@@ -31,129 +31,225 @@
 - [x] separate `MusicCanvas`
 - [x] normalized vector strokes
 - [x] pointer capture
-- [x] mouse/touch/stylus-compatible Pointer Events
-- [x] pressure field captured
-- [x] fast-pointer buffering through a mutable ref
-- [x] pitch grid rendering
-- [x] note labels on grid
+- [x] mouse/touch/stylus Pointer Events
+- [x] pressure capture
+- [x] fast-pointer buffering through mutable ref
+- [x] pitch grid
+- [x] note labels
 - [x] beat grid
 - [x] color strokes
 - [x] drawing-resolution presets 1/2/3
+- [x] realtime playhead
+- [x] Paper background
+- [x] Sky background
+- [x] user Photo background
 - [x] undo last music input
-- [x] clear music workspace
+- [x] clear workspace
 
-### Controls already wired
+### Controls
 - [x] Key
 - [x] Scale
 - [x] Range abstraction
 - [x] Octave offset
 - [x] palette
+- [x] custom color `+`
 - [x] drawing preset 1/2/3
 - [x] rhythm preset •/••/•••
 - [x] Tempo
 - [x] Tap tempo
 - [x] Quantize
 - [x] Swing
-- [x] Click On/Off state
+- [x] realtime Click On/Off
+- [x] Tune abstraction in cents
+- [x] MIDI in On/Off with visible status
 
-### Audio / playback
-- [x] drawing compiles to canonical NoteEvent[]
-- [x] piano input compiles to canonical NoteEvent[]
-- [x] drawing + piano events can coexist
-- [x] WAV render consumes NoteEvent[] rather than canvas pixels
-- [x] tuning-aware MIDI frequency conversion
-- [x] metronome click rendering
-- [x] play/pause behavior in music mode
-- [x] waveform preview still works from generated WAV
-- [x] music changes invalidate stale generated audio
+### Realtime audio / transport
+- [x] Web Audio realtime engine
+- [x] `AudioContext.currentTime` scheduling
+- [x] look-ahead scheduler
+- [x] true loop playback
+- [x] pause/resume
+- [x] seek
+- [x] realtime playhead via requestAnimationFrame
+- [x] realtime metronome
+- [x] accent on first beat
+- [x] live note audition
+- [x] active voice cleanup
+- [x] mode-change cleanup
+- [x] tempo/settings changes restart scheduler at current beat
+- [x] no generated WAV required for interactive playback
+
+### Virtual keyboard
+- [x] refactored to three octaves
+- [x] octave follows current octave offset
+- [x] live note-on/note-off
+- [x] mouse/touch/stylus
+- [x] keyboard activation with Enter/Space
+- [x] recording played notes into current loop
+- [x] same canonical `NoteEvent[]` as drawing/MIDI
+
+### Web MIDI
+- [x] capability detection
+- [x] permission flow
+- [x] unsupported state
+- [x] denied state
+- [x] no-device state
+- [x] connected-device list
+- [x] note-on
+- [x] note-off
+- [x] velocity
+- [x] live audition
+- [x] loop recording
+- [x] disconnect/disable releases held notes
+- [x] device notes enter canonical `NoteEvent[]`
+
+### Export
+- [x] WAV render from canonical `NoteEvent[]`
+- [x] WAV excludes metronome by default until parity confirms otherwise
+- [x] MIDI Standard MIDI File export
+- [x] tempo meta event
+- [x] note-on/note-off
+- [x] velocity
+- [x] deterministic PPQ
+- [x] WAV and MIDI consume the same timeline
+
+### Persistence
+- [x] versioned local draft schema
+- [x] autosave
+- [x] restore after reload
+- [x] settings persistence
+- [x] strokes persistence
+- [x] virtual-keyboard event persistence
+- [x] MIDI event persistence
+- [x] color/background persistence
+- [x] corrupted/unavailable localStorage fallback
+- [x] Photo intentionally falls back to Paper after reload (blob URL is not durable)
+
+### Take / record
+- [x] canvas video capture
+- [x] realtime Web Audio capture bus
+- [x] MediaRecorder capability detection
+- [x] WebM/MP4 candidate selection
+- [x] record/stop workflow
+- [x] take download
+- [x] recorder cleanup on mode change/clear
+
+### Share / Gallery MVP
+- [x] FastAPI publish endpoint
+- [x] FastAPI gallery list endpoint
+- [x] FastAPI gallery detail endpoint
+- [x] SQLite storage with no new dependency
+- [x] project-size limit
+- [x] title validation
+- [x] author validation
+- [x] share UI with title + handle
+- [x] public project ID
+- [x] copyable `?piece=<id>` link
+- [x] automatic shared-project loading from URL
+- [x] gallery list UI
+- [x] safe confirmation before replacing non-empty local work
+- [x] schema-version check on load
+- [x] responsive share/gallery layout
 
 ### Compatibility
 - [x] existing spectrogram text/upload/draw workflow preserved
-- [x] existing piano UI preserved as secondary note input
+- [x] old spectrogram WAV pipeline preserved
+- [x] music editor isolated from legacy raster editor
 - [x] music WAV download no longer downloads unrelated legacy canvas PNG
 
-## Validated
+## Important implementation decisions
 
-Pure TypeScript music-domain modules were checked with strict TypeScript compilation in isolation:
+### One canonical timeline
 
-- model types
-- theory
-- rhythm
-- stroke compiler
-- WAV renderer
+All musical inputs now converge on:
 
-A full Vite build could not be executed in the current isolated runtime because external npm/GitHub network access is unavailable. The repository itself remains the source of truth for the integrated React build.
+```
+MusicCanvas strokes
+Virtual keyboard
+Web MIDI
+      |
+      v
+   NoteEvent[]
+      |
+      +--> RealtimeMusicTransport
+      +--> WAV renderer
+      +--> MIDI exporter
+      +--> persistence/share
+```
 
-## In progress / next
+There is no longer a separate musical interpretation for each output.
 
-### Immediate
-- [ ] separate realtime Web Audio transport from WAV generation
-- [ ] playhead driven by AudioContext time
-- [ ] true looping without rebuilding WAV
-- [ ] metronome as realtime voice
-- [ ] prevent metronome from leaking into exported WAV unless parity confirms it
-- [ ] Tune UI and exact semantics abstraction
-- [ ] background Paper / Sky / Photo
-- [ ] custom color `+` flow
+### Interactive playback is not WAV playback
 
-### Input
-- [ ] three-octave virtual keyboard refactor onto NoteInputService
-- [ ] Web MIDI capability / permission states
-- [ ] MIDI note-on/note-off
-- [ ] MIDI recording into loop
+Generated WAV is export-only. Interactive playback uses Web Audio scheduling.
 
-### Export
-- [ ] dedicated clean WAV export
-- [ ] MIDI file export
-- [ ] parity verification of track structure
+### Unknown parity values are configuration
 
-### Project state
-- [ ] autosave local draft
-- [ ] project schema migration
-- [ ] record/take
-- [ ] share
-- [ ] gallery
+Values not yet measured exactly from the original are isolated in `parityConfig.ts`, including provisional:
 
-### Audit items still requiring exact interactive measurement
+- BPM limits/default;
+- Range options;
+- Quantize options;
+- Swing values;
+- Tune cents range;
+- rhythm preset mapping.
+
+They can be replaced without changing the canvas/compiler/audio architecture.
+
+### Gallery persistence
+
+Gallery MVP uses SQLite at `data/music_gallery.sqlite3` by default or `MUSIC_GALLERY_DB` when configured.
+
+This is appropriate for the current single-instance MVP. A horizontally scaled public deployment should move gallery persistence to PostgreSQL/object storage.
+
+## Validation status
+
+Pure domain/audio/export modules are intentionally dependency-light and TypeScript-strict.
+
+A complete `npm run build` has not been executed in the current isolated execution environment because the repository dependencies cannot be fetched from npm/GitHub from that environment. Integrated browser smoke testing remains required on a normal development machine or CI runner.
+
+Backend gallery code uses only Python stdlib SQLite plus the FastAPI/Pydantic stack already present in the project.
+
+## Remaining work
+
+### Exact parity audit
 - [ ] exact Key labels/enharmonics
 - [ ] exact Range values
 - [ ] Octave min/max
-- [ ] Tune semantics/range
+- [ ] exact Tune semantics/range
 - [ ] exact Quantize values
 - [ ] exact Swing values
 - [ ] exact BPM limits/default
-- [ ] exact `3` drawing resolution
-- [ ] exact dot-preset mapping
-- [ ] `+` behavior
+- [ ] exact drawing preset 3 mapping
+- [ ] exact •/••/••• mapping
+- [ ] exact custom-color `+` interaction
 - [ ] color -> sound mapping
-- [ ] MIDI scale mapping
-- [ ] export metronome policy
+- [ ] exact MIDI scale behavior
+- [ ] exact export metronome policy
+- [ ] exact MIDI track structure in original
+- [ ] exact take codec/container in original
+- [ ] exact share validation in original
+- [ ] exact gallery item behavior in original
 
-## Current architecture
+### Product hardening
+- [ ] chronological unified undo across strokes/virtual keyboard/MIDI
+- [ ] redo
+- [ ] persistent Photo background via IndexedDB or backend asset
+- [ ] gallery pagination UI
+- [ ] gallery moderation/rate limiting for public deployment
+- [ ] gallery preview thumbnails
+- [ ] configurable instrument/timbre rack if parity audit confirms color/timbre mapping
+- [ ] full browser smoke test
+- [ ] mobile Safari take/MIDI compatibility test
+- [ ] automated unit/integration tests
 
-```
-MusicCanvas / Piano
-       |
-       v
- Stroke[] / keyboard events
-       |
-       v
-  StrokeCompiler
-       |
-       v
-   NoteEvent[]
-       |
-       +----> current WAV renderer
-       |
-       +----> next: realtime Transport
-       |
-       +----> next: MIDI exporter
-       |
-       +----> next: project/share persistence
-```
+## Next milestone
 
-## Next engineering milestone
+The core implementation is now far enough that the next milestone should be **Parity Hardening**, not another architectural rewrite.
 
-The next milestone is **Realtime Transport**.
+The remaining work should focus on:
 
-The current generated-WAV playback is useful as a deterministic bridge, but it should not become the final interactive engine. Realtime playback must move to Web Audio scheduling so that tempo changes, metronome, MIDI input and looping respond immediately without regenerating an audio file.
+1. exact interactive measurements from the original service;
+2. replacing provisional values in `parityConfig.ts`;
+3. fixing any behavioral discrepancies found side-by-side;
+4. adding regression tests after those values stabilize.
