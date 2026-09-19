@@ -40,7 +40,7 @@
 | Redo | “Redo a line you took back.” | Implemented |
 | Restart | “Clear the drawing. The beat keeps going.” | Implemented without stopping transport |
 | Shuffle | “A new drawing, at random.” | Implemented; palette is preserved |
-| Recolor | “Change the colors: tap this, then any color.” | Implemented |
+| Recolor | “Change the colors: tap this, then any color.” | Implemented with measured 27-color picker + custom + reset |
 | Original colors | explicit reset control exists | Implemented |
 | Grid | “every note and beat under the ink”; rendered reference starts On | Implemented, default On |
 | Three-octave keyboard | confirmed in official app changelog | Implemented |
@@ -49,7 +49,7 @@
 | Photo fit | Fill / Fit / Stretch | Implemented |
 | Photo preprocessing | reference downsizes photos only past ~2000 px and uses JPEG 0.9 | Implemented |
 | Record | record/take control | Implemented |
-| Share take | separate share control appears after take | Take materialization implemented; direct share surface still differs |
+| Share take | separate share control appears after take | Implemented with Web Share file sharing and download fallback |
 | Share title | maxlength 48 | Implemented frontend/backend |
 | Share name/handle | maxlength 120 | Implemented frontend/backend |
 | Gallery | public gallery | Implemented MVP with thumbnail cards |
@@ -74,6 +74,26 @@ The rendered web UI exposes stable instrument identity separately from color:
 The application now stores instrument identity as `instrument:<id>`, while color remains customizable. This is important because Recolor must not change the selected sound identity.
 
 **Exact synthesis recipes are still unknown.** Current oscillator/envelope choices are clean-room approximations behind a configurable voice-profile layer.
+
+
+
+## Exact recolor picker presets
+
+The rendered color picker exposes 27 preset choices plus a custom `+` and a separate “The original colors” reset:
+
+```
+#1d9e75 #0e7a5a #7bc9a8
+#3fb0c0 #2c8c8c #8fd3dc
+#3e5ec6 #2a3f8f #87a5e8
+#7f77dd #5a4fb8 #b3aeed
+#de7bae #c2497f #f2b5d2
+#d85a30 #a83a1c #f09a75
+#ef9f27 #c77e12 #f6c877
+#f4be82 #b98a54 #8a6238
+#33312b #6b675c #a7a294
+```
+
+The clone uses the same measured preset list while retaining stable instrument identity independently of the chosen color.
 
 ## Confirmed interaction observations
 
