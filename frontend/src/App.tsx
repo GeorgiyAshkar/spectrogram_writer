@@ -1138,7 +1138,7 @@ export default function App() {
                   <p>Палитра — это 9 инструментов: keys, pluck, bell, marimba, flute, strings, chime, bass и 8bit. Recolor меняет их цвет, но не сам инструмент.</p>
                   <p>1 — Drawing mode, 2 — Pixel mode. • / •• / ••• независимо включают Bass, Drums и Arpeggio и могут работать одновременно.</p>
                   <p>Key, Scale, Range и Octave задают набор нот. Quantize, Swing, Tempo/Tap и Click управляют ритмом; swing применяется только к прямым сеткам, не к triplet.</p>
-                  <p>Grid показывает ноты и доли под рисунком. Pen рисует, Eraser удаляет линии, Restart очищает рисунок без остановки beat, Shuffle создаёт новый случайный рисунок.</p>
+                  <p>Grid показывает ноты и доли под рисунком. Freehand оставляет ту же линию, но ведёт pitch плавно между нотами. Pen рисует, Eraser удаляет линии, Restart очищает рисунок без остановки beat, Shuffle создаёт новый случайный рисунок.</p>
                   <p>Paper/Sky/Photo меняют фон; для Photo доступны Fill, Fit и Stretch. WAV/MIDI экспортируют loop, Record создаёт take, а Share/Gallery публикуют проект.</p>
                 </div>
               ) : null}
