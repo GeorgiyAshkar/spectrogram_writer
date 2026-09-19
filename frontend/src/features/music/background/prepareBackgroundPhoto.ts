@@ -6,8 +6,8 @@ export type PreparedBackgroundPhoto = {
 
 export async function prepareBackgroundPhoto(
   file: File,
-  maxDimension = 1600,
-  quality = 0.82,
+  maxDimension = 1280,
+  quality = 0.78,
 ): Promise<PreparedBackgroundPhoto> {
   if (!file.type.startsWith('image/')) {
     throw new Error('Выберите файл изображения.');
