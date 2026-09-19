@@ -2,10 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildPitchRange, midiToNoteName } from '../model/theory';
 import type { MusicSettings, Point, Stroke } from '../model/types';
 
+export type MusicCanvasBackground =
+  | { kind: 'paper' }
+  | { kind: 'sky' }
+  | { kind: 'photo'; url: string | null };
+
 type Props = {
   settings: MusicSettings;
   strokes: Stroke[];
   activeColor: string;
+  background: MusicCanvasBackground;
   playheadProgress?: number;
   onChange: (strokes: Stroke[]) => void;
 };
@@ -47,8 +53,9 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.restore();
 }
 
-export function MusicCanvas({ settings, strokes, activeColor, playheadProgress = 0, onChange }: Props) {
+export function MusicCanvas({ settings, strokes, activeColor, background, playheadProgress = 0, onChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const draftRef = useRef<Stroke | null>(null);
   const pointerStartedAt = useRef(0);
@@ -59,17 +66,77 @@ export function MusicCanvas({ settings, strokes, activeColor, playheadProgress =
   );
 
   useEffect(() => {
+    if (background.kind !== 'photo' || !background.url) {
+      setBackgroundImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (!cancelled) setBackgroundImage(image);
+    };
+    image.onerror = () => {
+      if (!cancelled) setBackgroundImage(null);
+    };
+    image.src = background.url;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [background]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#fffdf8';
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    if (background.kind === 'sky') {
+      const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      gradient.addColorStop(0, '#bfe2ff');
+      gradient.addColorStop(0.62, '#e9f5ff');
+      gradient.addColorStop(1, '#fffaf0');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    } else if (background.kind === 'photo' && backgroundImage) {
+      const imageRatio = backgroundImage.width / backgroundImage.height;
+      const canvasRatio = WIDTH / HEIGHT;
+      let sourceWidth = backgroundImage.width;
+      let sourceHeight = backgroundImage.height;
+      let sourceX = 0;
+      let sourceY = 0;
+
+      if (imageRatio > canvasRatio) {
+        sourceWidth = backgroundImage.height * canvasRatio;
+        sourceX = (backgroundImage.width - sourceWidth) / 2;
+      } else {
+        sourceHeight = backgroundImage.width / canvasRatio;
+        sourceY = (backgroundImage.height - sourceHeight) / 2;
+      }
+
+      ctx.drawImage(
+        backgroundImage,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        WIDTH,
+        HEIGHT,
+      );
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    } else {
+      ctx.fillStyle = '#fffdf8';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    }
 
     ctx.save();
-    ctx.strokeStyle = '#e7e1d8';
+    ctx.strokeStyle = background.kind === 'paper' ? '#e7e1d8' : 'rgba(72, 62, 51, 0.22)';
     ctx.lineWidth = 1;
     for (let beat = 0; beat <= settings.loopLengthBeats; beat += 1) {
       const x = settings.loopLengthBeats > 0 ? (beat / settings.loopLengthBeats) * WIDTH : 0;
@@ -109,7 +176,7 @@ export function MusicCanvas({ settings, strokes, activeColor, playheadProgress =
     ctx.lineTo(playheadX, HEIGHT);
     ctx.stroke();
     ctx.restore();
-  }, [draft, pitchRange, playheadProgress, settings.loopLengthBeats, strokes]);
+  }, [background, backgroundImage, draft, pitchRange, playheadProgress, settings.loopLengthBeats, strokes]);
 
   const pointFromEvent = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
     const rect = event.currentTarget.getBoundingClientRect();
