@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildPitchRange, midiToNoteName } from '../model/theory';
 import type { MusicSettings, Point, Stroke } from '../model/types';
+import {
+  PIXEL_COLUMNS,
+  pixelCellSide,
+  pixelColumnCenter,
+  pixelColumnIndex,
+  pixelRowCenter,
+  pixelRowIndex,
+  snapPixelPoint,
+} from './pixelGrid';
 
 export type PhotoFit = 'fill' | 'fit' | 'stretch';
 
@@ -25,51 +34,13 @@ type Props = {
 const WIDTH = 960;
 const HEIGHT = 420;
 
-const PIXEL_COLUMNS = 48;
-const PIXEL_FILL_RATIO = 18 / 19;
-
-function pixelCellSide(): number {
-  return (WIDTH / PIXEL_COLUMNS) * PIXEL_FILL_RATIO;
-}
-
-function pixelRowCenter(row: number, rowCount: number): number {
-  const safeRows = Math.max(1, Math.floor(rowCount));
-  if (safeRows === 1) return 0.5;
-
-  const halfCell = pixelCellSide() / (2 * HEIGHT);
-  const step = (1 - 2 * halfCell) / (safeRows - 1);
-  return halfCell + Math.min(safeRows - 1, Math.max(0, row)) * step;
-}
-
-function pixelRowIndex(y: number, rowCount: number): number {
-  const safeRows = Math.max(1, Math.floor(rowCount));
-  if (safeRows === 1) return 0;
-
-  const halfCell = pixelCellSide() / (2 * HEIGHT);
-  const step = (1 - 2 * halfCell) / (safeRows - 1);
-  return Math.min(
-    safeRows - 1,
-    Math.max(0, Math.round((Math.min(1, Math.max(0, y)) - halfCell) / step)),
-  );
-}
-
 function snapPoint(
   point: Point,
   programMode: MusicSettings['programMode'],
   pixelRowCount: number,
 ): Point {
   if (programMode !== 2) return point;
-
-  const col = Math.min(
-    PIXEL_COLUMNS - 1,
-    Math.max(0, Math.floor(Math.min(0.999999, Math.max(0, point.x)) * PIXEL_COLUMNS)),
-  );
-  const row = pixelRowIndex(point.y, pixelRowCount);
-  return {
-    ...point,
-    x: (col + 0.5) / PIXEL_COLUMNS,
-    y: pixelRowCenter(row, pixelRowCount),
-  };
+  return snapPixelPoint(point, pixelRowCount, WIDTH, HEIGHT);
 }
 
 function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
@@ -127,7 +98,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
     }
 
     const rowCount = Math.max(1, Math.floor(stroke.pixelRowCount));
-    const side = pixelCellSide();
+    const side = pixelCellSide(WIDTH);
     const visited = new Set<string>();
 
     const coordinates = (point: Point) => {
@@ -137,7 +108,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
       );
       return {
         col,
-        row: pixelRowIndex(point.y, rowCount),
+        row: pixelRowIndex(point.y, rowCount, WIDTH, HEIGHT),
       };
     };
 
@@ -148,8 +119,8 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
       if (visited.has(key)) return;
       visited.add(key);
 
-      const cx = ((safeCol + 0.5) / PIXEL_COLUMNS) * WIDTH;
-      const cy = pixelRowCenter(safeRow, rowCount) * HEIGHT;
+      const cx = pixelColumnCenter(safeCol) * WIDTH;
+      const cy = pixelRowCenter(safeRow, rowCount, WIDTH, HEIGHT) * HEIGHT;
       ctx.fillStyle = stroke.color;
       ctx.fillRect(cx - side / 2, cy - side / 2, side, side);
     };
