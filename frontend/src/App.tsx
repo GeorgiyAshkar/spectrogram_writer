@@ -84,6 +84,7 @@ export default function App() {
   const [takeError, setTakeError] = useState<string | null>(null);
   const [showInstrumentPanel, setShowInstrumentPanel] = useState(true);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [showMusicHelp, setShowMusicHelp] = useState(false);
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [shareTitle, setShareTitle] = useState('');
   const [shareAuthor, setShareAuthor] = useState('');
@@ -791,6 +792,15 @@ export default function App() {
               <div className="music-panel-switches">
                 <button
                   type="button"
+                  className="button-secondary music-help-button"
+                  aria-label="Справка по музыкальному режиму"
+                  aria-expanded={showMusicHelp}
+                  onClick={() => setShowMusicHelp((current) => !current)}
+                >
+                  ?
+                </button>
+                <button
+                  type="button"
                   className={showInstrumentPanel ? 'button-secondary is-active' : 'button-secondary'}
                   aria-expanded={showInstrumentPanel}
                   onClick={() => setShowInstrumentPanel((current) => !current)}
@@ -807,8 +817,41 @@ export default function App() {
                 </button>
               </div>
 
+              {showMusicHelp ? (
+                <div className="music-help-panel" role="dialog" aria-label="Справка по музыкальному режиму">
+                  <div className="music-help-panel__header">
+                    <strong>play_music_theory — справка</strong>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      aria-label="Закрыть справку"
+                      onClick={() => setShowMusicHelp(false)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p>Рисуйте на холсте: по горизонтали идёт время, по вертикали — высота ноты.</p>
+                  <p>Key и Scale ограничивают доступные ноты; Range и Octave меняют вертикальный диапазон.</p>
+                  <p>Quantize, Swing, Tempo/Tap и Click управляют ритмом. MIDI in подключает внешнюю MIDI-клавиатуру.</p>
+                  <p>Цвет выбирается в палитре; + открывает пользовательский цвет. Paper/Sky/Photo меняют только фон.</p>
+                  <p>WAV и MIDI экспортируют один loop. Record создаёт аудиовизуальный take, Share публикует проект в gallery.</p>
+                </div>
+              ) : null}
+
               {showInstrumentPanel ? (
-              <div className="music-parity-controls">
+              <div className="music-instrument-panel">
+                <div className="music-instrument-panel__header">
+                  <strong>The instrument</strong>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    aria-label="Закрыть The instrument"
+                    onClick={() => setShowInstrumentPanel(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="music-parity-controls">
                 <label className="music-control">
                   <span>Key</span>
                   <select value={musicSettings.key} onChange={(e) => updateMusicSetting('key', e.target.value)}>
@@ -930,7 +973,7 @@ export default function App() {
                   </button>
                 </div>
                 <label className="music-control">
-                  <span> tune </span>
+                  <span>Tune</span>
                   <input
                     type="number"
                     min={PROVISIONAL_TUNE_CENTS.min}
@@ -968,6 +1011,7 @@ export default function App() {
                     onChange={(e) => chooseMusicPhoto(e.target.files?.[0] ?? null)}
                   />
                 </label>
+                </div>
               </div>
               ) : null}
 
