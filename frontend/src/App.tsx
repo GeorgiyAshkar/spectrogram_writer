@@ -82,6 +82,8 @@ export default function App() {
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
   const [takeMimeType, setTakeMimeType] = useState('video/webm');
   const [takeError, setTakeError] = useState<string | null>(null);
+  const [showInstrumentPanel, setShowInstrumentPanel] = useState(true);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [shareTitle, setShareTitle] = useState('');
   const [shareAuthor, setShareAuthor] = useState('');
@@ -537,15 +539,7 @@ export default function App() {
   };
 
   const undoMusic = () => {
-    if (musicStrokes.length > 0) {
-      setMusicStrokes((current) => current.slice(0, -1));
-      return;
-    }
-    if (virtualKeyboardEvents.length > 0) {
-      setVirtualKeyboardEvents((current) => current.slice(0, -1));
-      return;
-    }
-    setMidiRecordedEvents((current) => current.slice(0, -1));
+    setMusicStrokes((current) => current.slice(0, -1));
   };
 
   const clearMusic = () => {
@@ -781,7 +775,7 @@ export default function App() {
             onDownloadSnapshot={downloadCanvasSnapshot}
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
-            musicUndoDisabled={musicStrokes.length === 0 && virtualKeyboardEvents.length === 0 && midiRecordedEvents.length === 0}
+            musicUndoDisabled={musicStrokes.length === 0}
             musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
             musicHasExportContent={activeMusicEvents.length > 0}
             musicIsPlaying={realtimeMusic.isPlaying}
@@ -794,6 +788,26 @@ export default function App() {
           />
           {activePanel === 'music' ? (
             <div className="music-panel">
+              <div className="music-panel-switches">
+                <button
+                  type="button"
+                  className={showInstrumentPanel ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-expanded={showInstrumentPanel}
+                  onClick={() => setShowInstrumentPanel((current) => !current)}
+                >
+                  The instrument
+                </button>
+                <button
+                  type="button"
+                  className={showVirtualKeyboard ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-expanded={showVirtualKeyboard}
+                  onClick={() => setShowVirtualKeyboard((current) => !current)}
+                >
+                  Key
+                </button>
+              </div>
+
+              {showInstrumentPanel ? (
               <div className="music-parity-controls">
                 <label className="music-control">
                   <span>Key</span>
@@ -955,6 +969,7 @@ export default function App() {
                   />
                 </label>
               </div>
+              ) : null}
 
               <div className="music-palette" aria-label="Палитра">
                 {DEFAULT_MUSIC_COLORS.map((color) => (
@@ -1118,6 +1133,7 @@ export default function App() {
                 {takeError ? <span className="error-banner">{takeError}</span> : null}
               </div>
 
+              {showVirtualKeyboard ? (
               <div className="music-octaves">
                 {keyboardOctaves.map((octave) => (
                   <div key={octave} className="music-octave">
@@ -1186,6 +1202,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              ) : null}
             </div>
           ) : null}
           {error ? <p className="error-banner">{error}</p> : null}
