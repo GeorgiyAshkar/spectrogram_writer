@@ -73,7 +73,7 @@ export const DEFAULT_MUSIC_SETTINGS: MusicSettings = {
   rangeOctaves: 3,
   loopLengthBeats: 4,
   bpm: 120,
-  quantizeStepBeats: null,
+  quantizeStepBeats: 1 / 3,
   swing: 0,
   metronomeEnabled: false,
   tuningCents: 0,
