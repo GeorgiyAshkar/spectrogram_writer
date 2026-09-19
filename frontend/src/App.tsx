@@ -110,6 +110,10 @@ export default function App() {
 
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
 
+  useEffect(() => {
+    if (activePanel !== 'music') realtimeMusic.stop();
+  }, [activePanel, realtimeMusic.stop]);
+
   const downloadMusicWav = () => {
     if (!activeMusicEvents.length) return;
     const url = renderNoteEventsToWavUrl(activeMusicEvents, musicPlaybackSettings);
@@ -353,6 +357,7 @@ export default function App() {
             musicModeEnabled={activePanel === 'music'}
             musicUndoDisabled={musicStrokes.length === 0 && musicSequence.length === 0}
             musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
+            musicHasExportContent={activeMusicEvents.length > 0}
             musicIsPlaying={realtimeMusic.isPlaying}
             musicProgress={realtimeMusic.progress}
             onUndoMusic={undoMusic}
