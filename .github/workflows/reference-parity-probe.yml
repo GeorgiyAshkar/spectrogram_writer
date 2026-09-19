@@ -8,6 +8,7 @@ on:
     paths:
       - scripts/reference-dom-probe.mjs
       - scripts/reference-interaction-probe.cjs
+      - scripts/reference-instrument-probe.cjs
       - .github/workflows/reference-parity-probe.yml
 
 jobs:
@@ -44,6 +45,8 @@ jobs:
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe public interactions
         run: node scripts/reference-interaction-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe reference instrument spectra
+        run: node scripts/reference-instrument-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Render reference DOM in headless Chrome
         run: |
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
