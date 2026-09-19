@@ -20,6 +20,7 @@ function modulo(value: number, divisor: number): number {
 export class RealtimeMusicTransport {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private captureDestination: MediaStreamAudioDestinationNode | null = null;
   private events: NoteEvent[] = [];
   private settings: MusicSettings;
   private timer: number | null = null;
@@ -148,6 +149,20 @@ export class RealtimeMusicTransport {
       // Voice may already be stopped.
     }
     this.liveVoices.delete(voiceId);
+  }
+
+  async getCaptureStream(): Promise<MediaStream> {
+    await this.ensureContext();
+    if (!this.context || !this.masterGain) {
+      throw new Error('Web Audio context is unavailable.');
+    }
+
+    if (!this.captureDestination) {
+      this.captureDestination = this.context.createMediaStreamDestination();
+      this.masterGain.connect(this.captureDestination);
+    }
+
+    return this.captureDestination.stream;
   }
 
   getPositionBeat(): number {
@@ -328,6 +343,7 @@ export class RealtimeMusicTransport {
       await this.context.close();
       this.context = null;
       this.masterGain = null;
+      this.captureDestination = null;
     }
   }
 }
