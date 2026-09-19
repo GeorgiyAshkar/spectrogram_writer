@@ -4,7 +4,8 @@
 **Целевая ветка:** `playmusictheory`  
 **Статус документа:** Product + UX + Functional Specification  
 **Дата фиксации эталона:** 2026-09-19  
-**Эталон:** https://playmusictheory.net/play
+**Эталон:** https://playmusictheory.net/play  
+**Parity audit:** [PLAYMUSICTHEORY_PARITY_AUDIT.md](./PLAYMUSICTHEORY_PARITY_AUDIT.md)
 
 ---
 
@@ -296,26 +297,27 @@ raw points
 
 # 7. Слои, цвета и голоса
 
-## 7.1. Buttons 1 / 2 / 3 [VERIFY]
+## 7.1. Buttons 1 / 2 / 3 [PARTIALLY CONFIRMED]
 
-В оригинальном DOM наблюдаются кнопки `1`, `2`, `3`.
+Parity audit снял первоначальную гипотезу о слоях.
 
-До ручной проверки фиксируем абстракцию:
+Официальные screenshots показывают:
+
+- `1` — continuous/freehand baseline;
+- `2` — выраженный grid/pixelized drawing;
+- `3` — третий selectable preset того же семейства; exact resolution пока требует интерактивной проверки.
+
+Вторичный hands-on обзор независимо описывает numeric controls как режимы, позволяющие превращать рисунок в pixel-art-like представление.
+
+Использовать отдельную модель:
 
 ```ts
-type Layer = {
-  id: string;
-  order: number;
-  color: string;
-  instrumentId: string;
-  muted: boolean;
-  gain: number;
-}
+type DrawingResolutionPreset = 1 | 2 | 3;
 ```
 
-UI должен позволять быстро переключать активный слой.
+Эти buttons **не должны использоваться как layer selector**.
 
-Если ручная проверка подтвердит, что `1/2/3` означают не layer, а другой параметр, label/семантика корректируются без изменения основной модели.
+Drawing layers/voices, если они нужны нашей архитектуре, существуют отдельно от визуального parity-control `1/2/3`.
 
 ## 7.2. Color
 
@@ -326,29 +328,35 @@ UI должен позволять быстро переключать акти�
 
 ## 7.3. Add `+` [VERIFY]
 
-Наблюдается отдельная кнопка `+`.
+Наблюдается отдельная кнопка `+`, рядом с ней DOM показывает дополнительный input, а help говорит “Make the colors your own”.
 
-Предполагаемое назначение — добавление/расширение текущего набора визуально-звуковых параметров.
+Наиболее сильная текущая гипотеза — custom-color workflow: добавить/настроить цвет палитры.
 
-Требование на архитектуру: `+` не должен быть hard-coded к 3 элементам; модель должна поддерживать N layers/voices, даже если parity UI ограничен тремя.
+До интерактивной проверки:
+
+- не связывать `+` со слоями;
+- color customization хранить отдельно от audio layer count;
+- UI adapter должен позволять заменить exact semantics без изменения Project model.
 
 ---
 
 # 8. Brush controls
 
-## 8.1. Buttons • / •• / ••• [VERIFY]
+## 8.1. Buttons • / •• / ••• [STRONG OBSERVATION, exact mapping VERIFY]
 
-С высокой вероятностью три уровня визуального параметра, наиболее естественная реализация — brush thickness.
+Первичная гипотеза “brush thickness” больше не считается основной.
 
-Если подтверждается:
+Внешний hands-on review текущего web-инструмента сообщает, что эта группа меняет/добавляет rhythm. Сами labels из одного, двух и трех dots также согласуются с rhythmic density/subdivision preset.
 
-- `•` = thin;
-- `••` = medium;
-- `•••` = thick.
+При этом точный mapping пока не измерен интерактивно, поэтому в domain model использовать нейтральную абстракцию:
 
-Brush size влияет на визуальный stroke.
+```ts
+type RhythmPreset = 1 | 2 | 3;
+```
 
-Музыкальное влияние thickness должно быть выключено по умолчанию, если эталон не подтверждает связь thickness → velocity/gain.
+Не зашивать названия “thin / medium / thick” и не связывать preset напрямую с CSS brush width.
+
+Если финальный интерактивный замер покажет комбинированное влияние на brush + rhythm, mapper расширяется без изменения сохраненного проекта.
 
 ---
 
@@ -471,7 +479,7 @@ Octave выполняет транспонирование диапазона н
 
 ## 14.1. Web UI [CONFIRMED]
 
-Наблюдается `Paper`.
+Наблюдается `Paper`. Официальные screenshots также показывают отдельную cloud-button как entry control фоновой карточки.
 
 ## 14.2. Official app behavior [CONFIRMED]
 
@@ -797,9 +805,9 @@ MIDI export не должен пытаться точно воспроизвес
 
 Action `record`.
 
-## 26.2. Behavior
+## 26.2. Behavior [CONFIRMED high-level]
 
-Предполагаемый продуктовый смысл — запись исполнения/take.
+Официальный changelog использует термин `take` и подтверждает, что завершенный take сохраняется в Photos **до sharing**. Это указывает на materialized media recording, а не только сохранение project state.
 
 Для web:
 
@@ -1378,9 +1386,9 @@ MIDI:
 - [ ] BPM min/max/default;
 - [ ] Tap behavior;
 - [ ] Click sound/accent;
-- [ ] значение buttons 1/2/3;
-- [ ] значение buttons •/••/•••;
-- [ ] значение `+`;
+- [x] buttons 1/2/3: семейство drawing resolution/pixelization presets; exact preset 3 еще уточнить;
+- [ ] exact mapping buttons •/••/••• (rhythm-related по текущему аудиту);
+- [ ] значение `+` (сильная гипотеза: custom color workflow);
 - [ ] color input behavior;
 - [ ] `Key` button behavior;
 - [ ] instrument list;
@@ -1426,9 +1434,9 @@ MIDI:
 
 ## Phase 3 — Voices/UI
 
-- layer/color model;
-- 1/2/3 semantics after verification;
-- brush controls;
+- color/voice model;
+- DrawingResolutionPreset 1/2/3;
+- RhythmPreset •/••/••• с конфигурируемым mapping;
 - instrument panel;
 - background/Paper.
 
@@ -1513,8 +1521,34 @@ NoteEvent[]
 
 ---
 
-# 60. Следующий шаг после этой спецификации
+# 60. Статус Parity Audit
 
-Перед началом большого рефакторинга выполнить короткий **Parity Audit** оригинального web-инструмента и заполнить все пункты `[VERIFY]`.
+Первый аудит выполнен 2026-09-19. Результаты находятся в:
 
-После этого сформировать `IMPLEMENTATION_PLAN.md` с задачами по компонентам, зависимостями и тестами, а уже затем переходить к коду.
+`docs/PLAYMUSICTHEORY_PARITY_AUDIT.md`
+
+Он уже снял несколько критичных неопределенностей:
+
+- `1/2/3` — drawing resolution / pixelization presets, не layers;
+- background = paper / sky / photo;
+- undo = последняя line;
+- take/record — materialized recording перед sharing;
+- `The instrument` — advanced feature bundle;
+- Major/Minor, three-octave keyboard и loop export подтверждены официально;
+- `•/••/•••` имеют rhythm-related behavior, но exact mapping еще требует интерактивного замера.
+
+# 61. Следующий шаг после первого аудита
+
+Сформировать `IMPLEMENTATION_PLAN.md` и начинать core-реализацию на конфигурируемых abstractions.
+
+Параллельно закрыть оставшиеся exact-value пункты интерактивным browser audit:
+
+- значения select;
+- диапазоны inputs;
+- mapping rhythm presets;
+- Tune;
+- custom color flow;
+- MIDI behavior;
+- export details.
+
+Оставшиеся VERIFY-пункты не должны блокировать архитектуру, если они изолированы в конфигурационных mapper-слоях.
