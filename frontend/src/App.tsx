@@ -10,7 +10,6 @@ import type { GenerationFormData } from './types/config';
 import {
   compileStrokes,
   DEFAULT_MUSIC_SETTINGS,
-  midiToNoteName,
   noteNameToMidi,
   type MusicSettings,
   type NoteEvent,
@@ -142,6 +141,58 @@ export default function App() {
         {
           id: pending.id,
           layerId: 'midi',
+          midi: pending.midi,
+          velocity: pending.velocity,
+          startBeat: pending.startBeat,
+          durationBeats,
+        },
+      ]);
+    },
+    [musicPlaybackSettings.loopLengthBeats, realtimeMusic.getPositionBeat, realtimeMusic.noteOff],
+  );
+
+  const handleVirtualNoteOn = useCallback(
+    (noteName: string) => {
+      const midi = noteNameToMidi(noteName);
+      if (midi === null) return;
+
+      const voiceId = `virtual:${midi}`;
+      void realtimeMusic.noteOn(midi, 0.82, voiceId);
+
+      if (!realtimePlayingRef.current) return;
+      pendingVirtualNotesRef.current.set(voiceId, {
+        midi,
+        startBeat: realtimeMusic.getPositionBeat(),
+        velocity: 0.82,
+        id: `virtual-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      });
+    },
+    [realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
+  );
+
+  const handleVirtualNoteOff = useCallback(
+    (noteName: string) => {
+      const midi = noteNameToMidi(noteName);
+      if (midi === null) return;
+
+      const voiceId = `virtual:${midi}`;
+      realtimeMusic.noteOff(midi, voiceId);
+
+      const pending = pendingVirtualNotesRef.current.get(voiceId);
+      if (!pending) return;
+      pendingVirtualNotesRef.current.delete(voiceId);
+
+      const endBeat = realtimeMusic.getPositionBeat();
+      const loopLength = Math.max(0.001, musicPlaybackSettings.loopLengthBeats);
+      let durationBeats = endBeat - pending.startBeat;
+      if (durationBeats < 0) durationBeats += loopLength;
+      durationBeats = Math.max(0.0625, durationBeats);
+
+      setVirtualKeyboardEvents((current) => [
+        ...current,
+        {
+          id: pending.id,
+          layerId: 'keyboard',
           midi: pending.midi,
           velocity: pending.velocity,
           startBeat: pending.startBeat,
