@@ -21,6 +21,11 @@ import { useRealtimeMusicTransport } from './features/music/audio/useRealtimeMus
 import { renderNoteEventsToMidiUrl } from './features/music/export/renderMidi';
 import { useWebMidiInput } from './features/music/midi/useWebMidiInput';
 import {
+  clearMusicDraft,
+  loadMusicDraft,
+  saveMusicDraft,
+} from './features/music/persistence/musicDraft';
+import {
   DEFAULT_MUSIC_COLORS,
   DRAWING_PRESETS,
   PARITY_KEY_OPTIONS,
@@ -64,6 +69,8 @@ export default function App() {
   const [midiRecordedEvents, setMidiRecordedEvents] = useState<NoteEvent[]>([]);
   const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
   const [musicPhotoUrl, setMusicPhotoUrl] = useState<string | null>(null);
+  const [musicDraftHydrated, setMusicDraftHydrated] = useState(false);
+  const [musicDraftStatus, setMusicDraftStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const tapTimesRef = useRef<number[]>([]);
   const pendingMidiNotesRef = useRef(
     new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
@@ -72,6 +79,50 @@ export default function App() {
     new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
   );
   const realtimePlayingRef = useRef(false);
+
+  useEffect(() => {
+    const draft = loadMusicDraft();
+    if (draft) {
+      setMusicSettings(draft.settings);
+      setMusicStrokes(draft.strokes);
+      setVirtualKeyboardEvents(draft.virtualKeyboardEvents);
+      setMidiRecordedEvents(draft.midiRecordedEvents);
+      setMusicColor(draft.activeColor);
+      setMusicCustomColor(draft.customColor);
+      setMusicBackgroundKind(draft.backgroundKind);
+      setMusicDraftStatus('saved');
+    }
+    setMusicDraftHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!musicDraftHydrated) return;
+
+    setMusicDraftStatus('idle');
+    const timer = window.setTimeout(() => {
+      const saved = saveMusicDraft({
+        settings: musicSettings,
+        strokes: musicStrokes,
+        virtualKeyboardEvents,
+        midiRecordedEvents,
+        activeColor: musicColor,
+        customColor: musicCustomColor,
+        backgroundKind: musicBackgroundKind === 'sky' ? 'sky' : 'paper',
+      });
+      setMusicDraftStatus(saved ? 'saved' : 'error');
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    midiRecordedEvents,
+    musicBackgroundKind,
+    musicColor,
+    musicCustomColor,
+    musicDraftHydrated,
+    musicSettings,
+    musicStrokes,
+    virtualKeyboardEvents,
+  ]);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
     setActivePanel(next);
@@ -272,6 +323,7 @@ export default function App() {
 
   const clearMusic = () => {
     realtimeMusic.stop();
+    clearMusicDraft();
     setMusicStrokes([]);
     setVirtualKeyboardEvents([]);
     setMidiRecordedEvents([]);
@@ -718,6 +770,7 @@ export default function App() {
                 <span>MIDI: <strong>{midiInput.status}</strong></span>
                 {midiInput.devices.length > 0 ? <span>Устройства: <strong>{midiInput.devices.join(', ')}</strong></span> : null}
                 <span>MIDI-событий: <strong>{midiRecordedEvents.length}</strong></span>
+                <span>Автосохранение: <strong>{musicDraftStatus === 'saved' ? 'сохранено' : musicDraftStatus === 'error' ? 'ошибка' : '…'}</strong></span>
               </div>
 
               <div className="music-octaves">
