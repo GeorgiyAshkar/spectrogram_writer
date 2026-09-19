@@ -1240,3 +1240,31 @@ button:disabled {
     order: 3;
   }
 }
+
+
+.music-gallery__item {
+  overflow: hidden;
+  padding: 0;
+}
+
+.music-gallery__thumbnail {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  object-fit: cover;
+  background: #f5efe7;
+  border-bottom: 1px solid #e7e1d8;
+}
+
+.music-gallery__thumbnail--empty {
+  display: grid;
+  place-items: center;
+  color: #8b8174;
+  font-size: 2rem;
+}
+
+.music-gallery__meta {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
