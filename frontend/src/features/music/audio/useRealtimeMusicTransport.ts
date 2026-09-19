@@ -89,6 +89,25 @@ export function useRealtimeMusicTransport(
     setPositionBeat(transport.getPositionBeat());
   }, []);
 
+  const getPositionBeat = useCallback(
+    () => transportRef.current?.getPositionBeat() ?? 0,
+    [],
+  );
+
+  const noteOn = useCallback(
+    async (midi: number, velocity = 0.8, voiceId = String(midi)) => {
+      await transportRef.current?.noteOn(midi, velocity, voiceId);
+    },
+    [],
+  );
+
+  const noteOff = useCallback(
+    (midi: number, voiceId = String(midi)) => {
+      transportRef.current?.noteOff(midi, voiceId);
+    },
+    [],
+  );
+
   return {
     isPlaying,
     positionBeat,
@@ -96,5 +115,8 @@ export function useRealtimeMusicTransport(
     togglePlayback,
     stop,
     seek,
+    getPositionBeat,
+    noteOn,
+    noteOff,
   };
 }
