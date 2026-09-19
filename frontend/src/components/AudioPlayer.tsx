@@ -249,11 +249,13 @@ export function AudioPlayer({
       {musicModeEnabled ? (
         <button
           type="button"
-          className="button-secondary draw-panel__clear-btn header-player__clear"
+          className="button-secondary draw-panel__clear-btn header-player__clear music-undo-button"
           onClick={onUndoMusic}
           disabled={musicUndoDisabled}
+          title="Отменить последнюю линию"
+          aria-label="Отменить последнюю линию"
         >
-          Отменить
+          ↶
         </button>
       ) : null}
 
