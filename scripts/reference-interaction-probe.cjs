@@ -248,6 +248,106 @@ try {
   const octaveMax = await octaveState();
   console.log(JSON.stringify({ label: 'octave-bounds', initial: octaveInitial, min: octaveMin, max: octaveMax }));
 
+
+
+  async function measureDrawVariant(label, toggleId) {
+    await page.goto('https://playmusictheory.net/play', {
+      waitUntil: 'networkidle2',
+      timeout: 30000,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    if (toggleId) {
+      const visible = await page.$eval('#' + toggleId, (el) => getComputedStyle(el).display !== 'none');
+      if (visible) await page.click('#' + toggleId);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+
+    const canvas = await page.$('#c');
+    if (!canvas) throw new Error('Reference canvas not found.');
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('Reference canvas has no bounding box.');
+
+    const before = await page.$eval('#c', (node) => {
+      const ctx = node.getContext('2d');
+      return Array.from(ctx.getImageData(0, 0, node.width, node.height).data);
+    });
+
+    const path = [];
+    const steps = 28;
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps;
+      const x = box.x + box.width * (0.12 + 0.76 * t);
+      const yNorm = 0.23 + 0.46 * t + 0.055 * Math.sin(t * Math.PI * 5);
+      const y = box.y + box.height * yNorm;
+      path.push({ x, y });
+    }
+
+    await page.mouse.move(path[0].x, path[0].y);
+    await page.mouse.down();
+    for (const point of path.slice(1)) {
+      await page.mouse.move(point.x, point.y, { steps: 2 });
+    }
+    await page.mouse.up();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const result = await page.$eval('#c', (node, beforePixels) => {
+      const ctx = node.getContext('2d');
+      const after = ctx.getImageData(0, 0, node.width, node.height).data;
+      const width = node.width;
+      const height = node.height;
+      const changed = [];
+      for (let p = 0; p < after.length; p += 4) {
+        const delta =
+          Math.abs(after[p] - beforePixels[p]) +
+          Math.abs(after[p + 1] - beforePixels[p + 1]) +
+          Math.abs(after[p + 2] - beforePixels[p + 2]) +
+          Math.abs(after[p + 3] - beforePixels[p + 3]);
+        if (delta > 24) {
+          const pixel = p / 4;
+          changed.push({ x: pixel % width, y: Math.floor(pixel / width) });
+        }
+      }
+
+      if (!changed.length) return { changed: 0, samples: [] };
+
+      const minX = Math.min(...changed.map((p) => p.x));
+      const maxX = Math.max(...changed.map((p) => p.x));
+      const minY = Math.min(...changed.map((p) => p.y));
+      const maxY = Math.max(...changed.map((p) => p.y));
+      const samples = [];
+      for (let i = 0; i <= 12; i += 1) {
+        const targetX = Math.round(minX + ((maxX - minX) * i) / 12);
+        const ys = changed
+          .filter((p) => Math.abs(p.x - targetX) <= 2)
+          .map((p) => p.y);
+        samples.push({
+          x: targetX,
+          y: ys.length ? Math.round(ys.reduce((a, b) => a + b, 0) / ys.length) : null,
+          count: ys.length,
+        });
+      }
+      return {
+        changed: changed.length,
+        bbox: { minX, maxX, minY, maxY },
+        samples,
+      };
+    }, before);
+
+    const modeState = await page.evaluate(() => ({
+      freestyle: document.getElementById('lockBtn')?.className ?? null,
+      freehand: document.getElementById('freeBtn')?.className ?? null,
+      program: ['p1', 'p2', 'p3'].map((id) => document.getElementById(id)?.className ?? null),
+    }));
+
+    console.log(JSON.stringify({ label: 'draw-variant', variant: label, toggleId, modeState, result }));
+  }
+
+  await measureDrawVariant('default', null);
+  await measureDrawVariant('freestyle', 'lockBtn');
+  await measureDrawVariant('freehand', 'freeBtn');
+
+
   await snapshot('final');
 } finally {
   await browser.close();
