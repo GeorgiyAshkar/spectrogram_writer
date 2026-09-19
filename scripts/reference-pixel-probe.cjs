@@ -97,6 +97,46 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       });
     }
 
+    // Probe vertical snap centers at a fixed X.
+    const verticalSnapMap = [];
+    for (let step = 0; step <= 20; step += 1) {
+      const yNorm = 0.02 + (0.96 * step) / 20;
+      const before = await capture();
+      const x = box.x + box.width * 0.5;
+      const y = box.y + box.height * yNorm;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + 1, y + 1);
+      await page.mouse.up();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      const result = await diff(before);
+      verticalSnapMap.push({
+        y: Math.round(yNorm * 1000) / 1000,
+        bbox: result.bbox,
+        centerY: result.bbox ? (result.bbox.minY + result.bbox.maxY) / 2 : null,
+      });
+    }
+
+    // Probe horizontal snap centers at a fixed Y.
+    const horizontalSnapMap = [];
+    for (let step = 0; step <= 24; step += 1) {
+      const xNorm = 0.02 + (0.96 * step) / 24;
+      const before = await capture();
+      const x = box.x + box.width * xNorm;
+      const y = box.y + box.height * 0.5;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + 1, y + 1);
+      await page.mouse.up();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      const result = await diff(before);
+      horizontalSnapMap.push({
+        x: Math.round(xNorm * 1000) / 1000,
+        bbox: result.bbox,
+        centerX: result.bbox ? (result.bbox.minX + result.bbox.maxX) / 2 : null,
+      });
+    }
+
     // Horizontal drag reveals the step spacing between adjacent pixel cells.
     const beforeDrag = await capture();
     const y = box.y + box.height * 0.42;
@@ -149,6 +189,8 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       native,
       program2Class: await page.$eval('#p2', (el) => el.className),
       probes,
+      verticalSnapMap,
+      horizontalSnapMap,
       horizontal,
     }));
   } finally {
