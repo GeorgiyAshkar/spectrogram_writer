@@ -37,5 +37,7 @@ jobs:
         run: npm ci
       - name: Check music TypeScript
         run: npm run check:music
+      - name: Run music domain tests
+        run: npm run test:music
       - name: Build frontend
         run: npm run build
