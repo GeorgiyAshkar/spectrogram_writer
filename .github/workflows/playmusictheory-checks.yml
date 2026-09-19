@@ -41,3 +41,25 @@ jobs:
         run: npm run test:music
       - name: Build frontend
         run: npm run build
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install browser smoke dependency
+        run: npm install --prefix /tmp/music-ui-smoke --no-save puppeteer-core@24
+      - name: Start production preview
+        shell: bash
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/music-ui-preview.log 2>&1 &
+          echo $! > /tmp/music-ui-preview.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173 >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/music-ui-preview.log
+          exit 1
+      - name: Run browser music smoke
+        run: node scripts/music-ui-smoke.cjs "${{ steps.chrome.outputs.path }}" "http://127.0.0.1:4173"
