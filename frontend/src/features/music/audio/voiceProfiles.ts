@@ -16,6 +16,17 @@ export const DEFAULT_VOICE_PROFILE: VoiceProfile = {
 
 export const PARITY_LAYER_VOICE_PROFILES: Readonly<Record<string, VoiceProfile>> = {
   // Instrument labels/colors are exact observations; synthesis profiles are clean-room approximations.
+  'instrument:keys': { waveform: 'sine', gain: 1.0 },
+  'instrument:pluck': { waveform: 'triangle', gain: 0.86 },
+  'instrument:bell': { waveform: 'sine', gain: 0.72 },
+  'instrument:marimba': { waveform: 'triangle', gain: 0.78 },
+  'instrument:flute': { waveform: 'sine', gain: 0.7 },
+  'instrument:strings': { waveform: 'sawtooth', gain: 0.46 },
+  'instrument:chime': { waveform: 'sine', gain: 0.62 },
+  'instrument:bass': { waveform: 'triangle', gain: 0.82 },
+  'instrument:8bit': { waveform: 'square', gain: 0.48 },
+
+  // Legacy color-based layers remain readable for old local/shared projects.
   'color:#1d9e75': { waveform: 'sine', gain: 1.0 }, // keys
   'color:#d85a30': { waveform: 'triangle', gain: 0.86 }, // pluck
   'color:#7f77dd': { waveform: 'sine', gain: 0.72 }, // bell
