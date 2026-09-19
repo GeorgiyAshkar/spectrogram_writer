@@ -44,8 +44,8 @@ class GenerationRequest(BaseModel):
 
 
 class MusicShareCreate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=120)
-    author: str = Field(..., min_length=1, max_length=80)
+    title: str = Field(..., min_length=1, max_length=48)
+    author: str = Field(..., min_length=1, max_length=120)
     project: dict[str, Any]
     thumbnail: str | None = Field(default=None, max_length=400_000)
 
