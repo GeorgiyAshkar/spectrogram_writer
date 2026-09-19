@@ -19,6 +19,26 @@ jobs:
           node-version: "22"
       - name: Probe public reference DOM
         run: node scripts/reference-dom-probe.mjs
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          set -e
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Dump rendered reference DOM
+        shell: bash
+        run: |
+          "${{ steps.chrome.outputs.path }}" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --virtual-time-budget=4000 \
+            --dump-dom \
+            https://playmusictheory.net/play > /tmp/playmusictheory-rendered.html
+      - name: Probe rendered reference DOM
+        run: node scripts/reference-dom-probe.mjs /tmp/playmusictheory-rendered.html
       - name: Render reference DOM in headless Chrome
         run: |
           CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
