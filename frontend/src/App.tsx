@@ -81,7 +81,7 @@ export default function App() {
   const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
   const [musicPhotoUrl, setMusicPhotoUrl] = useState<string | null>(null);
   const [musicPhotoFit, setMusicPhotoFit] = useState<'fill' | 'fit' | 'stretch'>('fill');
-  const [showMusicGrid, setShowMusicGrid] = useState(false);
+  const [showMusicGrid, setShowMusicGrid] = useState(true);
   const [musicDraftHydrated, setMusicDraftHydrated] = useState(false);
   const [musicDraftStatus, setMusicDraftStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [isTakeRecording, setIsTakeRecording] = useState(false);
@@ -970,7 +970,7 @@ export default function App() {
                       max={PARITY_BPM.max}
                       value={musicSettings.bpm}
                       aria-label="Tempo BPM"
-                      onChange={(e) => updateMusicSetting('bpm', Math.min(PARITY_BPM.max, Math.max(PARITY_BPM.min, Number(e.target.value))))}
+                      readOnly
                     />
                     <input
                       type="range"
