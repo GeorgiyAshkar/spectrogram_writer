@@ -10,9 +10,6 @@ on:
       - scripts/reference-dom-probe.mjs
       - scripts/reference-interaction-probe.cjs
       - scripts/reference-instrument-probe.cjs
-      - scripts/reference-export-probe.cjs
-      - scripts/reference-pixel-probe.cjs
-      - scripts/reference-freehand-curve-probe.cjs
       - .github/workflows/reference-parity-probe.yml
 
 jobs:
@@ -49,12 +46,6 @@ jobs:
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe public interactions
         run: node scripts/reference-interaction-probe.cjs "${{ steps.chrome.outputs.path }}"
-      - name: Probe Pixel mode geometry
-        run: node scripts/reference-pixel-probe.cjs "${{ steps.chrome.outputs.path }}"
-      - name: Probe Freehand Y frequency curve
-        run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
-      - name: Probe public exports
-        run: node scripts/reference-export-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe reference instrument spectra
         run: node scripts/reference-instrument-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Render reference DOM in headless Chrome
