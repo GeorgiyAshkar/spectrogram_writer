@@ -1114,20 +1114,17 @@ export default function App() {
                   className={recolorMode ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={recolorMode}
                   title="Change the colors — tap this, then any instrument color"
-                  onClick={() => setRecolorMode((current) => !current)}
+                  onClick={() => {
+                    setRecolorMode((current) => {
+                      const next = !current;
+                      if (!next) setShowRecolorPicker(false);
+                      return next;
+                    });
+                  }}
                 >
                   Recolor
                 </button>
-                {recolorMode ? (
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    title="The original colors"
-                    onClick={resetInstrumentColors}
-                  >
-                    Original colors
-                  </button>
-                ) : null}
+
               </div>
 
               {showMusicHelp ? (
