@@ -1,0 +1,53 @@
+name: Reference focused parity probes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - playmusictheory
+    paths:
+      - scripts/reference-pixel-probe.cjs
+      - scripts/reference-freehand-curve-probe.cjs
+      - scripts/reference-export-probe.cjs
+      - .github/workflows/reference-focused-probes.yml
+
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
+      - name: Probe Pixel mode geometry
+        run: node scripts/reference-pixel-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe pitch curves
+        run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
+
+  exports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
+      - name: Probe public exports
+        run: node scripts/reference-export-probe.cjs "${{ steps.chrome.outputs.path }}"
