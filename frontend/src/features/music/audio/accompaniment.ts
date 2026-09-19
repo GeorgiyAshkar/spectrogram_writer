@@ -37,7 +37,7 @@ export function buildAccompanimentEvents(settings: MusicSettings): NoteEvent[] {
       events.push({
         id: `hat:${step}`,
         layerId: 'accompaniment:drums:hat',
-        midi: 78,
+        midi: 42,
         velocity: step % 2 === 0 ? 0.42 : 0.3,
         startBeat: swungBeat,
         durationBeats: 0.08,
@@ -49,7 +49,7 @@ export function buildAccompanimentEvents(settings: MusicSettings): NoteEvent[] {
         events.push({
           id: `drum:${integerBeat}`,
           layerId: snare ? 'accompaniment:drums:snare' : 'accompaniment:drums:kick',
-          midi: snare ? 50 : 36,
+          midi: snare ? 38 : 36,
           velocity: 0.7,
           startBeat: beat,
           durationBeats: 0.12,
