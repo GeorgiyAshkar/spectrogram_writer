@@ -17,7 +17,7 @@ type MidiAccessLike = {
   onstatechange: (() => void) | null;
 };
 
-type NavigatorWithMidi = Navigator & {
+type NavigatorWithMidi = {
   requestMIDIAccess?: () => Promise<MidiAccessLike>;
 };
 
@@ -46,7 +46,7 @@ export function useWebMidiInput({ enabled, onNoteOn, onNoteOff }: Options) {
       return;
     }
 
-    const navigatorWithMidi = navigator as NavigatorWithMidi;
+    const navigatorWithMidi = navigator as unknown as NavigatorWithMidi;
     if (typeof navigatorWithMidi.requestMIDIAccess !== 'function') {
       setStatus('unsupported');
       setDevices([]);
