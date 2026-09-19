@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/features/music/**/*.ts",
+    "src/features/music/**/*.tsx",
+    "src/services/musicGallery.ts"
+  ]
+}
