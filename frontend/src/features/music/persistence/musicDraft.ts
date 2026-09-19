@@ -1,4 +1,10 @@
-import type { MusicSettings, NoteEvent, Stroke } from '../model/types';
+import {
+  DEFAULT_MUSIC_SETTINGS,
+  type MusicSettings,
+  type NoteEvent,
+  type ProgramMode,
+  type Stroke,
+} from '../model/types';
 
 const STORAGE_KEY = 'spectrogram-writer:playmusictheory:draft';
 
@@ -63,10 +69,31 @@ function isMusicDraftV2(value: unknown): value is MusicDraftV2 {
   return typeof value.savedAt === 'string';
 }
 
+function normalizeSettings(settings: MusicSettings): MusicSettings {
+  const legacy = settings as MusicSettings & {
+    drawingResolutionPreset?: ProgramMode;
+    rhythmPreset?: number;
+  };
+  const {
+    drawingResolutionPreset,
+    rhythmPreset: _legacyRhythmPreset,
+    ...current
+  } = legacy;
+
+  return {
+    ...DEFAULT_MUSIC_SETTINGS,
+    ...current,
+    programMode: current.programMode ?? drawingResolutionPreset ?? 1,
+    bassEnabled: current.bassEnabled ?? false,
+    drumsEnabled: current.drumsEnabled ?? false,
+    arpeggioEnabled: current.arpeggioEnabled ?? false,
+  };
+}
+
 function migrateV1(draft: MusicDraftV1): MusicDraftV2 {
   return {
     schemaVersion: 2,
-    settings: draft.settings,
+    settings: normalizeSettings(draft.settings),
     strokes: draft.strokes,
     virtualKeyboardEvents: draft.virtualKeyboardEvents,
     midiRecordedEvents: draft.midiRecordedEvents,
@@ -78,7 +105,9 @@ function migrateV1(draft: MusicDraftV1): MusicDraftV2 {
 }
 
 export function normalizeMusicDraft(value: unknown): MusicDraftV2 | null {
-  if (isMusicDraftV2(value)) return value;
+  if (isMusicDraftV2(value)) {
+    return { ...value, settings: normalizeSettings(value.settings) };
+  }
   if (isMusicDraftV1(value)) return migrateV1(value);
   return null;
 }
