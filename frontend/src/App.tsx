@@ -104,10 +104,10 @@ export default function App() {
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const tapTimesRef = useRef<number[]>([]);
   const pendingMidiNotesRef = useRef(
-    new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
+    new Map<string, { midi: number; startBeat: number; velocity: number; id: string; layerId: string }>(),
   );
   const pendingVirtualNotesRef = useRef(
-    new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
+    new Map<string, { midi: number; startBeat: number; velocity: number; id: string; layerId: string }>(),
   );
   const realtimePlayingRef = useRef(false);
   const musicCanvasElementRef = useRef<HTMLCanvasElement | null>(null);
@@ -201,6 +201,7 @@ export default function App() {
   const musicPlaybackSettings = musicSettings;
 
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
+  const activeMusicLayerId = `color:${musicColor.toLowerCase()}`;
 
   useEffect(() => {
     realtimePlayingRef.current = realtimeMusic.isPlaying;
@@ -209,13 +210,15 @@ export default function App() {
   const handleMidiNoteOn = useCallback(
     (midi: number, velocity: number, deviceId: string) => {
       const voiceId = `${deviceId}:${midi}`;
-      void realtimeMusic.noteOn(midi, velocity, voiceId);
+      const layerId = activeMusicLayerId;
+      void realtimeMusic.noteOn(midi, velocity, voiceId, layerId);
 
       if (!realtimePlayingRef.current) return;
       pendingMidiNotesRef.current.set(voiceId, {
         midi,
         startBeat: realtimeMusic.getPositionBeat(),
         velocity,
+        layerId,
         id: `midi-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       });
     },
@@ -241,7 +244,7 @@ export default function App() {
         ...current,
         {
           id: pending.id,
-          layerId: 'midi',
+          layerId: pending.layerId,
           midi: pending.midi,
           velocity: pending.velocity,
           startBeat: pending.startBeat,
@@ -258,13 +261,15 @@ export default function App() {
       if (midi === null) return;
 
       const voiceId = `virtual:${midi}`;
-      void realtimeMusic.noteOn(midi, 0.82, voiceId);
+      const layerId = activeMusicLayerId;
+      void realtimeMusic.noteOn(midi, 0.82, voiceId, layerId);
 
       if (!realtimePlayingRef.current) return;
       pendingVirtualNotesRef.current.set(voiceId, {
         midi,
         startBeat: realtimeMusic.getPositionBeat(),
         velocity: 0.82,
+        layerId,
         id: `virtual-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       });
     },
@@ -293,7 +298,7 @@ export default function App() {
         ...current,
         {
           id: pending.id,
-          layerId: 'keyboard',
+          layerId: pending.layerId,
           midi: pending.midi,
           velocity: pending.velocity,
           startBeat: pending.startBeat,
