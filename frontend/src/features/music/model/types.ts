@@ -20,6 +20,8 @@ export interface Stroke {
   color: string;
   points: Point[];
   createdAt: number;
+  /** Snapshot of the visual drawing preset used when this stroke was created. */
+  drawingResolutionPreset?: DrawingResolutionPreset;
 }
 
 export interface NoteEvent {
