@@ -25,6 +25,8 @@ export type MusicShareProjectV2 = {
   midiRecordedEvents: NoteEvent[];
   activeColor: string;
   customColor: string;
+  activeInstrumentId?: string;
+  instrumentColors?: Record<string, string>;
   background: ShareableBackground;
 };
 
