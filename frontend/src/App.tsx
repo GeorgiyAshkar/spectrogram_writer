@@ -932,7 +932,17 @@ export default function App() {
                       min={PROVISIONAL_BPM.min}
                       max={PROVISIONAL_BPM.max}
                       value={musicSettings.bpm}
+                      aria-label="Tempo BPM"
                       onChange={(e) => updateMusicSetting('bpm', Math.min(PROVISIONAL_BPM.max, Math.max(PROVISIONAL_BPM.min, Number(e.target.value))))}
+                    />
+                    <input
+                      type="range"
+                      min={PROVISIONAL_BPM.min}
+                      max={PROVISIONAL_BPM.max}
+                      step={1}
+                      value={musicSettings.bpm}
+                      aria-label="Tempo"
+                      onChange={(e) => updateMusicSetting('bpm', Number(e.target.value))}
                     />
                     <button type="button" onClick={tapTempo}>Tap</button>
                   </div>
