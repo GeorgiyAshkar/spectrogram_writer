@@ -113,7 +113,12 @@ export class RealtimeMusicTransport {
     return this.playing;
   }
 
-  async noteOn(midi: number, velocity = 0.8, voiceId = String(midi)): Promise<void> {
+  async noteOn(
+    midi: number,
+    velocity = 0.8,
+    voiceId = String(midi),
+    layerId = 'default',
+  ): Promise<void> {
     const context = await this.ensureContext();
     if (!this.masterGain) return;
 
@@ -121,11 +126,12 @@ export class RealtimeMusicTransport {
 
     const oscillator = context.createOscillator();
     const gain = context.createGain();
-    oscillator.type = 'sine';
+    const voice = resolveVoiceProfile(layerId);
+    oscillator.type = voice.waveform;
     oscillator.frequency.value = midiToFrequency(midi, this.settings.tuningCents);
 
     const now = context.currentTime;
-    const peakGain = Math.max(0.0002, Math.min(1, velocity) * 0.28);
+    const peakGain = Math.max(0.0002, Math.min(1, velocity) * 0.28 * voice.gain);
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.012);
 
