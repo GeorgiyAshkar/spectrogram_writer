@@ -2,7 +2,8 @@
 
 **Эталон:** https://playmusictheory.net/play  
 **Дата аудита:** 2026-09-19  
-**Связанный документ:** `docs/PLAYMUSICTHEORY_PARITY_SPEC.md`
+**Связанный документ:** `docs/PLAYMUSICTHEORY_PARITY_SPEC.md`  
+**Evidence matrix:** `docs/PARITY_EVIDENCE_MATRIX.md`
 
 ## 1. Цель
 
@@ -471,3 +472,30 @@ DOM одновременно показывает отдельный `Key` butto
 6. exact parity values можно заменить одной конфигурацией без переписывания canvas/audio engine.
 
 Это позволяет двигаться к MVP, не превращая временные догадки в архитектурные ограничения.
+
+
+---
+
+# 22. Hardening update — 2026-09-19
+
+После первого аудита реализация была повторно сверена с текущим web UI и официальным App Store version history.
+
+Подтверждено и приведено в соответствие:
+
+- `The instrument` по умолчанию закрыт и открывается отдельным переключателем;
+- внутри панели присутствует собственный close `×`;
+- WAV/MIDI Export находится внутри `The instrument`;
+- отдельный `Key` control открывает трехоктавную экранную клавиатуру;
+- Undo действует только на последнюю нарисованную линию;
+- Cmd/Ctrl+Z отменяет последнюю линию;
+- отдельная `?` справка реализована в music mode;
+- tempo имеет числовое управление, Tap и связанный range-control;
+- preset `2`/coarse drawing отображается как grid/pixel stroke, а не только координатный snap;
+- `1/2/3` и `•/••/•••` остаются конфигурируемыми до exact interactive measurement.
+
+Дополнительные источники подтверждают общий характер controls:
+
+- https://80.lv/articles/this-website-turns-your-sketches-into-minecraft-like-music
+- https://note.com/aoyamaan_h1/n/nc6318c5a8581
+
+Exact HTML option values текущий публичный индексатор по-прежнему не раскрывает. Они не считаются подтвержденными и остаются в `parityConfig.ts`.
