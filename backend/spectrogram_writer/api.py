@@ -7,7 +7,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
 
 from .core import GenerationConfig
-from .schemas import GenerationRequest
+from .gallery import GalleryError, create_piece, get_piece, list_pieces
+from .schemas import GenerationRequest, MusicShareCreate
 from .service import build_preview, build_wav
 
 router = APIRouter(prefix="/api")
@@ -54,3 +55,33 @@ def render(request: GenerationRequest) -> Response:
         media_type="audio/wav",
         headers={"Content-Disposition": 'attachment; filename="spectrogram.wav"'},
     )
+
+
+
+@router.post("/music/gallery", status_code=201)
+def publish_music_piece(request: MusicShareCreate) -> dict:
+    try:
+        return create_piece(
+            title=request.title,
+            author=request.author,
+            project=request.project,
+        )
+    except GalleryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/music/gallery")
+def music_gallery(limit: int = 30, offset: int = 0) -> dict:
+    return {
+        "items": list_pieces(limit=limit, offset=offset),
+        "limit": max(1, min(100, int(limit))),
+        "offset": max(0, int(offset)),
+    }
+
+
+@router.get("/music/gallery/{piece_id}")
+def music_gallery_piece(piece_id: str) -> dict:
+    piece = get_piece(piece_id)
+    if piece is None:
+        raise HTTPException(status_code=404, detail="Music piece not found.")
+    return piece
