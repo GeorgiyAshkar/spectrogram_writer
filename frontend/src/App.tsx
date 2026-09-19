@@ -7,6 +7,7 @@ import { PreviewCard } from './components/PreviewCard';
 import { SettingsSection } from './components/SettingsSection';
 import { useSpectrogramGenerator } from './hooks/useSpectrogramGenerator';
 import type { GenerationFormData } from './types/config';
+import { noteNameToFrequency } from './features/music/model';
 import './styles/app.css';
 
 const initialState: GenerationFormData = defaults as GenerationFormData;
@@ -42,24 +43,6 @@ export default function App() {
   const octaves = [1, 2, 3, 4, 5];
   const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-  const buildNoteFrequencyMap = () => {
-    const map: Record<string, number> = {};
-    const semitones: Record<string, number> = {
-      C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11,
-    };
-    for (let octave = 1; octave <= 5; octave += 1) {
-      Object.entries(semitones).forEach(([note, semitone]) => {
-        const midi = (octave + 1) * 12 + semitone;
-        map[`${note}${octave}`] = 440 * 2 ** ((midi - 69) / 12);
-      });
-    }
-    return map;
-  };
-  const noteFreq = buildNoteFrequencyMap();
-
-
-
-
   const noteOrder = Array.from({ length: 5 }, (_, octaveOffset) => octaveOffset + 1)
     .flatMap((octave) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((note) => `${note}${octave}`));
   const noteYOffset = noteOrder.reduce<Record<string, number>>((acc, note, idx) => {
@@ -77,8 +60,8 @@ export default function App() {
     const pcm = new Float32Array(totalSamples);
 
     musicSequence.forEach((note, noteIndex) => {
-      const freq = noteFreq[note];
-      if (!freq) return;
+      const freq = noteNameToFrequency(note);
+      if (freq === null) return;
       const startSample = Math.floor(noteIndex * noteDuration * sampleRate);
       const endSample = Math.min(totalSamples, startSample + Math.floor(noteDuration * sampleRate));
       for (let i = startSample; i < endSample; i += 1) {
