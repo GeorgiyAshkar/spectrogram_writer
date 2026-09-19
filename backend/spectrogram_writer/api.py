@@ -65,6 +65,7 @@ def publish_music_piece(request: MusicShareCreate) -> dict:
             title=request.title,
             author=request.author,
             project=request.project,
+            thumbnail=request.thumbnail,
         )
     except GalleryError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
