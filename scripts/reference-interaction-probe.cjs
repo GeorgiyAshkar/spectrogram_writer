@@ -456,6 +456,32 @@ try {
 
       patchContext(window.AudioContext);
       patchContext(window.webkitAudioContext);
+
+      const audioNodeProto = window.AudioNode?.prototype;
+      if (audioNodeProto && !audioNodeProto.__parityDestinationPatched) {
+        Object.defineProperty(audioNodeProto, '__parityDestinationPatched', { value: true });
+        const originalConnect = audioNodeProto.connect;
+        audioNodeProto.connect = function (destination, ...args) {
+          try {
+            if (
+              destination instanceof AudioDestinationNode &&
+              !window.__probeAnalyser &&
+              this.context?.createAnalyser
+            ) {
+              const analyser = this.context.createAnalyser();
+              analyser.fftSize = 8192;
+              analyser.smoothingTimeConstant = 0;
+              const silent = this.context.createGain();
+              silent.gain.value = 0;
+              originalConnect.call(this, analyser);
+              originalConnect.call(analyser, silent);
+              originalConnect.call(silent, destination);
+              window.__probeAnalyser = analyser;
+            }
+          } catch {}
+          return originalConnect.call(this, destination, ...args);
+        };
+      }
     });
 
     try {
@@ -501,7 +527,7 @@ try {
         await new Promise((resolve) => setTimeout(resolve, 1600));
       }
 
-      const result = await audioPage.evaluate(() => {
+      const result = await audioPage.evaluate(async () => {
         const events = window.__probeAudio ?? [];
         const frequencyEvents = events.filter((event) =>
           String(event.kind).startsWith('frequency-') || event.kind === 'osc-start'
@@ -510,11 +536,45 @@ try {
           .map((event) => Number(event.value))
           .filter((value) => Number.isFinite(value) && value > 0);
         const unique = [...new Set(values.map((value) => Math.round(value * 1000) / 1000))];
+
+        const spectralPeaks = [];
+        const analyser = window.__probeAnalyser;
+        if (analyser) {
+          const bins = new Float32Array(analyser.frequencyBinCount);
+          for (let sample = 0; sample < 28; sample += 1) {
+            analyser.getFloatFrequencyData(bins);
+            const candidates = [];
+            for (let i = 1; i < bins.length; i += 1) {
+              const db = bins[i];
+              if (!Number.isFinite(db) || db < -90) continue;
+              candidates.push({
+                hz: (i * analyser.context.sampleRate) / analyser.fftSize,
+                db,
+              });
+            }
+            candidates.sort((a, b) => b.db - a.db);
+            spectralPeaks.push(
+              candidates.slice(0, 8).map((item) => ({
+                hz: Math.round(item.hz * 10) / 10,
+                db: Math.round(item.db * 10) / 10,
+              })),
+            );
+            await new Promise((resolve) => setTimeout(resolve, 35));
+          }
+        }
+
+        const peakFrequencySet = [...new Set(
+          spectralPeaks.flat().map((item) => item.hz),
+        )].sort((a, b) => a - b);
+
         return {
           totalEvents: events.length,
           oscillatorEvents: frequencyEvents.length,
           bufferStarts: events.filter((event) => event.kind === 'buffer-start').length,
           uniqueFrequencies: unique.slice(0, 80),
+          analyserAvailable: Boolean(analyser),
+          peakFrequencySet: peakFrequencySet.slice(0, 120),
+          spectralPeaks: spectralPeaks.slice(0, 16),
           firstEvents: events.slice(0, 60),
           modeState: {
             freestyle: document.getElementById('lockBtn')?.className ?? null,
