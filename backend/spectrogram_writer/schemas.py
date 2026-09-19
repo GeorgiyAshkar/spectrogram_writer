@@ -47,6 +47,7 @@ class MusicShareCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=120)
     author: str = Field(..., min_length=1, max_length=80)
     project: dict[str, Any]
+    thumbnail: str | None = Field(default=None, max_length=400_000)
 
 
 class MusicShareSummary(BaseModel):
@@ -54,6 +55,7 @@ class MusicShareSummary(BaseModel):
     title: str
     author: str
     created_at: str
+    thumbnail: str | None = None
 
 
 class MusicShareDetail(MusicShareSummary):
