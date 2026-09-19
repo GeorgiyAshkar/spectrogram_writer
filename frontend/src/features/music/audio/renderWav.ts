@@ -1,5 +1,6 @@
 import { midiToFrequency } from '../model/theory';
 import type { MusicSettings, NoteEvent } from '../model/types';
+import { resolveVoiceProfile, sampleWaveform } from './voiceProfiles';
 
 function writeAscii(view: DataView, offset: number, value: string) {
   for (let i = 0; i < value.length; i += 1) {
@@ -26,7 +27,8 @@ export function renderNoteEventsToWavBlob(
     const startSample = Math.max(0, Math.floor(startSeconds * sampleRate));
     const endSample = Math.min(totalSamples, Math.ceil((startSeconds + durationSeconds) * sampleRate));
     const frequency = midiToFrequency(event.midi, settings.tuningCents);
-    const gain = Math.min(1, Math.max(0, event.velocity)) * 0.42;
+    const voice = resolveVoiceProfile(event.layerId);
+    const gain = Math.min(1, Math.max(0, event.velocity)) * 0.42 * voice.gain;
 
     for (let sampleIndex = startSample; sampleIndex < endSample; sampleIndex += 1) {
       const t = (sampleIndex - startSample) / sampleRate;
@@ -34,7 +36,7 @@ export function renderNoteEventsToWavBlob(
       const timeToEnd = durationSeconds - t;
       const release = Math.min(1, Math.max(0, timeToEnd / 0.06));
       const envelope = Math.min(attack, release);
-      pcm[sampleIndex] += Math.sin(2 * Math.PI * frequency * t) * gain * envelope;
+      pcm[sampleIndex] += sampleWaveform(voice.waveform, 2 * Math.PI * frequency * t) * gain * envelope;
     }
   }
 
