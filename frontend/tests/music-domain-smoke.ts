@@ -17,6 +17,7 @@ import {
   sampleWaveform,
 } from '../src/features/music/audio/voiceProfiles';
 import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
+import { buildAccompanimentEvents } from '../src/features/music/audio/accompaniment';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -40,6 +41,23 @@ function testTheory() {
   );
   assert(mapYToMidi(0, range) === 71, 'Top of canvas must map to highest note');
   assert(mapYToMidi(1, range) === 60, 'Bottom of canvas must map to lowest note');
+
+  const expectedScaleSizes = {
+    majorPentatonic: 5,
+    minorPentatonic: 5,
+    major: 7,
+    minor: 7,
+    harmonicMinor: 7,
+    dorian: 7,
+    phrygian: 7,
+    lydian: 7,
+    mixolydian: 7,
+    blues: 6,
+  } as const;
+  for (const [scale, expectedSize] of Object.entries(expectedScaleSizes)) {
+    const notes = buildPitchRange('C', scale as keyof typeof expectedScaleSizes, 4, 1);
+    assert(notes.length === expectedSize, `${scale} scale size must match reference option`);
+  }
 }
 
 function testRhythm() {
@@ -84,10 +102,45 @@ function testVoiceProfiles() {
   approx(sampleWaveform('sawtooth', Math.PI), 0, 1e-9, 'Sawtooth midpoint sample');
 }
 
+function testAccompaniment() {
+  assert(
+    Math.abs((DEFAULT_MUSIC_SETTINGS.quantizeStepBeats ?? 0) - 1 / 3) < 1e-9,
+    'Reference default quantize must be 1/8 triplet',
+  );
+
+  assert(
+    buildAccompanimentEvents(DEFAULT_MUSIC_SETTINGS).length === 0,
+    'Bass/Drums/Arpeggio must all be off by default',
+  );
+
+  const bass = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, bassEnabled: true });
+  assert(bass.length > 0 && bass.every((event) => event.layerId === 'accompaniment:bass'), 'Bass control must create only bass events');
+
+  const drums = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, drumsEnabled: true });
+  assert(drums.some((event) => event.layerId === 'accompaniment:drums:kick'), 'Drums must include kick');
+  assert(drums.some((event) => event.layerId === 'accompaniment:drums:snare'), 'Drums must include snare');
+  assert(drums.some((event) => event.layerId === 'accompaniment:drums:hat'), 'Drums must include hat');
+
+  const arpeggio = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, arpeggioEnabled: true });
+  assert(arpeggio.length > 0 && arpeggio.every((event) => event.layerId === 'accompaniment:arpeggio'), 'Arpeggio control must create arpeggio events');
+}
+
 function testDraftMigration() {
+  const {
+    programMode: _programMode,
+    bassEnabled: _bassEnabled,
+    drumsEnabled: _drumsEnabled,
+    arpeggioEnabled: _arpeggioEnabled,
+    ...legacyBaseSettings
+  } = DEFAULT_MUSIC_SETTINGS;
+
   const legacy = normalizeMusicDraft({
     schemaVersion: 1,
-    settings: DEFAULT_MUSIC_SETTINGS,
+    settings: {
+      ...legacyBaseSettings,
+      drawingResolutionPreset: 2,
+      rhythmPreset: 3,
+    },
     strokes: [],
     virtualKeyboardEvents: [],
     midiRecordedEvents: [],
@@ -99,6 +152,10 @@ function testDraftMigration() {
 
   assert(legacy?.schemaVersion === 2, 'Legacy draft must migrate to schema v2');
   assert(legacy?.background.kind === 'sky', 'Legacy sky background must survive migration');
+  assert(legacy?.settings.programMode === 2, 'Legacy drawing preset must migrate to Program 2');
+  assert(legacy?.settings.bassEnabled === false, 'Legacy rhythm guess must not become Bass');
+  assert(legacy?.settings.drumsEnabled === false, 'Legacy rhythm guess must not become Drums');
+  assert(legacy?.settings.arpeggioEnabled === false, 'Legacy rhythm guess must not become Arpeggio');
 
   const photoDataUrl = 'data:image/jpeg;base64,AA==';
   const current = normalizeMusicDraft({
@@ -152,6 +209,7 @@ testTheory();
 testRhythm();
 testStrokeCompiler();
 testVoiceProfiles();
+testAccompaniment();
 testDraftMigration();
 testExports();
 
