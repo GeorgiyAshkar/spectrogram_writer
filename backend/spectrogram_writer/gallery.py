@@ -11,6 +11,7 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT_DIR / "data" / "music_gallery.sqlite3"
 MAX_PROJECT_BYTES = 2_000_000
+MAX_THUMBNAIL_BYTES = 400_000
 
 
 class GalleryError(ValueError):
@@ -35,14 +36,27 @@ def _connect() -> sqlite3.Connection:
             title TEXT NOT NULL,
             author TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            project_json TEXT NOT NULL
+            project_json TEXT NOT NULL,
+            thumbnail TEXT
         )
         """
     )
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(music_gallery)").fetchall()
+    }
+    if "thumbnail" not in columns:
+        connection.execute("ALTER TABLE music_gallery ADD COLUMN thumbnail TEXT")
+        connection.commit()
     return connection
 
 
-def create_piece(title: str, author: str, project: dict[str, Any]) -> dict[str, Any]:
+def create_piece(
+    title: str,
+    author: str,
+    project: dict[str, Any],
+    thumbnail: str | None = None,
+) -> dict[str, Any]:
     clean_title = title.strip()
     clean_author = author.strip()
     if not clean_title:
@@ -54,13 +68,24 @@ def create_piece(title: str, author: str, project: dict[str, Any]) -> dict[str, 
     if len(project_json.encode("utf-8")) > MAX_PROJECT_BYTES:
         raise GalleryError("Project is too large to publish.")
 
+    clean_thumbnail = thumbnail.strip() if thumbnail else None
+    if clean_thumbnail:
+        if not clean_thumbnail.startswith("data:image/"):
+            raise GalleryError("Thumbnail must be an image data URL.")
+        if len(clean_thumbnail.encode("utf-8")) > MAX_THUMBNAIL_BYTES:
+            raise GalleryError("Thumbnail is too large.")
+
     piece_id = uuid.uuid4().hex
     created_at = datetime.now(timezone.utc).isoformat()
 
     with _connect() as connection:
         connection.execute(
-            "INSERT INTO music_gallery (id, title, author, created_at, project_json) VALUES (?, ?, ?, ?, ?)",
-            (piece_id, clean_title, clean_author, created_at, project_json),
+            """
+            INSERT INTO music_gallery
+                (id, title, author, created_at, project_json, thumbnail)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (piece_id, clean_title, clean_author, created_at, project_json, clean_thumbnail),
         )
         connection.commit()
 
@@ -69,6 +94,7 @@ def create_piece(title: str, author: str, project: dict[str, Any]) -> dict[str, 
         "title": clean_title,
         "author": clean_author,
         "created_at": created_at,
+        "thumbnail": clean_thumbnail,
     }
 
 
@@ -78,7 +104,7 @@ def list_pieces(limit: int = 30, offset: int = 0) -> list[dict[str, Any]]:
     with _connect() as connection:
         rows = connection.execute(
             """
-            SELECT id, title, author, created_at
+            SELECT id, title, author, created_at, thumbnail
             FROM music_gallery
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
@@ -93,7 +119,7 @@ def get_piece(piece_id: str) -> dict[str, Any] | None:
     with _connect() as connection:
         row = connection.execute(
             """
-            SELECT id, title, author, created_at, project_json
+            SELECT id, title, author, created_at, project_json, thumbnail
             FROM music_gallery
             WHERE id = ?
             """,
@@ -108,5 +134,6 @@ def get_piece(piece_id: str) -> dict[str, Any] | None:
         "title": row["title"],
         "author": row["author"],
         "created_at": row["created_at"],
+        "thumbnail": row["thumbnail"],
         "project": json.loads(row["project_json"]),
     }
