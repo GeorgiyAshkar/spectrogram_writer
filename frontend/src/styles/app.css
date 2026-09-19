@@ -1099,3 +1099,9 @@ button:disabled {
     height: 40px;
   }
 }
+
+
+.music-record.is-active {
+  box-shadow: inset 0 0 0 2px currentColor;
+  font-weight: 800;
+}
