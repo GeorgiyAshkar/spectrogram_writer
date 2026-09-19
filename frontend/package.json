@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "check:music": "tsc -p tsconfig.music-check.json --noEmit"
+    "check:music": "tsc -p tsconfig.music-check.json --noEmit",
+    "test:music": "tsc -p tsconfig.music-tests.json && node ../.music-test-build/tests/music-domain-smoke.js"
   },
   "dependencies": {
     "react": "^18.3.1",
