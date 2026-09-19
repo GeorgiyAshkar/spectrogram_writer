@@ -40,3 +40,27 @@ export const DEFAULT_MUSIC_COLORS = [
   '#a855f7',
   '#ec4899',
 ] as const;
+
+
+export const PROVISIONAL_QUANTIZE_OPTIONS = [
+  { label: 'Off', value: null },
+  { label: '1/4', value: 1 },
+  { label: '1/8', value: 0.5 },
+  { label: '1/16', value: 0.25 },
+] as const;
+
+export const PROVISIONAL_SWING_OPTIONS = [
+  { label: 'Off', value: 0 },
+  { label: 'Light', value: 0.25 },
+  { label: 'Heavy', value: 0.5 },
+] as const;
+
+/**
+ * Provisional mapping only: audit confirms the dot controls are rhythm-related,
+ * but the exact original subdivision mapping still needs interactive measurement.
+ */
+export const PROVISIONAL_RHYTHM_STEP_BEATS: Record<RhythmPreset, number | null> = {
+  1: null,
+  2: 0.5,
+  3: 0.25,
+};
