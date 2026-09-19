@@ -1,0 +1,21 @@
+name: Reference parity DOM probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - playmusictheory
+    paths:
+      - scripts/reference-dom-probe.mjs
+      - .github/workflows/reference-parity-probe.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Probe public reference DOM
+        run: node scripts/reference-dom-probe.mjs
