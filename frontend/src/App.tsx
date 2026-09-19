@@ -45,6 +45,7 @@ import {
   DEFAULT_INSTRUMENT_COLORS,
   DEFAULT_MUSIC_COLORS,
   PARITY_INSTRUMENT_SWATCHES,
+  PARITY_RECOLOR_PRESETS,
   type ParityInstrumentId,
   PARITY_ACCOMPANIMENT_CONTROLS,
   PARITY_KEY_OPTIONS,
@@ -92,6 +93,7 @@ export default function App() {
   const [musicCustomColor, setMusicCustomColor] = useState<string>(DEFAULT_INSTRUMENT_COLORS.keys);
   const [recolorMode, setRecolorMode] = useState(false);
   const [recolorTargetId, setRecolorTargetId] = useState<ParityInstrumentId>('keys');
+  const [showRecolorPicker, setShowRecolorPicker] = useState(false);
   const [midiEnabled, setMidiEnabled] = useState(false);
   const [midiRecordedEvents, setMidiRecordedEvents] = useState<NoteEvent[]>([]);
   const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
@@ -722,6 +724,20 @@ export default function App() {
     );
   }, [commitMusicStrokes, musicInstrumentColors, musicSettings.programMode]);
 
+  const applyInstrumentColor = useCallback(
+    (targetId: ParityInstrumentId, nextColor: string) => {
+      setMusicInstrumentColors((current) => ({ ...current, [targetId]: nextColor }));
+      setMusicCustomColor(nextColor);
+      if (activeMusicInstrumentId === targetId) setMusicColor(nextColor);
+
+      const nextStrokes = recolorInstrumentStrokes(musicStrokes, targetId, nextColor);
+      if (nextStrokes.some((stroke, index) => stroke !== musicStrokes[index])) {
+        commitMusicStrokes(nextStrokes);
+      }
+    },
+    [activeMusicInstrumentId, commitMusicStrokes, musicStrokes],
+  );
+
   const resetInstrumentColors = useCallback(() => {
     const restored = restoreDefaultInstrumentColors(musicStrokes);
     setMusicInstrumentColors(restored.colors);
@@ -733,6 +749,7 @@ export default function App() {
       commitMusicStrokes(restored.strokes);
     }
     setRecolorMode(false);
+    setShowRecolorPicker(false);
   }, [activeMusicInstrumentId, commitMusicStrokes, musicStrokes]);
 
   useEffect(() => {
@@ -1395,7 +1412,7 @@ export default function App() {
                         if (recolorMode) {
                           setRecolorTargetId(swatch.id);
                           setMusicCustomColor(color);
-                          window.requestAnimationFrame(() => recolorInputRef.current?.click());
+                          setShowRecolorPicker(true);
                           return;
                         }
                         setActiveMusicInstrumentId(swatch.id);
@@ -1412,22 +1429,57 @@ export default function App() {
                   value={musicCustomColor}
                   aria-label="Instrument color"
                   onChange={(e) => {
-                    const nextColor = e.target.value;
-                    const targetId = recolorTargetId;
-                    setMusicInstrumentColors((current) => ({ ...current, [targetId]: nextColor }));
-                    setMusicCustomColor(nextColor);
-                    if (activeMusicInstrumentId === targetId) setMusicColor(nextColor);
-                    const nextStrokes = recolorInstrumentStrokes(
-                      musicStrokes,
-                      targetId,
-                      nextColor,
-                    );
-                    if (nextStrokes.some((stroke, index) => stroke !== musicStrokes[index])) {
-                      commitMusicStrokes(nextStrokes);
-                    }
+                    applyInstrumentColor(recolorTargetId, e.target.value);
                     setRecolorMode(false);
+                    setShowRecolorPicker(false);
                   }}
                 />
+                {showRecolorPicker ? (
+                  <div className="music-recolor-picker" role="dialog" aria-label="Color">
+                    <div className="music-recolor-picker__header">
+                      <strong>{recolorTargetId}</strong>
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        aria-label="Закрыть выбор цвета"
+                        onClick={() => setShowRecolorPicker(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="music-recolor-picker__grid">
+                      {PARITY_RECOLOR_PRESETS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          className="music-recolor-preset"
+                          style={{ background: color }}
+                          aria-label={`Color ${color}`}
+                          onClick={() => {
+                            applyInstrumentColor(recolorTargetId, color);
+                            setRecolorMode(false);
+                            setShowRecolorPicker(false);
+                          }}
+                        />
+                      ))}
+                      <button
+                        type="button"
+                        className="music-recolor-preset music-recolor-preset--custom"
+                        aria-label="Custom color"
+                        onClick={() => recolorInputRef.current?.click()}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={resetInstrumentColors}
+                    >
+                      The original colors
+                    </button>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   className={isTakeRecording ? 'button-secondary music-record is-active' : 'button-secondary music-record'}
