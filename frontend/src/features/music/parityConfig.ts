@@ -84,3 +84,11 @@ export const PARITY_TUNE_CENTS = {
   step: 1,
   default: 0,
 } as const;
+
+
+export type ParityInstrumentId = (typeof PARITY_INSTRUMENT_SWATCHES)[number]['id'];
+
+export const DEFAULT_INSTRUMENT_COLORS: Record<ParityInstrumentId, string> =
+  Object.fromEntries(
+    PARITY_INSTRUMENT_SWATCHES.map((swatch) => [swatch.id, swatch.color]),
+  ) as Record<ParityInstrumentId, string>;
