@@ -5,8 +5,16 @@ export const PARITY_KEY_OPTIONS = [
 ] as const;
 
 export const PARITY_SCALE_OPTIONS = [
-  { value: 'major', label: 'Major' },
-  { value: 'minor', label: 'Minor' },
+  { value: 'majorPentatonic', referenceValue: 'pentatonic', label: 'Major pentatonic' },
+  { value: 'minorPentatonic', referenceValue: 'minor', label: 'Minor pentatonic' },
+  { value: 'major', referenceValue: 'major', label: 'Major' },
+  { value: 'minor', referenceValue: 'natural', label: 'Minor' },
+  { value: 'harmonicMinor', referenceValue: 'harmonic', label: 'Harmonic minor' },
+  { value: 'dorian', referenceValue: 'dorian', label: 'Dorian' },
+  { value: 'phrygian', referenceValue: 'phrygian', label: 'Phrygian' },
+  { value: 'lydian', referenceValue: 'lydian', label: 'Lydian' },
+  { value: 'mixolydian', referenceValue: 'mixolydian', label: 'Mixolydian' },
+  { value: 'blues', referenceValue: 'blues', label: 'Blues' },
 ] as const;
 
 /**
