@@ -41,6 +41,8 @@ export interface NoteEvent {
   id: string;
   layerId: string;
   midi: number;
+  /** Optional continuous pitch target used by Freehand glissando segments. */
+  endMidi?: number;
   velocity: number;
   startBeat: number;
   durationBeats: number;
