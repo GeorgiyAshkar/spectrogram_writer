@@ -261,13 +261,23 @@ export class RealtimeMusicTransport {
     const gain = this.context.createGain();
     const voice = resolveVoiceProfile(event.layerId);
     oscillator.type = voice.waveform;
-    oscillator.frequency.value = midiToFrequency(event.midi, this.settings.tuningCents);
+
+    const startFrequency = midiToFrequency(event.midi, this.settings.tuningCents);
+    const endFrequency = midiToFrequency(event.endMidi ?? event.midi, this.settings.tuningCents);
 
     const velocity = Math.min(1, Math.max(0, event.velocity));
     const peakGain = 0.26 * velocity * voice.gain;
     const safeStart = Math.max(startTime, this.context.currentTime + 0.001);
     const attackEnd = Math.min(endTime, safeStart + 0.012);
     const releaseStart = Math.max(attackEnd, endTime - 0.045);
+
+    oscillator.frequency.setValueAtTime(startFrequency, safeStart);
+    if (Math.abs(endFrequency - startFrequency) > 1e-9) {
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(0.01, endFrequency),
+        endTime,
+      );
+    }
 
     gain.gain.setValueAtTime(0.0001, safeStart);
     gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peakGain), attackEnd);
