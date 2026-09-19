@@ -26,6 +26,7 @@ import {
   saveMusicDraft,
 } from './features/music/persistence/musicDraft';
 import { prepareBackgroundPhoto } from './features/music/background/prepareBackgroundPhoto';
+import { captureCanvasThumbnail } from './features/music/gallery/captureCanvasThumbnail';
 import {
   fetchMusicPiece,
   listMusicGallery,
@@ -463,10 +464,14 @@ export default function App() {
     setShareStatus('publishing');
     setShareError(null);
     try {
+      const thumbnail = musicCanvasElementRef.current
+        ? captureCanvasThumbnail(musicCanvasElementRef.current)
+        : null;
       const result = await publishMusicPiece(
         shareTitle.trim(),
         shareAuthor.trim(),
         buildShareProject(),
+        thumbnail,
       );
       setPublishedPieceId(result.id);
       setShareStatus('published');
@@ -1205,9 +1210,23 @@ export default function App() {
                         className="music-gallery__item"
                         onClick={() => void openSharedPiece(item.id)}
                       >
-                        <strong>{item.title}</strong>
-                        <span>{item.author}</span>
-                        <small>{new Date(item.created_at).toLocaleString()}</small>
+                        {item.thumbnail ? (
+                          <img
+                            src={item.thumbnail}
+                            alt=""
+                            aria-hidden="true"
+                            className="music-gallery__thumbnail"
+                          />
+                        ) : (
+                          <div className="music-gallery__thumbnail music-gallery__thumbnail--empty" aria-hidden="true">
+                            ♪
+                          </div>
+                        )}
+                        <span className="music-gallery__meta">
+                          <strong>{item.title}</strong>
+                          <span>{item.author}</span>
+                          <small>{new Date(item.created_at).toLocaleString()}</small>
+                        </span>
                       </button>
                     ))}
                   </div>
