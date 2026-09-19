@@ -22,14 +22,19 @@ export const PARITY_SCALE_OPTIONS = [
  * These values are isolated here so parity measurements can replace them
  * without touching theory/audio code.
  */
-export const PROVISIONAL_RANGE_OPTIONS = [1, 2, 3] as const;
+export const PARITY_RANGE_OPTIONS = [
+  { value: 1, label: '1 octave' },
+  { value: 2, label: '2 octaves' },
+  { value: 3, label: '3 octaves' },
+] as const;
 
 /**
  * Exact original BPM range/default remains VERIFY.
  */
-export const PROVISIONAL_BPM = {
-  min: 30,
-  max: 300,
+export const PARITY_BPM = {
+  min: 60,
+  max: 200,
+  step: 1,
   default: 120,
 } as const;
 
@@ -50,17 +55,20 @@ export const DEFAULT_MUSIC_COLORS = [
 ] as const;
 
 
-export const PROVISIONAL_QUANTIZE_OPTIONS = [
-  { label: 'Off', value: null },
-  { label: '1/4', value: 1 },
-  { label: '1/8', value: 0.5 },
-  { label: '1/16', value: 0.25 },
+export const PARITY_QUANTIZE_OPTIONS = [
+  { label: '1/4', referenceValue: 1, stepBeats: 1 },
+  { label: '1/8', referenceValue: 2, stepBeats: 0.5 },
+  { label: '1/8 triplet', referenceValue: 3, stepBeats: 1 / 3 },
+  { label: '1/16', referenceValue: 4, stepBeats: 0.25 },
+  { label: '1/16 triplet', referenceValue: 6, stepBeats: 1 / 6 },
+  { label: '1/32', referenceValue: 8, stepBeats: 0.125 },
 ] as const;
 
-export const PROVISIONAL_SWING_OPTIONS = [
+export const PARITY_SWING_OPTIONS = [
   { label: 'Off', value: 0 },
-  { label: 'Light', value: 0.25 },
-  { label: 'Heavy', value: 0.5 },
+  { label: 'Light', value: 0.1 },
+  { label: 'Medium', value: 0.2 },
+  { label: 'Hard', value: 0.33 },
 ] as const;
 
 /**
@@ -78,8 +86,9 @@ export const PROVISIONAL_RHYTHM_STEP_BEATS: Record<RhythmPreset, number | null> 
  * Tune is modeled as global cents offset until the exact original input semantics
  * are measured interactively.
  */
-export const PROVISIONAL_TUNE_CENTS = {
-  min: -100,
-  max: 100,
+export const PARITY_TUNE_CENTS = {
+  min: -50,
+  max: 50,
   step: 1,
+  default: 0,
 } as const;
