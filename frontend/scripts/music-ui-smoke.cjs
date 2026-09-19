@@ -108,6 +108,37 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     );
     if (!pixelActive) throw new Error('Pixel mode did not become active.');
 
+    const pixelBox = await canvas?.boundingBox();
+    if (!pixelBox) throw new Error('Music canvas is not measurable in Pixel mode.');
+    const pixelStartX = pixelBox.x + pixelBox.width * 0.24;
+    const pixelStartY = pixelBox.y + pixelBox.height * 0.28;
+    await page.mouse.move(pixelStartX, pixelStartY);
+    await page.mouse.down();
+    await page.mouse.move(pixelStartX + pixelBox.width * 0.08, pixelStartY + pixelBox.height * 0.08, { steps: 8 });
+    await page.mouse.up();
+
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('.music-event-summary span')].some(
+        (node) => /Линий:\s*2/.test(node.textContent || ''),
+      ),
+      { timeout: 5000 },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const persistedPixelStroke = await page.evaluate(() => {
+      const raw = localStorage.getItem('spectrogram-writer:playmusictheory:draft');
+      if (!raw) return null;
+      const draft = JSON.parse(raw);
+      const stroke = draft.strokes?.[draft.strokes.length - 1];
+      return stroke ? {
+        programMode: stroke.programMode,
+        pixelRowCount: stroke.pixelRowCount,
+      } : null;
+    });
+    if (persistedPixelStroke?.programMode !== 2 || persistedPixelStroke?.pixelRowCount !== 15) {
+      throw new Error(`Measured Pixel metadata was not persisted: ${JSON.stringify(persistedPixelStroke)}`);
+    }
+
     await clickByAria('Freehand');
     const freehandActive = await page.evaluate(
       () => [...document.querySelectorAll('button')].some(
