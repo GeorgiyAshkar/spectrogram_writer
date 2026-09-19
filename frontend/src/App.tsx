@@ -222,7 +222,7 @@ export default function App() {
         id: `midi-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       });
     },
-    [realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
+    [activeMusicLayerId, realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
   );
 
   const handleMidiNoteOff = useCallback(
@@ -273,7 +273,7 @@ export default function App() {
         id: `virtual-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       });
     },
-    [realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
+    [activeMusicLayerId, realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
   );
 
   const handleVirtualNoteOff = useCallback(
