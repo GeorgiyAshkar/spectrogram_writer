@@ -49,6 +49,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 export function MusicCanvas({ settings, strokes, activeColor, onChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
+  const draftRef = useRef<Stroke | null>(null);
   const pointerStartedAt = useRef(0);
 
   const pitchRange = useMemo(
@@ -110,12 +111,15 @@ export function MusicCanvas({ settings, strokes, activeColor, onChange }: Props)
   };
 
   const appendPoint = (point: Point) => {
-    setDraft((current) => {
-      if (!current) return current;
-      const previous = current.points[current.points.length - 1];
-      if (previous && previous.x === point.x && previous.y === point.y) return current;
-      return { ...current, points: [...current.points, point] };
-    });
+    const current = draftRef.current;
+    if (!current) return;
+
+    const previous = current.points[current.points.length - 1];
+    if (previous && previous.x === point.x && previous.y === point.y) return;
+
+    const next = { ...current, points: [...current.points, point] };
+    draftRef.current = next;
+    setDraft(next);
   };
 
   return (
@@ -129,36 +133,47 @@ export function MusicCanvas({ settings, strokes, activeColor, onChange }: Props)
         event.currentTarget.setPointerCapture(event.pointerId);
         pointerStartedAt.current = performance.now();
         const point = pointFromEvent(event);
-        setDraft({
-          id: crypto.randomUUID(),
+        const nextDraft: Stroke = {
+          id:
+            typeof crypto.randomUUID === 'function'
+              ? crypto.randomUUID()
+              : `stroke-${Date.now()}-${Math.random().toString(16).slice(2)}`,
           layerId: 'default',
           color: activeColor,
           createdAt: Date.now(),
           points: [point],
-        });
+        };
+        draftRef.current = nextDraft;
+        setDraft(nextDraft);
       }}
       onPointerMove={(event) => {
-        if (!draft) return;
+        if (!draftRef.current) return;
         appendPoint(pointFromEvent(event));
       }}
       onPointerUp={(event) => {
-        if (!draft) return;
+        const current = draftRef.current;
+        if (!current) return;
+
         const finalPoint = pointFromEvent(event);
-        const previous = draft.points[draft.points.length - 1];
+        const previous = current.points[current.points.length - 1];
         const points =
           previous && previous.x === finalPoint.x && previous.y === finalPoint.y
-            ? draft.points
-            : [...draft.points, finalPoint];
+            ? current.points
+            : [...current.points, finalPoint];
 
         if (points.length > 0) {
-          onChange([...strokes, { ...draft, points }]);
+          onChange([...strokes, { ...current, points }]);
         }
+        draftRef.current = null;
         setDraft(null);
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
       }}
-      onPointerCancel={() => setDraft(null)}
+      onPointerCancel={() => {
+        draftRef.current = null;
+        setDraft(null);
+      }}
     />
   );
 }
