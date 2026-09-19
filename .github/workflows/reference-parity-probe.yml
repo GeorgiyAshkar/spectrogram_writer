@@ -48,6 +48,8 @@ jobs:
         run: node scripts/reference-interaction-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Pixel mode geometry
         run: node scripts/reference-pixel-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Freehand Y frequency curve
+        run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe public exports
         run: node scripts/reference-export-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe reference instrument spectra
