@@ -14,7 +14,10 @@ import { renderNoteEventsToMidiBlob } from '../src/features/music/export/renderM
 import { renderNoteEventsToWavBlob } from '../src/features/music/audio/renderWav';
 import {
   DEFAULT_VOICE_PROFILE,
+  envelopeAt,
+  normalizedPartialGain,
   resolveVoiceProfile,
+  sampleVoice,
   sampleWaveform,
 } from '../src/features/music/audio/voiceProfiles';
 import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
@@ -160,6 +163,27 @@ function testVoiceProfiles() {
   approx(sampleWaveform('sine', Math.PI / 2), 1, 1e-9, 'Sine waveform sample');
   approx(sampleWaveform('square', Math.PI / 2), 1, 1e-9, 'Square waveform sample');
   approx(sampleWaveform('sawtooth', Math.PI), 0, 1e-9, 'Sawtooth midpoint sample');
+
+  const signatures = PARITY_INSTRUMENT_SWATCHES.map((swatch) => {
+    const voice = resolveVoiceProfile(`instrument:${swatch.id}`);
+    assert(voice.partials.length >= 1, `${swatch.id} must define at least one partial`);
+    assert(voice.attackSeconds > 0, `${swatch.id} attack must be positive`);
+    assert(voice.releaseSeconds > 0, `${swatch.id} release must be positive`);
+    assert(voice.sustain >= 0 && voice.sustain <= 1, `${swatch.id} sustain must be normalized`);
+    assert(normalizedPartialGain(voice) > 0 && normalizedPartialGain(voice) <= 1, `${swatch.id} partial normalization must be safe`);
+    approx(envelopeAt(voice, 0, 1), 0, 1e-9, `${swatch.id} envelope starts silent`);
+    approx(envelopeAt(voice, 1, 1), 0, 1e-9, `${swatch.id} envelope ends silent`);
+    assert(Number.isFinite(sampleVoice(voice, 0.73)), `${swatch.id} voice sample must be finite`);
+    return JSON.stringify({
+      waveform: voice.waveform,
+      attack: voice.attackSeconds,
+      release: voice.releaseSeconds,
+      sustain: voice.sustain,
+      partials: voice.partials,
+    });
+  });
+
+  assert(new Set(signatures).size === PARITY_INSTRUMENT_SWATCHES.length, 'All nine named instruments must have distinct clean-room synthesis profiles');
 }
 
 function testAccompaniment() {
@@ -301,11 +325,20 @@ function testExports() {
   const events = [
     {
       id: 'n1',
-      layerId: 'default',
+      layerId: 'instrument:keys',
       midi: 60,
       velocity: 0.8,
       startBeat: 0,
       durationBeats: 1,
+    },
+    {
+      id: 'gliss',
+      layerId: 'instrument:flute',
+      midi: 64.25,
+      endMidi: 69.75,
+      velocity: 0.62,
+      startBeat: 1,
+      durationBeats: 1.5,
     },
   ];
 
