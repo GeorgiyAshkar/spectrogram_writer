@@ -9,7 +9,7 @@ function writeAscii(view: DataView, offset: number, value: string) {
 
 export function renderNoteEventsToWavBlob(
   events: readonly NoteEvent[],
-  settings: Pick<MusicSettings, 'bpm' | 'loopLengthBeats' | 'tuningCents'>,
+  settings: Pick<MusicSettings, 'bpm' | 'loopLengthBeats' | 'tuningCents' | 'metronomeEnabled'>,
   sampleRate = 44100,
 ): Blob {
   const bpm = Math.max(1, settings.bpm);
@@ -34,6 +34,24 @@ export function renderNoteEventsToWavBlob(
       const release = Math.min(1, Math.max(0, timeToEnd / 0.06));
       const envelope = Math.min(attack, release);
       pcm[sampleIndex] += Math.sin(2 * Math.PI * frequency * t) * gain * envelope;
+    }
+  }
+
+  if (settings.metronomeEnabled) {
+    const beatCount = Math.ceil(settings.loopLengthBeats);
+    for (let beat = 0; beat < beatCount; beat += 1) {
+      const startSeconds = beat * secondsPerBeat;
+      const startSample = Math.floor(startSeconds * sampleRate);
+      const clickDuration = 0.035;
+      const clickSamples = Math.floor(clickDuration * sampleRate);
+      const clickFrequency = beat === 0 ? 1320 : 880;
+      const clickGain = beat === 0 ? 0.34 : 0.24;
+
+      for (let i = 0; i < clickSamples && startSample + i < pcm.length; i += 1) {
+        const t = i / sampleRate;
+        const envelope = Math.exp(-t * 90);
+        pcm[startSample + i] += Math.sin(2 * Math.PI * clickFrequency * t) * clickGain * envelope;
+      }
     }
   }
 
@@ -71,7 +89,7 @@ export function renderNoteEventsToWavBlob(
 
 export function renderNoteEventsToWavUrl(
   events: readonly NoteEvent[],
-  settings: Pick<MusicSettings, 'bpm' | 'loopLengthBeats' | 'tuningCents'>,
+  settings: Pick<MusicSettings, 'bpm' | 'loopLengthBeats' | 'tuningCents' | 'metronomeEnabled'>,
   sampleRate = 44100,
 ): string {
   return URL.createObjectURL(renderNoteEventsToWavBlob(events, settings, sampleRate));
