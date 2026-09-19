@@ -34,10 +34,11 @@ export const PARITY_PROGRAMS: ReadonlyArray<{
   value: ProgramMode;
   label: string;
   tooltip: string;
+  hiddenInReference?: boolean;
 }> = [
   { value: 1, label: '1', tooltip: 'Drawing mode' },
   { value: 2, label: '2', tooltip: 'Pixel mode' },
-  { value: 3, label: '3', tooltip: 'Video mode' },
+  { value: 3, label: '3', tooltip: 'Video mode — map a photo to each instrument', hiddenInReference: true },
 ];
 
 export const PARITY_ACCOMPANIMENT_CONTROLS = [
