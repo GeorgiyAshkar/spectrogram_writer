@@ -80,6 +80,8 @@ export default function App() {
   const [midiRecordedEvents, setMidiRecordedEvents] = useState<NoteEvent[]>([]);
   const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
   const [musicPhotoUrl, setMusicPhotoUrl] = useState<string | null>(null);
+  const [musicPhotoFit, setMusicPhotoFit] = useState<'fill' | 'fit' | 'stretch'>('fill');
+  const [showMusicGrid, setShowMusicGrid] = useState(false);
   const [musicDraftHydrated, setMusicDraftHydrated] = useState(false);
   const [musicDraftStatus, setMusicDraftStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [isTakeRecording, setIsTakeRecording] = useState(false);
@@ -123,6 +125,7 @@ export default function App() {
       setMusicCustomColor(draft.customColor);
       setMusicBackgroundKind(draft.background.kind);
       setMusicPhotoUrl(draft.background.kind === 'photo' ? draft.background.dataUrl : null);
+      setMusicPhotoFit(draft.background.kind === 'photo' ? draft.background.fit ?? 'fill' : 'fill');
       setMusicDraftStatus('saved');
     }
     setMusicDraftHydrated(true);
@@ -142,7 +145,7 @@ export default function App() {
         customColor: musicCustomColor,
         background:
           musicBackgroundKind === 'photo' && musicPhotoUrl
-            ? { kind: 'photo', dataUrl: musicPhotoUrl }
+            ? { kind: 'photo', dataUrl: musicPhotoUrl, fit: musicPhotoFit }
             : { kind: musicBackgroundKind === 'sky' ? 'sky' : 'paper' },
       });
       setMusicDraftStatus(saved ? 'saved' : 'error');
@@ -156,6 +159,7 @@ export default function App() {
     musicCustomColor,
     musicDraftHydrated,
     musicSettings,
+    musicPhotoFit,
     musicPhotoUrl,
     musicStrokes,
     virtualKeyboardEvents,
@@ -308,9 +312,9 @@ export default function App() {
   const musicCanvasBackground = useMemo<MusicCanvasBackground>(
     () =>
       musicBackgroundKind === 'photo'
-        ? { kind: 'photo', url: musicPhotoUrl }
+        ? { kind: 'photo', url: musicPhotoUrl, fit: musicPhotoFit }
         : { kind: musicBackgroundKind },
-    [musicBackgroundKind, musicPhotoUrl],
+    [musicBackgroundKind, musicPhotoFit, musicPhotoUrl],
   );
 
   useEffect(() => {
@@ -464,7 +468,7 @@ export default function App() {
     customColor: musicCustomColor,
     background:
       musicBackgroundKind === 'photo' && musicPhotoUrl
-        ? { kind: 'photo', dataUrl: musicPhotoUrl }
+        ? { kind: 'photo', dataUrl: musicPhotoUrl, fit: musicPhotoFit }
         : { kind: musicBackgroundKind === 'sky' ? 'sky' : 'paper' },
   });
 
@@ -528,6 +532,7 @@ export default function App() {
     if (project.schemaVersion === 2) {
       setMusicBackgroundKind(project.background.kind);
       setMusicPhotoUrl(project.background.kind === 'photo' ? project.background.dataUrl : null);
+      setMusicPhotoFit(project.background.kind === 'photo' ? project.background.fit ?? 'fill' : 'fill');
       return;
     }
 
@@ -628,6 +633,7 @@ export default function App() {
     try {
       const prepared = await prepareBackgroundPhoto(file);
       setMusicPhotoUrl(prepared.dataUrl);
+      setMusicPhotoFit('fill');
       setMusicBackgroundKind('photo');
       setTakeError(null);
     } catch (error) {
@@ -880,6 +886,16 @@ export default function App() {
                 >
                   Key
                 </button>
+                <button
+                  type="button"
+                  className={showMusicGrid ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-pressed={showMusicGrid}
+                  title="The grid: notes and beats under the ink"
+                  aria-label="Grid"
+                  onClick={() => setShowMusicGrid((current) => !current)}
+                >
+                  Grid
+                </button>
               </div>
 
               {showMusicHelp ? (
@@ -1066,6 +1082,24 @@ export default function App() {
                     onChange={(e) => { void chooseMusicPhoto(e.target.files?.[0] ?? null); }}
                   />
                 </label>
+                {musicBackgroundKind === 'photo' && musicPhotoUrl ? (
+                  <div className="music-control">
+                    <span>Photo fit</span>
+                    <div className="music-inline-buttons" aria-label="Photo fit">
+                      {(['fill', 'fit', 'stretch'] as const).map((fit) => (
+                        <button
+                          type="button"
+                          key={fit}
+                          className={musicPhotoFit === fit ? 'is-active' : ''}
+                          aria-pressed={musicPhotoFit === fit}
+                          onClick={() => setMusicPhotoFit(fit)}
+                        >
+                          {fit === 'fill' ? 'Fill' : fit === 'fit' ? 'Fit' : 'Stretch'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="music-control music-export-control">
                   <span>Export</span>
                   <div className="music-inline-buttons">
@@ -1290,6 +1324,7 @@ export default function App() {
                 activeColor={musicColor}
                 background={musicCanvasBackground}
                 playheadProgress={realtimeMusic.progress}
+                showGrid={showMusicGrid}
                 onCanvasReady={handleMusicCanvasReady}
                 onChange={handleMusicStrokesChange}
               />
