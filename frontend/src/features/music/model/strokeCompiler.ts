@@ -1,4 +1,4 @@
-import { buildPitchRange, mapYToMidi } from './theory';
+import { buildPitchRange, mapYToContinuousMidi, mapYToMidi } from './theory';
 import { applySwing, mapXToBeat, quantizeBeat } from './rhythm';
 import type { MusicSettings, NoteEvent, Point, Stroke } from './types';
 
@@ -94,13 +94,21 @@ export function compileStroke(
     settings.rangeOctaves,
   );
 
-  const samples = sampleStrokeByBeat(stroke, settings.loopLengthBeats, sampleStepBeats);
+  const effectiveSampleStepBeats = settings.freehandEnabled
+    ? Math.min(sampleStepBeats, 0.125)
+    : sampleStepBeats;
+
+  const samples = sampleStrokeByBeat(stroke, settings.loopLengthBeats, effectiveSampleStepBeats);
   if (samples.length === 0) return [];
 
   const mapped = samples.map((sample) => {
     const quantized = quantizeBeat(sample.beat, settings.quantizeStepBeats);
+    const midi = settings.freehandEnabled
+      ? Math.round(mapYToContinuousMidi(sample.point.y, pitchRange) * 20) / 20
+      : mapYToMidi(sample.point.y, pitchRange);
+
     return {
-      midi: mapYToMidi(sample.point.y, pitchRange),
+      midi,
       beat: applySwing(quantized, settings.quantizeStepBeats, settings.swing),
     };
   });
@@ -113,7 +121,10 @@ export function compileStroke(
     const current = mapped[i];
     if (current && current.midi === currentMidi) continue;
 
-    const endBeat = current?.beat ?? Math.min(settings.loopLengthBeats, mapped[mapped.length - 1].beat + sampleStepBeats);
+    const endBeat = current?.beat ?? Math.min(
+      settings.loopLengthBeats,
+      mapped[mapped.length - 1].beat + effectiveSampleStepBeats,
+    );
     const durationBeats = Math.max(minimumDurationBeats, endBeat - groupStart);
 
     events.push({
