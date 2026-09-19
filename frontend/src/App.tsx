@@ -37,8 +37,10 @@ import {
   type MusicShareProjectV2,
 } from './services/musicGallery';
 import {
+  DEFAULT_INSTRUMENT_COLORS,
   DEFAULT_MUSIC_COLORS,
   PARITY_INSTRUMENT_SWATCHES,
+  type ParityInstrumentId,
   PARITY_ACCOMPANIMENT_CONTROLS,
   PARITY_KEY_OPTIONS,
   PARITY_SCALE_OPTIONS,
@@ -77,8 +79,14 @@ export default function App() {
   const [musicUndoHistory, setMusicUndoHistory] = useState<Stroke[][]>([]);
   const [musicRedoHistory, setMusicRedoHistory] = useState<Stroke[][]>([]);
   const [musicTool, setMusicTool] = useState<'pen' | 'eraser'>('pen');
-  const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
-  const [musicCustomColor, setMusicCustomColor] = useState<string>('#111827');
+  const [activeMusicInstrumentId, setActiveMusicInstrumentId] = useState<ParityInstrumentId>('keys');
+  const [musicInstrumentColors, setMusicInstrumentColors] = useState<Record<ParityInstrumentId, string>>(
+    { ...DEFAULT_INSTRUMENT_COLORS },
+  );
+  const [musicColor, setMusicColor] = useState<string>(DEFAULT_INSTRUMENT_COLORS.keys);
+  const [musicCustomColor, setMusicCustomColor] = useState<string>(DEFAULT_INSTRUMENT_COLORS.keys);
+  const [recolorMode, setRecolorMode] = useState(false);
+  const [recolorTargetId, setRecolorTargetId] = useState<ParityInstrumentId>('keys');
   const [midiEnabled, setMidiEnabled] = useState(false);
   const [midiRecordedEvents, setMidiRecordedEvents] = useState<NoteEvent[]>([]);
   const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
@@ -116,6 +124,7 @@ export default function App() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const takeChunksRef = useRef<Blob[]>([]);
   const takeVideoTracksRef = useRef<MediaStreamTrack[]>([]);
+  const recolorInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const draft = loadMusicDraft();
@@ -126,8 +135,20 @@ export default function App() {
       setMusicRedoHistory([]);
       setVirtualKeyboardEvents(draft.virtualKeyboardEvents);
       setMidiRecordedEvents(draft.midiRecordedEvents);
-      setMusicColor(draft.activeColor);
-      setMusicCustomColor(draft.customColor);
+      const instrumentColors = {
+        ...DEFAULT_INSTRUMENT_COLORS,
+        ...(draft.instrumentColors ?? {}),
+      } as Record<ParityInstrumentId, string>;
+      const requestedInstrumentId = draft.activeInstrumentId;
+      const instrumentId = PARITY_INSTRUMENT_SWATCHES.some(
+        (swatch) => swatch.id === requestedInstrumentId,
+      )
+        ? requestedInstrumentId as ParityInstrumentId
+        : 'keys';
+      setMusicInstrumentColors(instrumentColors);
+      setActiveMusicInstrumentId(instrumentId);
+      setMusicColor(instrumentColors[instrumentId] ?? draft.activeColor ?? DEFAULT_INSTRUMENT_COLORS.keys);
+      setMusicCustomColor(instrumentColors[instrumentId] ?? draft.customColor ?? DEFAULT_INSTRUMENT_COLORS.keys);
       setMusicBackgroundKind(draft.background.kind);
       setMusicPhotoUrl(draft.background.kind === 'photo' ? draft.background.dataUrl : null);
       setMusicPhotoFit(draft.background.kind === 'photo' ? draft.background.fit ?? 'fill' : 'fill');
@@ -148,6 +169,8 @@ export default function App() {
         midiRecordedEvents,
         activeColor: musicColor,
         customColor: musicCustomColor,
+        activeInstrumentId: activeMusicInstrumentId,
+        instrumentColors: musicInstrumentColors,
         background:
           musicBackgroundKind === 'photo' && musicPhotoUrl
             ? { kind: 'photo', dataUrl: musicPhotoUrl, fit: musicPhotoFit }
@@ -158,10 +181,12 @@ export default function App() {
 
     return () => window.clearTimeout(timer);
   }, [
+    activeMusicInstrumentId,
     midiRecordedEvents,
     musicBackgroundKind,
     musicColor,
     musicCustomColor,
+    musicInstrumentColors,
     musicDraftHydrated,
     musicSettings,
     musicPhotoFit,
@@ -205,7 +230,7 @@ export default function App() {
   const musicPlaybackSettings = musicSettings;
 
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
-  const activeMusicLayerId = `color:${musicColor.toLowerCase()}`;
+  const activeMusicLayerId = `instrument:${activeMusicInstrumentId}`;
 
   useEffect(() => {
     realtimePlayingRef.current = realtimeMusic.isPlaying;
@@ -476,6 +501,8 @@ export default function App() {
     midiRecordedEvents,
     activeColor: musicColor,
     customColor: musicCustomColor,
+    activeInstrumentId: activeMusicInstrumentId,
+    instrumentColors: musicInstrumentColors,
     background:
       musicBackgroundKind === 'photo' && musicPhotoUrl
         ? { kind: 'photo', dataUrl: musicPhotoUrl, fit: musicPhotoFit }
@@ -537,8 +564,20 @@ export default function App() {
     setMusicRedoHistory([]);
     setVirtualKeyboardEvents(project.virtualKeyboardEvents ?? []);
     setMidiRecordedEvents(project.midiRecordedEvents ?? []);
-    setMusicColor(project.activeColor || DEFAULT_MUSIC_COLORS[0]);
-    setMusicCustomColor(project.customColor || '#111827');
+    const sharedInstrumentColors = {
+      ...DEFAULT_INSTRUMENT_COLORS,
+      ...(project.schemaVersion === 2 ? project.instrumentColors ?? {} : {}),
+    } as Record<ParityInstrumentId, string>;
+    const sharedRequestedId = project.schemaVersion === 2 ? project.activeInstrumentId : undefined;
+    const sharedInstrumentId = PARITY_INSTRUMENT_SWATCHES.some(
+      (swatch) => swatch.id === sharedRequestedId,
+    )
+      ? sharedRequestedId as ParityInstrumentId
+      : 'keys';
+    setMusicInstrumentColors(sharedInstrumentColors);
+    setActiveMusicInstrumentId(sharedInstrumentId);
+    setMusicColor(sharedInstrumentColors[sharedInstrumentId] ?? project.activeColor || DEFAULT_INSTRUMENT_COLORS.keys);
+    setMusicCustomColor(sharedInstrumentColors[sharedInstrumentId] ?? project.customColor || DEFAULT_INSTRUMENT_COLORS.keys);
 
     if (project.schemaVersion === 2) {
       setMusicBackgroundKind(project.background.kind);
@@ -1283,33 +1322,54 @@ export default function App() {
               </div>
 
               <div className="music-palette" aria-label="Палитра">
-                {PARITY_INSTRUMENT_SWATCHES.map((swatch) => (
-                  <button
-                    type="button"
-                    key={swatch.id}
-                    className={musicColor === swatch.color ? 'music-color is-active' : 'music-color'}
-                    style={{ background: swatch.color }}
-                    title={swatch.label}
-                    aria-label={swatch.label}
-                    aria-pressed={musicColor === swatch.color}
-                    onClick={() => setMusicColor(swatch.color)}
-                  />
-                ))}
-                <label
-                  className={musicColor === musicCustomColor ? 'music-color-add is-active' : 'music-color-add'}
-                  title="Свой цвет"
-                  aria-label="Добавить свой цвет"
-                >
-                  <span>+</span>
-                  <input
-                    type="color"
-                    value={musicCustomColor}
-                    onChange={(e) => {
-                      setMusicCustomColor(e.target.value);
-                      setMusicColor(e.target.value);
-                    }}
-                  />
-                </label>
+                {PARITY_INSTRUMENT_SWATCHES.map((swatch) => {
+                  const color = musicInstrumentColors[swatch.id] ?? swatch.color;
+                  return (
+                    <button
+                      type="button"
+                      key={swatch.id}
+                      className={activeMusicInstrumentId === swatch.id ? 'music-color is-active' : 'music-color'}
+                      style={{ background: color }}
+                      title={swatch.label}
+                      aria-label={swatch.label}
+                      aria-pressed={activeMusicInstrumentId === swatch.id}
+                      onClick={() => {
+                        if (recolorMode) {
+                          setRecolorTargetId(swatch.id);
+                          setMusicCustomColor(color);
+                          window.requestAnimationFrame(() => recolorInputRef.current?.click());
+                          return;
+                        }
+                        setActiveMusicInstrumentId(swatch.id);
+                        setMusicColor(color);
+                        setMusicCustomColor(color);
+                      }}
+                    />
+                  );
+                })}
+                <input
+                  ref={recolorInputRef}
+                  type="color"
+                  className="music-hidden-color-input"
+                  value={musicCustomColor}
+                  aria-label="Instrument color"
+                  onChange={(e) => {
+                    const nextColor = e.target.value;
+                    const targetId = recolorTargetId;
+                    setMusicInstrumentColors((current) => ({ ...current, [targetId]: nextColor }));
+                    setMusicCustomColor(nextColor);
+                    if (activeMusicInstrumentId === targetId) setMusicColor(nextColor);
+                    const nextStrokes = musicStrokes.map((stroke) =>
+                      stroke.layerId === `instrument:${targetId}`
+                        ? { ...stroke, color: nextColor }
+                        : stroke,
+                    );
+                    if (nextStrokes.some((stroke, index) => stroke !== musicStrokes[index])) {
+                      commitMusicStrokes(nextStrokes);
+                    }
+                    setRecolorMode(false);
+                  }}
+                />
                 <button
                   type="button"
                   className={isTakeRecording ? 'button-secondary music-record is-active' : 'button-secondary music-record'}
@@ -1441,6 +1501,7 @@ export default function App() {
                 settings={musicSettings}
                 strokes={musicStrokes}
                 activeColor={musicColor}
+                activeLayerId={activeMusicLayerId}
                 background={musicCanvasBackground}
                 playheadProgress={realtimeMusic.progress}
                 showGrid={showMusicGrid}
