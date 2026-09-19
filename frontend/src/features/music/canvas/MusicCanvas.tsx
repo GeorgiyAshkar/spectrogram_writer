@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildPitchRange, midiToNoteName } from '../model/theory';
 import type { MusicSettings, Point, Stroke } from '../model/types';
 
+export type PhotoFit = 'fill' | 'fit' | 'stretch';
+
 export type MusicCanvasBackground =
   | { kind: 'paper' }
   | { kind: 'sky' }
-  | { kind: 'photo'; url: string | null };
+  | { kind: 'photo'; url: string | null; fit: PhotoFit };
 
 type Props = {
   settings: MusicSettings;
@@ -13,6 +15,7 @@ type Props = {
   activeColor: string;
   background: MusicCanvasBackground;
   playheadProgress?: number;
+  showGrid?: boolean;
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
   onChange: (strokes: Stroke[]) => void;
 };
@@ -108,6 +111,7 @@ export function MusicCanvas({
   activeColor,
   background,
   playheadProgress = 0,
+  showGrid = false,
   onCanvasReady,
   onChange,
 }: Props) {
@@ -166,30 +170,50 @@ export function MusicCanvas({
     } else if (background.kind === 'photo' && backgroundImage) {
       const imageRatio = backgroundImage.width / backgroundImage.height;
       const canvasRatio = WIDTH / HEIGHT;
-      let sourceWidth = backgroundImage.width;
-      let sourceHeight = backgroundImage.height;
-      let sourceX = 0;
-      let sourceY = 0;
 
-      if (imageRatio > canvasRatio) {
-        sourceWidth = backgroundImage.height * canvasRatio;
-        sourceX = (backgroundImage.width - sourceWidth) / 2;
+      if (background.fit === 'stretch') {
+        ctx.drawImage(backgroundImage, 0, 0, WIDTH, HEIGHT);
+      } else if (background.fit === 'fit') {
+        ctx.fillStyle = '#fffdf8';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        let targetWidth = WIDTH;
+        let targetHeight = HEIGHT;
+        if (imageRatio > canvasRatio) {
+          targetHeight = WIDTH / imageRatio;
+        } else {
+          targetWidth = HEIGHT * imageRatio;
+        }
+        const targetX = (WIDTH - targetWidth) / 2;
+        const targetY = (HEIGHT - targetHeight) / 2;
+        ctx.drawImage(backgroundImage, targetX, targetY, targetWidth, targetHeight);
       } else {
-        sourceHeight = backgroundImage.width / canvasRatio;
-        sourceY = (backgroundImage.height - sourceHeight) / 2;
+        let sourceWidth = backgroundImage.width;
+        let sourceHeight = backgroundImage.height;
+        let sourceX = 0;
+        let sourceY = 0;
+
+        if (imageRatio > canvasRatio) {
+          sourceWidth = backgroundImage.height * canvasRatio;
+          sourceX = (backgroundImage.width - sourceWidth) / 2;
+        } else {
+          sourceHeight = backgroundImage.width / canvasRatio;
+          sourceY = (backgroundImage.height - sourceHeight) / 2;
+        }
+
+        ctx.drawImage(
+          backgroundImage,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          0,
+          0,
+          WIDTH,
+          HEIGHT,
+        );
       }
 
-      ctx.drawImage(
-        backgroundImage,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
-        0,
-        0,
-        WIDTH,
-        HEIGHT,
-      );
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
     } else {
@@ -197,33 +221,35 @@ export function MusicCanvas({
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
     }
 
-    ctx.save();
-    ctx.strokeStyle = background.kind === 'paper' ? '#e7e1d8' : 'rgba(72, 62, 51, 0.22)';
-    ctx.lineWidth = 1;
-    for (let beat = 0; beat <= settings.loopLengthBeats; beat += 1) {
-      const x = settings.loopLengthBeats > 0 ? (beat / settings.loopLengthBeats) * WIDTH : 0;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, HEIGHT);
-      ctx.stroke();
-    }
-
-    const rows = Math.max(1, pitchRange.length);
-    for (let index = 0; index < rows; index += 1) {
-      const y = rows === 1 ? HEIGHT / 2 : (index / (rows - 1)) * HEIGHT;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(WIDTH, y);
-      ctx.stroke();
-
-      const midi = pitchRange[pitchRange.length - 1 - index];
-      if (midi !== undefined) {
-        ctx.fillStyle = '#8b8174';
-        ctx.font = '12px system-ui, sans-serif';
-        ctx.fillText(midiToNoteName(midi), 8, Math.max(14, y - 4));
+    if (showGrid) {
+      ctx.save();
+      ctx.strokeStyle = background.kind === 'paper' ? '#e7e1d8' : 'rgba(72, 62, 51, 0.22)';
+      ctx.lineWidth = 1;
+      for (let beat = 0; beat <= settings.loopLengthBeats; beat += 1) {
+        const x = settings.loopLengthBeats > 0 ? (beat / settings.loopLengthBeats) * WIDTH : 0;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, HEIGHT);
+        ctx.stroke();
       }
+
+      const rows = Math.max(1, pitchRange.length);
+      for (let index = 0; index < rows; index += 1) {
+        const y = rows === 1 ? HEIGHT / 2 : (index / (rows - 1)) * HEIGHT;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(WIDTH, y);
+        ctx.stroke();
+
+        const midi = pitchRange[pitchRange.length - 1 - index];
+        if (midi !== undefined) {
+          ctx.fillStyle = '#8b8174';
+          ctx.font = '12px system-ui, sans-serif';
+          ctx.fillText(midiToNoteName(midi), 8, Math.max(14, y - 4));
+        }
+      }
+      ctx.restore();
     }
-    ctx.restore();
 
     strokes.forEach((stroke) => drawStroke(ctx, stroke));
     if (draft) drawStroke(ctx, draft);
@@ -238,7 +264,7 @@ export function MusicCanvas({
     ctx.lineTo(playheadX, HEIGHT);
     ctx.stroke();
     ctx.restore();
-  }, [background, backgroundImage, draft, pitchRange, playheadProgress, settings.loopLengthBeats, strokes]);
+  }, [background, backgroundImage, draft, pitchRange, playheadProgress, settings.loopLengthBeats, showGrid, strokes]);
 
   const pointFromEvent = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
     const rect = event.currentTarget.getBoundingClientRect();
