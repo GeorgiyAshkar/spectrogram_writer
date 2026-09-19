@@ -61,6 +61,8 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] stable `instrument:<id>` identity independent of color
 - [x] Recolor existing instrument strokes
 - [x] “Original colors” reset
+- [x] 27 measured recolor preset colors
+- [x] custom recolor + control
 - [x] custom colors persist/share without changing instrument identity
 - [x] legacy color-based layer compatibility
 
@@ -149,7 +151,8 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] downloadable take
 - [x] cleanup on clear/mode switch
 - [ ] exact original take codec/container policy
-- [ ] direct OS/Web Share surface equivalent to the reference “share take” control
+- [x] Web Share file flow for “share take”
+- [x] download fallback when file sharing is unavailable
 
 ### Share / Gallery
 - [x] FastAPI publish/list/detail endpoints
