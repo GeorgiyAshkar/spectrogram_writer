@@ -1,4 +1,14 @@
-export type ScaleName = 'major' | 'minor';
+export type ScaleName =
+  | 'majorPentatonic'
+  | 'minorPentatonic'
+  | 'major'
+  | 'minor'
+  | 'harmonicMinor'
+  | 'dorian'
+  | 'phrygian'
+  | 'lydian'
+  | 'mixolydian'
+  | 'blues';
 
 export type DrawingResolutionPreset = 1 | 2 | 3;
 export type RhythmPreset = 1 | 2 | 3;
