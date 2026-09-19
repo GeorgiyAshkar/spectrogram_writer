@@ -1,4 +1,4 @@
-import type { DrawingResolutionPreset, RhythmPreset } from './model/types';
+import type { ProgramMode } from './model/types';
 
 export const PARITY_KEY_OPTIONS = [
   'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
@@ -17,20 +17,12 @@ export const PARITY_SCALE_OPTIONS = [
   { value: 'blues', referenceValue: 'blues', label: 'Blues' },
 ] as const;
 
-/**
- * Exact original Range labels remain VERIFY.
- * These values are isolated here so parity measurements can replace them
- * without touching theory/audio code.
- */
 export const PARITY_RANGE_OPTIONS = [
   { value: 1, label: '1 octave' },
   { value: 2, label: '2 octaves' },
   { value: 3, label: '3 octaves' },
 ] as const;
 
-/**
- * Exact original BPM range/default remains VERIFY.
- */
 export const PARITY_BPM = {
   min: 60,
   max: 200,
@@ -38,8 +30,21 @@ export const PARITY_BPM = {
   default: 120,
 } as const;
 
-export const DRAWING_PRESETS: readonly DrawingResolutionPreset[] = [1, 2, 3];
-export const RHYTHM_PRESETS: readonly RhythmPreset[] = [1, 2, 3];
+export const PARITY_PROGRAMS: ReadonlyArray<{
+  value: ProgramMode;
+  label: string;
+  tooltip: string;
+}> = [
+  { value: 1, label: '1', tooltip: 'Drawing mode' },
+  { value: 2, label: '2', tooltip: 'Pixel mode' },
+  { value: 3, label: '3', tooltip: 'Video mode' },
+];
+
+export const PARITY_ACCOMPANIMENT_CONTROLS = [
+  { setting: 'bassEnabled', label: '•', tooltip: 'Bass' },
+  { setting: 'drumsEnabled', label: '••', tooltip: 'Drums' },
+  { setting: 'arpeggioEnabled', label: '•••', tooltip: 'Arpeggio' },
+] as const;
 
 export const DEFAULT_MUSIC_COLORS = [
   '#171717',
@@ -71,21 +76,6 @@ export const PARITY_SWING_OPTIONS = [
   { label: 'Hard', value: 0.33 },
 ] as const;
 
-/**
- * Provisional mapping only: audit confirms the dot controls are rhythm-related,
- * but the exact original subdivision mapping still needs interactive measurement.
- */
-export const PROVISIONAL_RHYTHM_STEP_BEATS: Record<RhythmPreset, number | null> = {
-  1: null,
-  2: 0.5,
-  3: 0.25,
-};
-
-
-/**
- * Tune is modeled as global cents offset until the exact original input semantics
- * are measured interactively.
- */
 export const PARITY_TUNE_CENTS = {
   min: -50,
   max: 50,
