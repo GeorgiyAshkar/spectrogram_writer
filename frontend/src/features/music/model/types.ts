@@ -49,7 +49,7 @@ export interface MusicSettings {
 }
 
 export interface MusicProject {
-  schemaVersion: 1;
+  schemaVersion: 2;
   title: string;
   author: string;
   settings: MusicSettings;
