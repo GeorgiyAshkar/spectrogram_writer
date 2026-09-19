@@ -456,6 +456,8 @@ try {
 
       patchContext(window.AudioContext);
       patchContext(window.webkitAudioContext);
+      patchContext(window.OfflineAudioContext);
+      patchContext(window.webkitOfflineAudioContext);
 
       const audioNodeProto = window.AudioNode?.prototype;
       if (audioNodeProto && !audioNodeProto.__parityDestinationPatched) {
