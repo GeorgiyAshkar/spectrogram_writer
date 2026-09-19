@@ -95,8 +95,13 @@ export function useRealtimeMusicTransport(
   );
 
   const noteOn = useCallback(
-    async (midi: number, velocity = 0.8, voiceId = String(midi)) => {
-      await transportRef.current?.noteOn(midi, velocity, voiceId);
+    async (
+      midi: number,
+      velocity = 0.8,
+      voiceId = String(midi),
+      layerId = 'default',
+    ) => {
+      await transportRef.current?.noteOn(midi, velocity, voiceId, layerId);
     },
     [],
   );
