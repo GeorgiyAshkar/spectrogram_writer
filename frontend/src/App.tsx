@@ -101,11 +101,11 @@ export default function App() {
           layerId: 'keyboard',
           midi,
           velocity: 0.82,
-          startBeat: noteIndex * 0.5,
+          startBeat: (noteIndex * 0.5) % Math.max(0.001, musicSettings.loopLengthBeats),
           durationBeats: 0.42,
         }];
       }),
-    [musicSequence],
+    [musicSequence, musicSettings.loopLengthBeats],
   );
 
   const activeMusicEvents = useMemo(
@@ -115,13 +115,7 @@ export default function App() {
       ),
     [canvasMusicEvents, keyboardMusicEvents, midiRecordedEvents],
   );
-  const musicPlaybackSettings = useMemo(
-    () => ({
-      ...musicSettings,
-      loopLengthBeats: Math.max(musicSettings.loopLengthBeats, musicSequence.length * 0.5 + 0.5),
-    }),
-    [musicSequence.length, musicSettings],
-  );
+  const musicPlaybackSettings = musicSettings;
 
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
 
