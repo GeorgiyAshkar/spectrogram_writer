@@ -11,6 +11,11 @@ import {
 } from '../src/features/music/model';
 import { renderNoteEventsToMidiBlob } from '../src/features/music/export/renderMidi';
 import { renderNoteEventsToWavBlob } from '../src/features/music/audio/renderWav';
+import {
+  DEFAULT_VOICE_PROFILE,
+  resolveVoiceProfile,
+  sampleWaveform,
+} from '../src/features/music/audio/voiceProfiles';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -71,6 +76,13 @@ function testStrokeCompiler() {
   assert(events[0].durationBeats >= 3.9, 'Flat stroke should span essentially the whole loop');
 }
 
+function testVoiceProfiles() {
+  assert(resolveVoiceProfile('color:#ff0000') === DEFAULT_VOICE_PROFILE, 'Unknown color layer must use neutral voice');
+  approx(sampleWaveform('sine', Math.PI / 2), 1, 1e-9, 'Sine waveform sample');
+  approx(sampleWaveform('square', Math.PI / 2), 1, 1e-9, 'Square waveform sample');
+  approx(sampleWaveform('sawtooth', Math.PI), 0, 1e-9, 'Sawtooth midpoint sample');
+}
+
 function testExports() {
   const settings = {
     ...DEFAULT_MUSIC_SETTINGS,
@@ -101,6 +113,7 @@ function testExports() {
 testTheory();
 testRhythm();
 testStrokeCompiler();
+testVoiceProfiles();
 testExports();
 
 console.log('music-domain-smoke: all checks passed');
