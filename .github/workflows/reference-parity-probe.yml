@@ -10,6 +10,9 @@ on:
       - scripts/reference-dom-probe.mjs
       - scripts/reference-interaction-probe.cjs
       - scripts/reference-instrument-probe.cjs
+      - scripts/reference-export-probe.cjs
+      - scripts/reference-pixel-probe.cjs
+      - scripts/reference-freehand-curve-probe.cjs
       - .github/workflows/reference-parity-probe.yml
 
 jobs:
