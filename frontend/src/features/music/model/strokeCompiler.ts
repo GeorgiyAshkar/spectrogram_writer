@@ -101,14 +101,42 @@ export function compileStroke(
   const samples = sampleStrokeByBeat(stroke, settings.loopLengthBeats, effectiveSampleStepBeats);
   if (samples.length === 0) return [];
 
+  if (settings.freehandEnabled) {
+    const continuous = samples.map((sample) => ({
+      midi: Math.round(mapYToContinuousMidi(sample.point.y, pitchRange) * 100) / 100,
+      beat: sample.beat,
+    }));
+
+    if (continuous.length === 1) {
+      return [{
+        id: `${stroke.id}:freehand:0`,
+        layerId: stroke.layerId,
+        midi: continuous[0].midi,
+        endMidi: continuous[0].midi,
+        velocity: Math.min(1, Math.max(0, velocity)),
+        startBeat: Math.min(settings.loopLengthBeats, Math.max(0, continuous[0].beat)),
+        durationBeats: minimumDurationBeats,
+      }];
+    }
+
+    return continuous.slice(0, -1).map((current, index) => {
+      const next = continuous[index + 1];
+      return {
+        id: `${stroke.id}:freehand:${index}`,
+        layerId: stroke.layerId,
+        midi: current.midi,
+        endMidi: next.midi,
+        velocity: Math.min(1, Math.max(0, velocity)),
+        startBeat: Math.min(settings.loopLengthBeats, Math.max(0, current.beat)),
+        durationBeats: Math.max(minimumDurationBeats, next.beat - current.beat),
+      };
+    });
+  }
+
   const mapped = samples.map((sample) => {
     const quantized = quantizeBeat(sample.beat, settings.quantizeStepBeats);
-    const midi = settings.freehandEnabled
-      ? Math.round(mapYToContinuousMidi(sample.point.y, pitchRange) * 20) / 20
-      : mapYToMidi(sample.point.y, pitchRange);
-
     return {
-      midi,
+      midi: mapYToMidi(sample.point.y, pitchRange),
       beat: applySwing(quantized, settings.quantizeStepBeats, settings.swing),
     };
   });
