@@ -40,12 +40,12 @@ import {
   DRAWING_PRESETS,
   PARITY_KEY_OPTIONS,
   PARITY_SCALE_OPTIONS,
-  PROVISIONAL_BPM,
-  PROVISIONAL_QUANTIZE_OPTIONS,
-  PROVISIONAL_RANGE_OPTIONS,
+  PARITY_BPM,
+  PARITY_QUANTIZE_OPTIONS,
+  PARITY_RANGE_OPTIONS,
   PROVISIONAL_RHYTHM_STEP_BEATS,
-  PROVISIONAL_SWING_OPTIONS,
-  PROVISIONAL_TUNE_CENTS,
+  PARITY_SWING_OPTIONS,
+  PARITY_TUNE_CENTS,
   RHYTHM_PRESETS,
 } from './features/music/parityConfig';
 import './styles/app.css';
@@ -629,7 +629,7 @@ export default function App() {
         : intervals[middle];
 
     const bpm = Math.round(60000 / Math.max(1, median));
-    updateMusicSetting('bpm', Math.min(PROVISIONAL_BPM.max, Math.max(PROVISIONAL_BPM.min, bpm)));
+    updateMusicSetting('bpm', Math.min(PARITY_BPM.max, Math.max(PARITY_BPM.min, bpm)));
   };
 
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -902,7 +902,9 @@ export default function App() {
                 <label className="music-control">
                   <span>Range</span>
                   <select value={musicSettings.rangeOctaves} onChange={(e) => updateMusicSetting('rangeOctaves', Number(e.target.value))}>
-                    {PROVISIONAL_RANGE_OPTIONS.map((range) => <option key={range} value={range}>{range}</option>)}
+                    {PARITY_RANGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </label>
                 <div className="music-control">
@@ -950,16 +952,16 @@ export default function App() {
                   <div className="music-tempo">
                     <input
                       type="number"
-                      min={PROVISIONAL_BPM.min}
-                      max={PROVISIONAL_BPM.max}
+                      min={PARITY_BPM.min}
+                      max={PARITY_BPM.max}
                       value={musicSettings.bpm}
                       aria-label="Tempo BPM"
-                      onChange={(e) => updateMusicSetting('bpm', Math.min(PROVISIONAL_BPM.max, Math.max(PROVISIONAL_BPM.min, Number(e.target.value))))}
+                      onChange={(e) => updateMusicSetting('bpm', Math.min(PARITY_BPM.max, Math.max(PARITY_BPM.min, Number(e.target.value))))}
                     />
                     <input
                       type="range"
-                      min={PROVISIONAL_BPM.min}
-                      max={PROVISIONAL_BPM.max}
+                      min={PARITY_BPM.min}
+                      max={PARITY_BPM.max}
                       step={1}
                       value={musicSettings.bpm}
                       aria-label="Tempo"
@@ -971,18 +973,28 @@ export default function App() {
                 <label className="music-control">
                   <span>Quantize</span>
                   <select
-                    value={musicSettings.quantizeStepBeats ?? 'off'}
-                    onChange={(e) => updateMusicSetting('quantizeStepBeats', e.target.value === 'off' ? null : Number(e.target.value))}
+                    value={
+                      PARITY_QUANTIZE_OPTIONS.find(
+                        (option) => Math.abs(option.stepBeats - (musicSettings.quantizeStepBeats ?? -1)) < 1e-6,
+                      )?.referenceValue ?? 3
+                    }
+                    onChange={(e) => {
+                      const referenceValue = Number(e.target.value);
+                      const option = PARITY_QUANTIZE_OPTIONS.find(
+                        (candidate) => candidate.referenceValue === referenceValue,
+                      );
+                      if (option) updateMusicSetting('quantizeStepBeats', option.stepBeats);
+                    }}
                   >
-                    {PROVISIONAL_QUANTIZE_OPTIONS.map((option) => (
-                      <option key={option.label} value={option.value ?? 'off'}>{option.label}</option>
+                    {PARITY_QUANTIZE_OPTIONS.map((option) => (
+                      <option key={option.referenceValue} value={option.referenceValue}>{option.label}</option>
                     ))}
                   </select>
                 </label>
                 <label className="music-control">
                   <span>Swing</span>
                   <select value={musicSettings.swing} onChange={(e) => updateMusicSetting('swing', Number(e.target.value))}>
-                    {PROVISIONAL_SWING_OPTIONS.map((option) => (
+                    {PARITY_SWING_OPTIONS.map((option) => (
                       <option key={option.label} value={option.value}>{option.label}</option>
                     ))}
                   </select>
@@ -1021,16 +1033,16 @@ export default function App() {
                   <span>Tune</span>
                   <input
                     type="number"
-                    min={PROVISIONAL_TUNE_CENTS.min}
-                    max={PROVISIONAL_TUNE_CENTS.max}
-                    step={PROVISIONAL_TUNE_CENTS.step}
+                    min={PARITY_TUNE_CENTS.min}
+                    max={PARITY_TUNE_CENTS.max}
+                    step={PARITY_TUNE_CENTS.step}
                     value={musicSettings.tuningCents}
                     onChange={(e) =>
                       updateMusicSetting(
                         'tuningCents',
                         Math.min(
-                          PROVISIONAL_TUNE_CENTS.max,
-                          Math.max(PROVISIONAL_TUNE_CENTS.min, Number(e.target.value)),
+                          PARITY_TUNE_CENTS.max,
+                          Math.max(PARITY_TUNE_CENTS.min, Number(e.target.value)),
                         ),
                       )
                     }
@@ -1153,7 +1165,7 @@ export default function App() {
                     <span>title</span>
                     <input
                       type="text"
-                      maxLength={120}
+                      maxLength={48}
                       value={shareTitle}
                       onChange={(e) => {
                         setShareTitle(e.target.value);
@@ -1165,7 +1177,7 @@ export default function App() {
                     <span>your name / handle</span>
                     <input
                       type="text"
-                      maxLength={80}
+                      maxLength={120}
                       value={shareAuthor}
                       onChange={(e) => {
                         setShareAuthor(e.target.value);
