@@ -25,12 +25,14 @@ import {
   loadMusicDraft,
   saveMusicDraft,
 } from './features/music/persistence/musicDraft';
+import { prepareBackgroundPhoto } from './features/music/background/prepareBackgroundPhoto';
 import {
   fetchMusicPiece,
   listMusicGallery,
   publishMusicPiece,
   type GallerySummary,
   type MusicShareProject,
+  type MusicShareProjectV2,
 } from './services/musicGallery';
 import {
   DEFAULT_MUSIC_COLORS,
@@ -117,7 +119,8 @@ export default function App() {
       setMidiRecordedEvents(draft.midiRecordedEvents);
       setMusicColor(draft.activeColor);
       setMusicCustomColor(draft.customColor);
-      setMusicBackgroundKind(draft.backgroundKind);
+      setMusicBackgroundKind(draft.background.kind);
+      setMusicPhotoUrl(draft.background.kind === 'photo' ? draft.background.dataUrl : null);
       setMusicDraftStatus('saved');
     }
     setMusicDraftHydrated(true);
@@ -135,7 +138,10 @@ export default function App() {
         midiRecordedEvents,
         activeColor: musicColor,
         customColor: musicCustomColor,
-        backgroundKind: musicBackgroundKind === 'sky' ? 'sky' : 'paper',
+        background:
+          musicBackgroundKind === 'photo' && musicPhotoUrl
+            ? { kind: 'photo', dataUrl: musicPhotoUrl }
+            : { kind: musicBackgroundKind === 'sky' ? 'sky' : 'paper' },
       });
       setMusicDraftStatus(saved ? 'saved' : 'error');
     }, 350);
@@ -148,6 +154,7 @@ export default function App() {
     musicCustomColor,
     musicDraftHydrated,
     musicSettings,
+    musicPhotoUrl,
     musicStrokes,
     virtualKeyboardEvents,
   ]);
@@ -309,13 +316,6 @@ export default function App() {
 
   useEffect(
     () => () => {
-      if (musicPhotoUrl) URL.revokeObjectURL(musicPhotoUrl);
-    },
-    [musicPhotoUrl],
-  );
-
-  useEffect(
-    () => () => {
       if (takeUrl) URL.revokeObjectURL(takeUrl);
     },
     [takeUrl],
@@ -444,15 +444,18 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  const buildShareProject = (): MusicShareProject => ({
-    schemaVersion: 1,
+  const buildShareProject = (): MusicShareProjectV2 => ({
+    schemaVersion: 2,
     settings: musicSettings,
     strokes: musicStrokes,
     virtualKeyboardEvents,
     midiRecordedEvents,
     activeColor: musicColor,
     customColor: musicCustomColor,
-    backgroundKind: musicBackgroundKind === 'sky' ? 'sky' : 'paper',
+    background:
+      musicBackgroundKind === 'photo' && musicPhotoUrl
+        ? { kind: 'photo', dataUrl: musicPhotoUrl }
+        : { kind: musicBackgroundKind === 'sky' ? 'sky' : 'paper' },
   });
 
   const publishCurrentProject = async () => {
@@ -497,11 +500,6 @@ export default function App() {
   };
 
   const applySharedProject = (project: MusicShareProject) => {
-    if (project.schemaVersion !== 1) {
-      setGalleryError('Эта версия проекта пока не поддерживается.');
-      return;
-    }
-
     realtimeMusic.stop();
     pendingMidiNotesRef.current.clear();
     pendingVirtualNotesRef.current.clear();
@@ -511,8 +509,20 @@ export default function App() {
     setMidiRecordedEvents(project.midiRecordedEvents ?? []);
     setMusicColor(project.activeColor || DEFAULT_MUSIC_COLORS[0]);
     setMusicCustomColor(project.customColor || '#111827');
-    setMusicBackgroundKind(project.backgroundKind === 'sky' ? 'sky' : 'paper');
-    setMusicPhotoUrl(null);
+
+    if (project.schemaVersion === 2) {
+      setMusicBackgroundKind(project.background.kind);
+      setMusicPhotoUrl(project.background.kind === 'photo' ? project.background.dataUrl : null);
+      return;
+    }
+
+    if (project.schemaVersion === 1) {
+      setMusicBackgroundKind(project.backgroundKind === 'sky' ? 'sky' : 'paper');
+      setMusicPhotoUrl(null);
+      return;
+    }
+
+    setGalleryError('Эта версия проекта пока не поддерживается.');
   };
 
   const openSharedPiece = async (id: string, requireConfirmation = true) => {
@@ -572,10 +582,16 @@ export default function App() {
     pendingVirtualNotesRef.current.clear();
   };
 
-  const chooseMusicPhoto = (file: File | null) => {
+  const chooseMusicPhoto = async (file: File | null) => {
     if (!file) return;
-    setMusicPhotoUrl(URL.createObjectURL(file));
-    setMusicBackgroundKind('photo');
+    try {
+      const prepared = await prepareBackgroundPhoto(file);
+      setMusicPhotoUrl(prepared.dataUrl);
+      setMusicBackgroundKind('photo');
+      setTakeError(null);
+    } catch (error) {
+      setTakeError(error instanceof Error ? error.message : 'Не удалось подготовить фотографию.');
+    }
   };
 
   const handleMusicCanvasReady = useCallback((canvas: HTMLCanvasElement | null) => {
@@ -1032,7 +1048,7 @@ export default function App() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => chooseMusicPhoto(e.target.files?.[0] ?? null)}
+                    onChange={(e) => { void chooseMusicPhoto(e.target.files?.[0] ?? null); }}
                   />
                 </label>
                 <div className="music-control music-export-control">
