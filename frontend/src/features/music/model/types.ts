@@ -33,6 +33,8 @@ export interface Stroke {
   createdAt: number;
   /** Program used when this stroke was created. */
   programMode?: ProgramMode;
+  /** Number of musical pitch rows captured when an exact Pixel-mode stroke was created. */
+  pixelRowCount?: number;
   /** @deprecated Legacy v1/v2 field, read only during migration/render fallback. */
   drawingResolutionPreset?: DrawingResolutionPreset;
 }
