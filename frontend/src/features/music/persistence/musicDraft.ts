@@ -8,10 +8,12 @@ import {
 
 const STORAGE_KEY = 'spectrogram-writer:playmusictheory:draft';
 
+export type PhotoFit = 'fill' | 'fit' | 'stretch';
+
 export type PersistedBackground =
   | { kind: 'paper' }
   | { kind: 'sky' }
-  | { kind: 'photo'; dataUrl: string };
+  | { kind: 'photo'; dataUrl: string; fit?: PhotoFit };
 
 type MusicDraftV1 = {
   schemaVersion: 1;
@@ -55,7 +57,10 @@ function isMusicDraftV1(value: unknown): value is MusicDraftV1 {
 function isPersistedBackground(value: unknown): value is PersistedBackground {
   if (!isObject(value) || typeof value.kind !== 'string') return false;
   if (value.kind === 'paper' || value.kind === 'sky') return true;
-  return value.kind === 'photo' && typeof value.dataUrl === 'string' && value.dataUrl.startsWith('data:image/');
+  if (value.kind !== 'photo' || typeof value.dataUrl !== 'string' || !value.dataUrl.startsWith('data:image/')) {
+    return false;
+  }
+  return value.fit === undefined || value.fit === 'fill' || value.fit === 'fit' || value.fit === 'stretch';
 }
 
 function isMusicDraftV2(value: unknown): value is MusicDraftV2 {
