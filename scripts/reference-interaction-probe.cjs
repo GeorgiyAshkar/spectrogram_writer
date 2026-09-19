@@ -383,6 +383,157 @@ try {
   await measureDrawVariant('freehand', 'freeBtn');
 
 
+
+
+  async function measureAudioVariant(label, toggleId) {
+    const audioPage = await browser.newPage();
+    await audioPage.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    await audioPage.evaluateOnNewDocument(() => {
+      window.__probeAudio = [];
+      window.__probeAudioSeq = 0;
+
+      const patchContext = (Ctor) => {
+        if (!Ctor?.prototype || Ctor.prototype.__parityProbePatched) return;
+        const proto = Ctor.prototype;
+        Object.defineProperty(proto, '__parityProbePatched', { value: true });
+
+        const originalCreateOscillator = proto.createOscillator;
+        if (typeof originalCreateOscillator === 'function') {
+          proto.createOscillator = function (...args) {
+            const oscillator = originalCreateOscillator.apply(this, args);
+            const id = ++window.__probeAudioSeq;
+            const frequency = oscillator.frequency;
+
+            const record = (kind, value, time) => {
+              window.__probeAudio.push({
+                kind,
+                id,
+                value: Number(value),
+                time: Number(time),
+                type: oscillator.type,
+              });
+            };
+
+            for (const method of ['setValueAtTime', 'linearRampToValueAtTime', 'exponentialRampToValueAtTime', 'setTargetAtTime']) {
+              const original = frequency?.[method];
+              if (typeof original !== 'function') continue;
+              try {
+                frequency[method] = function (value, time, ...rest) {
+                  record('frequency-' + method, value, time);
+                  return original.call(this, value, time, ...rest);
+                };
+              } catch {}
+            }
+
+            const originalStart = oscillator.start.bind(oscillator);
+            oscillator.start = function (when = 0, ...rest) {
+              record('osc-start', oscillator.frequency.value, when);
+              return originalStart(when, ...rest);
+            };
+            return oscillator;
+          };
+        }
+
+        const originalCreateBufferSource = proto.createBufferSource;
+        if (typeof originalCreateBufferSource === 'function') {
+          proto.createBufferSource = function (...args) {
+            const source = originalCreateBufferSource.apply(this, args);
+            const id = ++window.__probeAudioSeq;
+            const originalStart = source.start.bind(source);
+            source.start = function (when = 0, ...rest) {
+              window.__probeAudio.push({
+                kind: 'buffer-start',
+                id,
+                value: Number(source.playbackRate?.value ?? 1),
+                time: Number(when),
+              });
+              return originalStart(when, ...rest);
+            };
+            return source;
+          };
+        }
+      };
+
+      patchContext(window.AudioContext);
+      patchContext(window.webkitAudioContext);
+    });
+
+    try {
+      await audioPage.goto('https://playmusictheory.net/play', {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      if (toggleId) {
+        await audioPage.evaluate((id) => {
+          const el = document.getElementById(id);
+          if (el instanceof HTMLElement) el.click();
+        }, toggleId);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const canvas = await audioPage.$('#c');
+      const box = await canvas?.boundingBox();
+      if (!box) throw new Error('Audio probe canvas unavailable.');
+
+      const points = [];
+      const steps = 24;
+      for (let i = 0; i <= steps; i += 1) {
+        const t = i / steps;
+        points.push({
+          x: box.x + box.width * (0.12 + 0.76 * t),
+          y: box.y + box.height * (0.17 + 0.63 * t),
+        });
+      }
+
+      await audioPage.mouse.move(points[0].x, points[0].y);
+      await audioPage.mouse.down();
+      for (const point of points.slice(1)) {
+        await audioPage.mouse.move(point.x, point.y, { steps: 2 });
+      }
+      await audioPage.mouse.up();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+
+      const playVisible = await audioPage.$eval('#play', (el) => getComputedStyle(el).display !== 'none');
+      if (playVisible) {
+        await audioPage.click('#play');
+        await new Promise((resolve) => setTimeout(resolve, 1600));
+      }
+
+      const result = await audioPage.evaluate(() => {
+        const events = window.__probeAudio ?? [];
+        const frequencyEvents = events.filter((event) =>
+          String(event.kind).startsWith('frequency-') || event.kind === 'osc-start'
+        );
+        const values = frequencyEvents
+          .map((event) => Number(event.value))
+          .filter((value) => Number.isFinite(value) && value > 0);
+        const unique = [...new Set(values.map((value) => Math.round(value * 1000) / 1000))];
+        return {
+          totalEvents: events.length,
+          oscillatorEvents: frequencyEvents.length,
+          bufferStarts: events.filter((event) => event.kind === 'buffer-start').length,
+          uniqueFrequencies: unique.slice(0, 80),
+          firstEvents: events.slice(0, 60),
+          modeState: {
+            freestyle: document.getElementById('lockBtn')?.className ?? null,
+            freehand: document.getElementById('freeBtn')?.className ?? null,
+          },
+        };
+      });
+
+      console.log(JSON.stringify({ label: 'audio-variant', variant: label, toggleId, result }));
+    } finally {
+      await audioPage.close();
+    }
+  }
+
+  await measureAudioVariant('default', null);
+  await measureAudioVariant('freestyle', 'lockBtn');
+  await measureAudioVariant('freehand', 'freeBtn');
+
+
   await snapshot('final');
 } finally {
   await browser.close();
