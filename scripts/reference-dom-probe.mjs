@@ -96,3 +96,34 @@ for (const tagName of ['video', 'canvas']) {
     }));
   });
 }
+
+
+console.log('\n=== TARGET CONTEXTS ===');
+for (const target of [
+  'keySel',
+  'octDown',
+  'octUp',
+  'p3',
+  'shuffle',
+  'recolorBtn',
+  'gridBtn',
+  'lockBtn',
+  'freeBtn',
+  'bgfile',
+  'tileSky',
+  'tilePhoto',
+  'tilePlus',
+  'data-fit="fill"',
+  'data-fit="fit"',
+  'data-fit="stretch"',
+  '<video',
+  'camera',
+]) {
+  const index = html.toLowerCase().indexOf(target.toLowerCase());
+  if (index < 0) {
+    console.log(JSON.stringify({ target, found: false }));
+    continue;
+  }
+  const snippet = html.slice(Math.max(0, index - 420), Math.min(html.length, index + 820));
+  console.log(JSON.stringify({ target, found: true, context: stripTags(snippet) }));
+}
