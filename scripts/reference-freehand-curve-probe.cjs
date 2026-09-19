@@ -40,14 +40,16 @@ async function createProbePage(browser) {
   return page;
 }
 
-async function measureY(browser, yNorm) {
+async function measureY(browser, yNorm, freehand) {
   const page = await createProbePage(browser);
   try {
-    await page.evaluate(() => {
-      const free = document.getElementById('freeBtn');
-      if (free instanceof HTMLElement) free.click();
-    });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    if (freehand) {
+      await page.evaluate(() => {
+        const free = document.getElementById('freeBtn');
+        if (free instanceof HTMLElement) free.click();
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
     const canvas = await page.$('#c');
     const box = await canvas?.boundingBox();
@@ -110,6 +112,7 @@ async function measureY(browser, yNorm) {
 
     return {
       y: yNorm,
+      freehand,
       freehandClass: await page.$eval('#freeBtn', (el) => el.className),
       result,
     };
@@ -125,11 +128,17 @@ async function measureY(browser, yNorm) {
     args: ['--no-sandbox', '--disable-gpu', '--autoplay-policy=no-user-gesture-required'],
   });
   try {
-    const measurements = [];
-    for (const y of [0.1, 0.25, 0.5, 0.75, 0.9]) {
-      measurements.push(await measureY(browser, y));
+    const freehandMeasurements = [];
+    const discreteMeasurements = [];
+    for (const y of [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]) {
+      freehandMeasurements.push(await measureY(browser, y, true));
+      discreteMeasurements.push(await measureY(browser, y, false));
     }
-    console.log(JSON.stringify({ label: 'freehand-y-frequency-curve', measurements }));
+    console.log(JSON.stringify({
+      label: 'pitch-y-frequency-curve',
+      freehandMeasurements,
+      discreteMeasurements,
+    }));
   } finally {
     await browser.close();
   }
