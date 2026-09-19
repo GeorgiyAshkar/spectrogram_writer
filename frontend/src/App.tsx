@@ -29,6 +29,11 @@ import {
 import { prepareBackgroundPhoto } from './features/music/background/prepareBackgroundPhoto';
 import { captureCanvasThumbnail } from './features/music/gallery/captureCanvasThumbnail';
 import {
+  generateRandomDrawing,
+  recolorInstrumentStrokes,
+  restoreDefaultInstrumentColors,
+} from './features/music/drawing/drawingTools';
+import {
   fetchMusicPiece,
   listMusicGallery,
   publishMusicPiece,
@@ -675,51 +680,24 @@ export default function App() {
       return Math.random();
     };
 
-    const strokeCount = 5 + Math.floor(randomUnit() * 6);
-    const now = Date.now();
-    const next: Stroke[] = Array.from({ length: strokeCount }, (_, strokeIndex) => {
-      const pointCount = 3 + Math.floor(randomUnit() * 5);
-      const startX = randomUnit() * 0.16;
-      const span = 0.35 + randomUnit() * 0.62;
-      const swatch = PARITY_INSTRUMENT_SWATCHES[
-        Math.floor(randomUnit() * PARITY_INSTRUMENT_SWATCHES.length)
-      ] ?? PARITY_INSTRUMENT_SWATCHES[0];
-      const color = musicInstrumentColors[swatch.id] ?? swatch.color;
-
-      const points = Array.from({ length: pointCount }, (_, pointIndex) => ({
-        x: Math.min(1, startX + (span * pointIndex) / Math.max(1, pointCount - 1)),
-        y: 0.08 + randomUnit() * 0.84,
-        t: pointIndex * 80,
-      }));
-
-      return {
-        id: `shuffle-${now}-${strokeIndex}`,
-        layerId: `instrument:${swatch.id}`,
-        color,
-        createdAt: now + strokeIndex,
-        programMode: musicSettings.programMode,
-        points,
-      };
-    });
-
-    commitMusicStrokes(next);
+    commitMusicStrokes(
+      generateRandomDrawing(
+        { programMode: musicSettings.programMode },
+        musicInstrumentColors,
+        randomUnit,
+      ),
+    );
   }, [commitMusicStrokes, musicInstrumentColors, musicSettings.programMode]);
 
   const resetInstrumentColors = useCallback(() => {
-    const defaults = { ...DEFAULT_INSTRUMENT_COLORS };
-    setMusicInstrumentColors(defaults);
-    const selectedColor = defaults[activeMusicInstrumentId];
+    const restored = restoreDefaultInstrumentColors(musicStrokes);
+    setMusicInstrumentColors(restored.colors);
+    const selectedColor = restored.colors[activeMusicInstrumentId];
     setMusicColor(selectedColor);
     setMusicCustomColor(selectedColor);
 
-    const nextStrokes = musicStrokes.map((stroke) => {
-      if (!stroke.layerId.startsWith('instrument:')) return stroke;
-      const instrumentId = stroke.layerId.slice('instrument:'.length) as ParityInstrumentId;
-      const color = defaults[instrumentId];
-      return color && color !== stroke.color ? { ...stroke, color } : stroke;
-    });
-    if (nextStrokes.some((stroke, index) => stroke !== musicStrokes[index])) {
-      commitMusicStrokes(nextStrokes);
+    if (restored.strokes.some((stroke, index) => stroke !== musicStrokes[index])) {
+      commitMusicStrokes(restored.strokes);
     }
     setRecolorMode(false);
   }, [activeMusicInstrumentId, commitMusicStrokes, musicStrokes]);
@@ -1406,10 +1384,10 @@ export default function App() {
                     setMusicInstrumentColors((current) => ({ ...current, [targetId]: nextColor }));
                     setMusicCustomColor(nextColor);
                     if (activeMusicInstrumentId === targetId) setMusicColor(nextColor);
-                    const nextStrokes = musicStrokes.map((stroke) =>
-                      stroke.layerId === `instrument:${targetId}`
-                        ? { ...stroke, color: nextColor }
-                        : stroke,
+                    const nextStrokes = recolorInstrumentStrokes(
+                      musicStrokes,
+                      targetId,
+                      nextColor,
                     );
                     if (nextStrokes.some((stroke, index) => stroke !== musicStrokes[index])) {
                       commitMusicStrokes(nextStrokes);
