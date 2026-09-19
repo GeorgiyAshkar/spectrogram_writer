@@ -38,6 +38,7 @@ import {
 } from './services/musicGallery';
 import {
   DEFAULT_MUSIC_COLORS,
+  PARITY_INSTRUMENT_SWATCHES,
   PARITY_ACCOMPANIMENT_CONTROLS,
   PARITY_KEY_OPTIONS,
   PARITY_SCALE_OPTIONS,
@@ -1165,15 +1166,16 @@ export default function App() {
               </div>
 
               <div className="music-palette" aria-label="Палитра">
-                {DEFAULT_MUSIC_COLORS.map((color) => (
+                {PARITY_INSTRUMENT_SWATCHES.map((swatch) => (
                   <button
                     type="button"
-                    key={color}
-                    className={musicColor === color ? 'music-color is-active' : 'music-color'}
-                    style={{ background: color }}
-                    aria-label={`Цвет ${color}`}
-                    aria-pressed={musicColor === color}
-                    onClick={() => setMusicColor(color)}
+                    key={swatch.id}
+                    className={musicColor === swatch.color ? 'music-color is-active' : 'music-color'}
+                    style={{ background: swatch.color }}
+                    title={swatch.label}
+                    aria-label={swatch.label}
+                    aria-pressed={musicColor === swatch.color}
+                    onClick={() => setMusicColor(swatch.color)}
                   />
                 ))}
                 <label
