@@ -5,8 +5,9 @@ import { resolveVoiceProfile } from './voiceProfiles';
 type ScheduledSource = OscillatorNode;
 
 type LiveVoice = {
-  oscillator: OscillatorNode;
+  oscillators: OscillatorNode[];
   gain: GainNode;
+  releaseSeconds: number;
 };
 
 const LOOKAHEAD_MS = 25;
@@ -124,22 +125,40 @@ export class RealtimeMusicTransport {
 
     this.noteOff(midi, voiceId);
 
-    const oscillator = context.createOscillator();
     const gain = context.createGain();
     const voice = resolveVoiceProfile(layerId);
-    oscillator.type = voice.waveform;
-    oscillator.frequency.value = midiToFrequency(midi, this.settings.tuningCents);
+    const frequency = midiToFrequency(midi, this.settings.tuningCents);
 
     const now = context.currentTime;
     const peakGain = Math.max(0.0002, Math.min(1, velocity) * 0.28 * voice.gain);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(
+      peakGain,
+      now + Math.max(0.002, voice.attackSeconds),
+    );
 
-    oscillator.connect(gain);
+    const normalization = Math.max(
+      1,
+      voice.partials.reduce((sum, partial) => sum + Math.abs(partial.gain), 0),
+    );
+    const oscillators = voice.partials.map((partial) => {
+      const oscillator = context.createOscillator();
+      const partialGain = context.createGain();
+      oscillator.type = voice.waveform;
+      oscillator.frequency.value = frequency * partial.ratio;
+      partialGain.gain.value = partial.gain / normalization;
+      oscillator.connect(partialGain);
+      partialGain.connect(gain);
+      oscillator.start(now);
+      return oscillator;
+    });
+
     gain.connect(this.masterGain);
-    oscillator.start(now);
-
-    this.liveVoices.set(voiceId, { oscillator, gain });
+    this.liveVoices.set(voiceId, {
+      oscillators,
+      gain,
+      releaseSeconds: voice.releaseSeconds,
+    });
   }
 
   noteOff(_midi: number, voiceId = String(_midi)): void {
@@ -147,13 +166,20 @@ export class RealtimeMusicTransport {
     if (!voice || !this.context) return;
 
     const now = this.context.currentTime;
-    const stopTime = now + 0.05;
+    const releaseSeconds = Math.max(0.01, voice.releaseSeconds);
+    const stopTime = now + releaseSeconds;
     voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setTargetAtTime(0.0001, now, 0.012);
-    try {
-      voice.oscillator.stop(stopTime);
-    } catch {
-      // Voice may already be stopped.
+    voice.gain.gain.setTargetAtTime(
+      0.0001,
+      now,
+      Math.max(0.004, releaseSeconds / 3),
+    );
+    for (const oscillator of voice.oscillators) {
+      try {
+        oscillator.stop(stopTime);
+      } catch {
+        // Voice may already be stopped.
+      }
     }
     this.liveVoices.delete(voiceId);
   }
@@ -257,39 +283,61 @@ export class RealtimeMusicTransport {
     const endTime = startTime + durationSeconds;
     if (endTime <= this.context.currentTime) return;
 
-    const oscillator = this.context.createOscillator();
     const gain = this.context.createGain();
     const voice = resolveVoiceProfile(event.layerId);
-    oscillator.type = voice.waveform;
 
     const startFrequency = midiToFrequency(event.midi, this.settings.tuningCents);
     const endFrequency = midiToFrequency(event.endMidi ?? event.midi, this.settings.tuningCents);
 
     const velocity = Math.min(1, Math.max(0, event.velocity));
     const peakGain = 0.26 * velocity * voice.gain;
+    const sustainGain = Math.max(
+      0.0002,
+      peakGain * Math.min(1, Math.max(0, voice.sustain)),
+    );
     const safeStart = Math.max(startTime, this.context.currentTime + 0.001);
-    const attackEnd = Math.min(endTime, safeStart + 0.012);
-    const releaseStart = Math.max(attackEnd, endTime - 0.045);
-
-    oscillator.frequency.setValueAtTime(startFrequency, safeStart);
-    if (Math.abs(endFrequency - startFrequency) > 1e-9) {
-      oscillator.frequency.exponentialRampToValueAtTime(
-        Math.max(0.01, endFrequency),
-        endTime,
-      );
-    }
+    const attackEnd = Math.min(
+      endTime,
+      safeStart + Math.max(0.002, voice.attackSeconds),
+    );
+    const releaseStart = Math.max(
+      attackEnd,
+      endTime - Math.max(0.005, voice.releaseSeconds),
+    );
 
     gain.gain.setValueAtTime(0.0001, safeStart);
     gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peakGain), attackEnd);
-    gain.gain.setValueAtTime(Math.max(0.0002, peakGain), releaseStart);
+    gain.gain.linearRampToValueAtTime(sustainGain, releaseStart);
     gain.gain.exponentialRampToValueAtTime(0.0001, endTime);
 
-    oscillator.connect(gain);
-    gain.connect(this.masterGain);
-    oscillator.start(safeStart);
-    oscillator.stop(endTime + 0.01);
+    const normalization = Math.max(
+      1,
+      voice.partials.reduce((sum, partial) => sum + Math.abs(partial.gain), 0),
+    );
 
-    this.trackSource(oscillator);
+    for (const partial of voice.partials) {
+      const oscillator = this.context.createOscillator();
+      const partialGain = this.context.createGain();
+      oscillator.type = voice.waveform;
+      oscillator.frequency.setValueAtTime(
+        startFrequency * partial.ratio,
+        safeStart,
+      );
+      if (Math.abs(endFrequency - startFrequency) > 1e-9) {
+        oscillator.frequency.exponentialRampToValueAtTime(
+          Math.max(0.01, endFrequency * partial.ratio),
+          endTime,
+        );
+      }
+      partialGain.gain.value = partial.gain / normalization;
+      oscillator.connect(partialGain);
+      partialGain.connect(gain);
+      oscillator.start(safeStart);
+      oscillator.stop(endTime + 0.01);
+      this.trackSource(oscillator);
+    }
+
+    gain.connect(this.masterGain);
   }
 
   private scheduleClick(absoluteBeat: number): void {
@@ -338,10 +386,12 @@ export class RealtimeMusicTransport {
 
   private stopLiveVoices(): void {
     for (const [voiceId, voice] of this.liveVoices) {
-      try {
-        voice.oscillator.stop();
-      } catch {
-        // Voice may already be stopped.
+      for (const oscillator of voice.oscillators) {
+        try {
+          oscillator.stop();
+        } catch {
+          // Voice may already be stopped.
+        }
       }
       this.liveVoices.delete(voiceId);
     }
