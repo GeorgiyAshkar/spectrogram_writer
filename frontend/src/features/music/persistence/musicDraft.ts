@@ -77,14 +77,17 @@ function migrateV1(draft: MusicDraftV1): MusicDraftV2 {
   };
 }
 
+export function normalizeMusicDraft(value: unknown): MusicDraftV2 | null {
+  if (isMusicDraftV2(value)) return value;
+  if (isMusicDraftV1(value)) return migrateV1(value);
+  return null;
+}
+
 export function loadMusicDraft(): MusicDraftV2 | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (isMusicDraftV2(parsed)) return parsed;
-    if (isMusicDraftV1(parsed)) return migrateV1(parsed);
-    return null;
+    return normalizeMusicDraft(JSON.parse(raw));
   } catch {
     return null;
   }
