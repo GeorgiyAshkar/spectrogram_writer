@@ -687,6 +687,70 @@ try {
   await measureBacktrackVariant('freestyle', true);
 
 
+
+
+  const freestyleControlState = async () => page.evaluate(() => {
+    const inspect = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const style = getComputedStyle(el);
+      return {
+        id,
+        tag: el.tagName,
+        className: el.className,
+        value: 'value' in el ? el.value : undefined,
+        disabled: 'disabled' in el ? Boolean(el.disabled) : undefined,
+        readOnly: 'readOnly' in el ? Boolean(el.readOnly) : undefined,
+        opacity: style.opacity,
+        pointerEvents: style.pointerEvents,
+        display: style.display,
+        visibility: style.visibility,
+        ariaDisabled: el.getAttribute('aria-disabled'),
+      };
+    };
+
+    return {
+      freestyle: inspect('lockBtn'),
+      freehand: inspect('freeBtn'),
+      key: inspect('keySel'),
+      scale: inspect('scaleSel'),
+      range: inspect('rangeSel'),
+      octaveDown: inspect('octDown'),
+      octaveUp: inspect('octUp'),
+      octaveCanvas: inspect('octave'),
+      quantize: inspect('beatSel'),
+      swing: inspect('swingSel'),
+      tempo: inspect('speed'),
+      tune: inspect('tuneIn'),
+      piano: inspect('keys'),
+      keyButton: inspect('keyBtn'),
+      program1: inspect('p1'),
+      program2: inspect('p2'),
+      bass: inspect('b1'),
+      drums: inspect('b2'),
+      arpeggio: inspect('b3'),
+    };
+  });
+
+  await page.goto('https://playmusictheory.net/play', {
+    waitUntil: 'networkidle2',
+    timeout: 30000,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const freestyleBefore = await freestyleControlState();
+  await page.evaluate(() => {
+    const el = document.getElementById('lockBtn');
+    if (el instanceof HTMLElement) el.click();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const freestyleAfter = await freestyleControlState();
+  console.log(JSON.stringify({
+    label: 'freestyle-control-state',
+    before: freestyleBefore,
+    after: freestyleAfter,
+  }));
+
+
   await snapshot('final');
 } finally {
   await browser.close();
