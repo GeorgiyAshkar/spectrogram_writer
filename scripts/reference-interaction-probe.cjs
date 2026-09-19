@@ -144,11 +144,11 @@ try {
   const gridAfter = await page.$eval('#gridBtn', (el) => el.className);
   console.log(JSON.stringify({ label: 'grid-toggle', before: gridBefore, after: gridAfter }));
 
-  const colorsBefore = await page.$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
+  const colorsBefore = await page.$$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
   const canvasBeforeShuffle = await canvasDigest();
   await domClick('#shuffle');
   await new Promise((resolve) => setTimeout(resolve, 180));
-  const colorsAfter = await page.$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
+  const colorsAfter = await page.$$eval('.swatch', (els) => els.map((el) => getComputedStyle(el).backgroundColor));
   const canvasAfterShuffle = await canvasDigest();
   console.log(JSON.stringify({
     label: 'shuffle',
