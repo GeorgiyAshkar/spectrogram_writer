@@ -18,6 +18,7 @@ type AudioPlayerProps = {
   onToggleMusicPlayback: () => Promise<void>;
   onSeekMusic: (progress: number) => Promise<void>;
   onDownloadMusicWav: () => void;
+  onDownloadMusicMidi: () => void;
 };
 
 const WAVE_SAMPLES = 220;
@@ -40,6 +41,7 @@ export function AudioPlayer({
   onToggleMusicPlayback,
   onSeekMusic,
   onDownloadMusicWav,
+  onDownloadMusicMidi,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -229,6 +231,17 @@ export function AudioPlayer({
       >
         Скачать WAV
       </button>
+
+      {musicModeEnabled ? (
+        <button
+          type="button"
+          className="button-secondary draw-panel__clear-btn header-player__download"
+          onClick={onDownloadMusicMidi}
+          disabled={!musicHasExportContent}
+        >
+          Скачать MIDI
+        </button>
+      ) : null}
 
 
       {!musicModeEnabled ? (
