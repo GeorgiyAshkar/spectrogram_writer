@@ -13,6 +13,7 @@ type Props = {
   activeColor: string;
   background: MusicCanvasBackground;
   playheadProgress?: number;
+  onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
   onChange: (strokes: Stroke[]) => void;
 };
 
@@ -53,7 +54,15 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.restore();
 }
 
-export function MusicCanvas({ settings, strokes, activeColor, background, playheadProgress = 0, onChange }: Props) {
+export function MusicCanvas({
+  settings,
+  strokes,
+  activeColor,
+  background,
+  playheadProgress = 0,
+  onCanvasReady,
+  onChange,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
@@ -203,7 +212,10 @@ export function MusicCanvas({ settings, strokes, activeColor, background, playhe
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={(node) => {
+        canvasRef.current = node;
+        onCanvasReady?.(node);
+      }}
       width={WIDTH}
       height={HEIGHT}
       className="music-draw-canvas"
