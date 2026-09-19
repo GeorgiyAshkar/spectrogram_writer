@@ -171,6 +171,7 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] Freehand maps Y to continuous fractional pitch
 - [x] Freehand realtime glissando ramps
 - [x] Freehand WAV glissando ramps
+- [x] Freehand help text
 - [x] old drafts default Freehand to Off
 - [x] Freehand regression tests
 - [ ] exact reference Freehand Y→Hz curve — clean-room linear range mapping currently used
