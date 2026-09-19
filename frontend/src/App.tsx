@@ -22,7 +22,6 @@ import { buildAccompanimentEvents } from './features/music/audio/accompaniment';
 import { renderNoteEventsToMidiUrl } from './features/music/export/renderMidi';
 import { useWebMidiInput } from './features/music/midi/useWebMidiInput';
 import {
-  clearMusicDraft,
   loadMusicDraft,
   saveMusicDraft,
 } from './features/music/persistence/musicDraft';
@@ -774,21 +773,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [activePanel, redoMusic, undoMusic]);
 
-  const clearMusic = () => {
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
-    mediaRecorderRef.current = null;
-    realtimeMusic.stop();
-    clearMusicDraft();
-    setMusicStrokes([]);
-    setMusicUndoHistory([]);
-    setMusicRedoHistory([]);
-    setVirtualKeyboardEvents([]);
-    setMidiRecordedEvents([]);
-    pendingMidiNotesRef.current.clear();
-    pendingVirtualNotesRef.current.clear();
-  };
-
   const chooseMusicPhoto = async (file: File | null) => {
     if (!file) return;
     try {
@@ -1517,9 +1501,6 @@ export default function App() {
                   }}
                 >
                   gallery
-                </button>
-                <button type="button" className="button-secondary" onClick={clearMusic} disabled={activeMusicEvents.length === 0}>
-                  Очистить
                 </button>
               </div>
 
