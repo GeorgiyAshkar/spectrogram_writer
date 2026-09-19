@@ -26,6 +26,7 @@ import {
 import {
   DEFAULT_INSTRUMENT_COLORS,
   PARITY_INSTRUMENT_SWATCHES,
+  PARITY_RECOLOR_PRESETS,
 } from '../src/features/music/parityConfig';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -139,6 +140,14 @@ function testAccompaniment() {
 
   const arpeggio = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, arpeggioEnabled: true });
   assert(arpeggio.length > 0 && arpeggio.every((event) => event.layerId === 'accompaniment:arpeggio'), 'Arpeggio control must create arpeggio events');
+}
+
+function testReferencePalette() {
+  assert(PARITY_INSTRUMENT_SWATCHES.length === 9, 'Reference must expose nine named instrument swatches');
+  assert(PARITY_RECOLOR_PRESETS.length === 27, 'Reference recolor picker must expose 27 measured preset colors');
+  assert(new Set(PARITY_RECOLOR_PRESETS).size === 27, 'Reference recolor preset colors must be unique');
+  assert(PARITY_INSTRUMENT_SWATCHES[0].id === 'keys', 'Keys must be the default first instrument');
+  assert(PARITY_INSTRUMENT_SWATCHES[8].id === '8bit', '8bit must remain the ninth instrument');
 }
 
 function testDrawingTools() {
@@ -271,6 +280,7 @@ testRhythm();
 testStrokeCompiler();
 testVoiceProfiles();
 testAccompaniment();
+testReferencePalette();
 testDrawingTools();
 testDraftMigration();
 testExports();
