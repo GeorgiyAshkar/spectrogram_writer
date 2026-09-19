@@ -15,7 +15,7 @@ import {
   type NoteEvent,
   type Stroke,
 } from './features/music/model';
-import { MusicCanvas } from './features/music/canvas/MusicCanvas';
+import { MusicCanvas, type MusicCanvasBackground } from './features/music/canvas/MusicCanvas';
 import { renderNoteEventsToWavUrl } from './features/music/audio/renderWav';
 import { useRealtimeMusicTransport } from './features/music/audio/useRealtimeMusicTransport';
 import {
@@ -28,6 +28,7 @@ import {
   PROVISIONAL_RANGE_OPTIONS,
   PROVISIONAL_RHYTHM_STEP_BEATS,
   PROVISIONAL_SWING_OPTIONS,
+  PROVISIONAL_TUNE_CENTS,
   RHYTHM_PRESETS,
 } from './features/music/parityConfig';
 import './styles/app.css';
@@ -56,6 +57,9 @@ export default function App() {
   const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
+  const [musicCustomColor, setMusicCustomColor] = useState<string>('#111827');
+  const [musicBackgroundKind, setMusicBackgroundKind] = useState<'paper' | 'sky' | 'photo'>('paper');
+  const [musicPhotoUrl, setMusicPhotoUrl] = useState<string | null>(null);
   const tapTimesRef = useRef<number[]>([]);
 
   const handlePanelChange = (next: 'text' | 'upload' | 'draw' | 'music' | 'info') => {
@@ -109,10 +113,24 @@ export default function App() {
   );
 
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
+  const musicCanvasBackground = useMemo<MusicCanvasBackground>(
+    () =>
+      musicBackgroundKind === 'photo'
+        ? { kind: 'photo', url: musicPhotoUrl }
+        : { kind: musicBackgroundKind },
+    [musicBackgroundKind, musicPhotoUrl],
+  );
 
   useEffect(() => {
     if (activePanel !== 'music') realtimeMusic.stop();
   }, [activePanel, realtimeMusic.stop]);
+
+  useEffect(
+    () => () => {
+      if (musicPhotoUrl) URL.revokeObjectURL(musicPhotoUrl);
+    },
+    [musicPhotoUrl],
+  );
 
   const downloadMusicWav = () => {
     if (!activeMusicEvents.length) return;
@@ -143,6 +161,12 @@ export default function App() {
     realtimeMusic.stop();
     setMusicStrokes([]);
     setMusicSequence([]);
+  };
+
+  const chooseMusicPhoto = (file: File | null) => {
+    if (!file) return;
+    setMusicPhotoUrl(URL.createObjectURL(file));
+    setMusicBackgroundKind('photo');
   };
 
   const updateMusicSetting = <K extends keyof MusicSettings>(key: K, value: MusicSettings[K]) => {
@@ -469,6 +493,45 @@ export default function App() {
                     {musicSettings.metronomeEnabled ? 'On' : 'Off'}
                   </button>
                 </div>
+                <label className="music-control">
+                  <span> tune </span>
+                  <input
+                    type="number"
+                    min={PROVISIONAL_TUNE_CENTS.min}
+                    max={PROVISIONAL_TUNE_CENTS.max}
+                    step={PROVISIONAL_TUNE_CENTS.step}
+                    value={musicSettings.tuningCents}
+                    onChange={(e) =>
+                      updateMusicSetting(
+                        'tuningCents',
+                        Math.min(
+                          PROVISIONAL_TUNE_CENTS.max,
+                          Math.max(PROVISIONAL_TUNE_CENTS.min, Number(e.target.value)),
+                        ),
+                      )
+                    }
+                  />
+                </label>
+                <label className="music-control">
+                  <span>Paper</span>
+                  <select
+                    value={musicBackgroundKind}
+                    onChange={(e) => setMusicBackgroundKind(e.target.value as 'paper' | 'sky' | 'photo')}
+                  >
+                    <option value="paper">Paper</option>
+                    <option value="sky">Sky</option>
+                    <option value="photo" disabled={!musicPhotoUrl}>Photo</option>
+                  </select>
+                </label>
+                <label className="music-control music-photo-picker">
+                  <span>Photo</span>
+                  <span className="button-secondary music-photo-picker__button">Выбрать</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => chooseMusicPhoto(e.target.files?.[0] ?? null)}
+                  />
+                </label>
               </div>
 
               <div className="music-palette" aria-label="Палитра">
@@ -483,6 +546,21 @@ export default function App() {
                     onClick={() => setMusicColor(color)}
                   />
                 ))}
+                <label
+                  className={musicColor === musicCustomColor ? 'music-color-add is-active' : 'music-color-add'}
+                  title="Свой цвет"
+                  aria-label="Добавить свой цвет"
+                >
+                  <span>+</span>
+                  <input
+                    type="color"
+                    value={musicCustomColor}
+                    onChange={(e) => {
+                      setMusicCustomColor(e.target.value);
+                      setMusicColor(e.target.value);
+                    }}
+                  />
+                </label>
                 <button type="button" className="button-secondary" onClick={clearMusic} disabled={musicStrokes.length === 0 && musicSequence.length === 0}>
                   Очистить
                 </button>
@@ -492,6 +570,7 @@ export default function App() {
                 settings={musicSettings}
                 strokes={musicStrokes}
                 activeColor={musicColor}
+                background={musicCanvasBackground}
                 playheadProgress={realtimeMusic.progress}
                 onChange={setMusicStrokes}
               />
