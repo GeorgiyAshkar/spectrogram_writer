@@ -23,6 +23,14 @@ import {
 import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
 import { buildAccompanimentEvents } from '../src/features/music/audio/accompaniment';
 import {
+  PIXEL_COLUMNS,
+  pixelCellSide,
+  pixelColumnIndex,
+  pixelRowCenter,
+  pixelRowIndex,
+  snapPixelPoint,
+} from '../src/features/music/canvas/pixelGrid';
+import {
   generateRandomDrawing,
   recolorInstrumentStrokes,
   restoreDefaultInstrumentColors,
@@ -217,6 +225,28 @@ function testReferencePalette() {
   assert(PARITY_INSTRUMENT_SWATCHES[8].id === '8bit', '8bit must remain the ninth instrument');
 }
 
+function testMeasuredPixelGrid() {
+  assert(PIXEL_COLUMNS === 48, 'Measured Pixel mode must use 48 time columns');
+  approx(pixelCellSide(1216), 24, 1e-9, 'Reference-width Pixel square side');
+
+  assert(pixelColumnIndex(0.24) === 11, 'x=0.24 must land in measured Pixel column 11');
+  const snapped = snapPixelPoint(
+    { x: 0.24, y: 0.28, t: 0 },
+    15,
+    1216,
+    724,
+  );
+  approx(snapped.x, 11.5 / 48, 1e-9, 'Pixel X snaps to column center');
+  assert(pixelRowIndex(0.28, 15, 1216, 724) === 4, 'y=0.28 must land on measured note row 4');
+  approx(pixelRowCenter(4, 15, 1216, 724) * 724, 212, 1e-9, 'Measured note-row center');
+
+  assert(pixelRowIndex(0.53, 15, 1216, 724) === 7, 'y=0.53 must land on measured note row 7');
+  approx(pixelRowCenter(7, 15, 1216, 724) * 724, 362, 1e-9, 'Middle measured note-row center');
+
+  assert(pixelRowIndex(0.72, 15, 1216, 724) === 10, 'y=0.72 must land on measured note row 10');
+  approx(pixelRowCenter(10, 15, 1216, 724) * 724, 512, 1e-9, 'Lower measured note-row center');
+}
+
 function testDrawingTools() {
   let index = 0;
   const sequence = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -358,6 +388,7 @@ testFreehandCompiler();
 testVoiceProfiles();
 testAccompaniment();
 testReferencePalette();
+testMeasuredPixelGrid();
 testDrawingTools();
 testDraftMigration();
 testExports();
