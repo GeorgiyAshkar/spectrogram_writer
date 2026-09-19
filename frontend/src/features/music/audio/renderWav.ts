@@ -1,6 +1,6 @@
 import { midiToFrequency } from '../model/theory';
 import type { MusicSettings, NoteEvent } from '../model/types';
-import { resolveVoiceProfile, sampleWaveform } from './voiceProfiles';
+import { envelopeAt, resolveVoiceProfile, sampleVoice } from './voiceProfiles';
 
 function writeAscii(view: DataView, offset: number, value: string) {
   for (let i = 0; i < value.length; i += 1) {
