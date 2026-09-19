@@ -14,7 +14,13 @@ export const DEFAULT_VOICE_PROFILE: VoiceProfile = {
   gain: 1,
 };
 
-export const PARITY_LAYER_VOICE_PROFILES: Readonly<Record<string, VoiceProfile>> = {};
+export const PARITY_LAYER_VOICE_PROFILES: Readonly<Record<string, VoiceProfile>> = {
+  'accompaniment:bass': { waveform: 'triangle', gain: 0.86 },
+  'accompaniment:drums:kick': { waveform: 'sine', gain: 1 },
+  'accompaniment:drums:snare': { waveform: 'square', gain: 0.28 },
+  'accompaniment:drums:hat': { waveform: 'square', gain: 0.12 },
+  'accompaniment:arpeggio': { waveform: 'triangle', gain: 0.62 },
+};
 
 export function resolveVoiceProfile(layerId: string): VoiceProfile {
   return PARITY_LAYER_VOICE_PROFILES[layerId] ?? DEFAULT_VOICE_PROFILE;
