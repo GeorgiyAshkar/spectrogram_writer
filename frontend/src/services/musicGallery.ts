@@ -4,7 +4,7 @@ import { API_BASE } from './api';
 export type ShareableBackground =
   | { kind: 'paper' }
   | { kind: 'sky' }
-  | { kind: 'photo'; dataUrl: string };
+  | { kind: 'photo'; dataUrl: string; fit?: 'fill' | 'fit' | 'stretch' };
 
 export type MusicShareProjectV1 = {
   schemaVersion: 1;
