@@ -1,5 +1,6 @@
 import { midiToFrequency } from '../model/theory';
 import type { MusicSettings, NoteEvent } from '../model/types';
+import { resolveVoiceProfile } from './voiceProfiles';
 
 type ScheduledSource = OscillatorNode;
 
@@ -252,11 +253,12 @@ export class RealtimeMusicTransport {
 
     const oscillator = this.context.createOscillator();
     const gain = this.context.createGain();
-    oscillator.type = 'sine';
+    const voice = resolveVoiceProfile(event.layerId);
+    oscillator.type = voice.waveform;
     oscillator.frequency.value = midiToFrequency(event.midi, this.settings.tuningCents);
 
     const velocity = Math.min(1, Math.max(0, event.velocity));
-    const peakGain = 0.26 * velocity;
+    const peakGain = 0.26 * velocity * voice.gain;
     const safeStart = Math.max(startTime, this.context.currentTime + 0.001);
     const attackEnd = Math.min(endTime, safeStart + 0.012);
     const releaseStart = Math.max(attackEnd, endTime - 0.045);
