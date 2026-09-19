@@ -46,18 +46,19 @@ export const PARITY_ACCOMPANIMENT_CONTROLS = [
   { setting: 'arpeggioEnabled', label: '•••', tooltip: 'Arpeggio' },
 ] as const;
 
-export const DEFAULT_MUSIC_COLORS = [
-  '#171717',
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#3b82f6',
-  '#6366f1',
-  '#a855f7',
-  '#ec4899',
+export const PARITY_INSTRUMENT_SWATCHES = [
+  { id: 'keys', label: 'keys', color: '#1d9e75' },
+  { id: 'pluck', label: 'pluck', color: '#d85a30' },
+  { id: 'bell', label: 'bell', color: '#7f77dd' },
+  { id: 'marimba', label: 'marimba', color: '#ef9f27' },
+  { id: 'flute', label: 'flute', color: '#3e5ec6' },
+  { id: 'strings', label: 'strings', color: '#de7bae' },
+  { id: 'chime', label: 'chime', color: '#85bee8' },
+  { id: 'bass', label: 'bass', color: '#33312b' },
+  { id: '8bit', label: '8bit', color: '#f4be82' },
 ] as const;
+
+export const DEFAULT_MUSIC_COLORS = PARITY_INSTRUMENT_SWATCHES.map((swatch) => swatch.color);
 
 
 export const PARITY_QUANTIZE_OPTIONS = [
