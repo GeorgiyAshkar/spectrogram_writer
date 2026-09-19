@@ -8,7 +8,7 @@
 
 The music-mode architecture is stable. Exact reference values are no longer provisional for Key, Scale, Range, Tune, Tempo, Quantize, Swing, Program 1/2, accompaniment identities, instrument names/colors, Grid default, photo-fit modes, and share field limits.
 
-Remaining parity work is concentrated in behaviors that cannot yet be inferred safely from public labels alone: Freestyle, Freehand, exact synthesis recipes, octave clamp, and a few export/take details.
+Remaining parity work is concentrated in behaviors that cannot yet be inferred safely from public observation alone: Freestyle, exact original synthesis recipes, octave entitlement/clamp behavior, and a few export details.
 
 ## Implemented
 
@@ -90,6 +90,9 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] active voice cleanup
 - [x] configurable voice profiles
 - [x] named instrument layers route to distinct clean-room voice profiles
+- [x] per-instrument clean-room attack/release/sustain envelopes
+- [x] per-instrument harmonic partial profiles
+- [x] realtime and WAV share the same voice-profile model
 - [ ] exact original synthesis recipes
 
 ### Virtual keyboard / MIDI input
@@ -232,5 +235,5 @@ Measured facts are recorded in:
 4. compare named instrument audio behavior and refine configurable voice profiles;
 5. verify metronome export policy;
 6. verify MIDI structure, especially Freehand pitch-bend behavior;
-7. browser/mobile smoke testing;
+7. keep production browser smoke green across desktop/mobile-sized viewports;
 8. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
