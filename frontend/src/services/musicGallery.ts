@@ -35,6 +35,7 @@ export type GallerySummary = {
   title: string;
   author: string;
   created_at: string;
+  thumbnail?: string | null;
 };
 
 export type GalleryDetail = GallerySummary & {
@@ -54,11 +55,12 @@ export async function publishMusicPiece(
   title: string,
   author: string,
   project: MusicShareProjectV2,
+  thumbnail?: string | null,
 ): Promise<GallerySummary> {
   const response = await fetch(`${API_BASE}/music/gallery`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, author, project }),
+    body: JSON.stringify({ title, author, project, thumbnail: thumbnail ?? null }),
   });
 
   if (!response.ok) throw new Error(await readError(response));
