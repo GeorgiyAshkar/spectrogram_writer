@@ -58,16 +58,17 @@ export function renderNoteEventsToMidiBlob(
     const endTick = startTick + durationTicks;
     const midi = Math.min(127, Math.max(0, Math.round(event.midi)));
     const velocity = Math.min(127, Math.max(1, Math.round(event.velocity * 127)));
+    const channel = event.layerId.startsWith('accompaniment:drums') ? 9 : 0;
 
     messages.push({
       tick: startTick,
       priority: 2,
-      bytes: [0x90, midi, velocity],
+      bytes: [0x90 | channel, midi, velocity],
     });
     messages.push({
       tick: endTick,
       priority: 1,
-      bytes: [0x80, midi, 0],
+      bytes: [0x80 | channel, midi, 0],
     });
   }
 
