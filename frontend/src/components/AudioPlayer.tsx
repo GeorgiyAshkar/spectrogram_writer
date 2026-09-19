@@ -17,8 +17,6 @@ type AudioPlayerProps = {
   onUndoMusic: () => void;
   onToggleMusicPlayback: () => Promise<void>;
   onSeekMusic: (progress: number) => Promise<void>;
-  onDownloadMusicWav: () => void;
-  onDownloadMusicMidi: () => void;
 };
 
 const WAVE_SAMPLES = 220;
@@ -40,8 +38,6 @@ export function AudioPlayer({
   onUndoMusic,
   onToggleMusicPlayback,
   onSeekMusic,
-  onDownloadMusicWav,
-  onDownloadMusicMidi,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -167,10 +163,6 @@ export function AudioPlayer({
   };
 
   const downloadWav = () => {
-    if (musicModeEnabled) {
-      onDownloadMusicWav();
-      return;
-    }
     if (!audioUrl) return;
     const baseName = buildTimestampFileName();
     const link = document.createElement('a');
@@ -223,23 +215,14 @@ export function AudioPlayer({
         </div>
       </div>
 
-      <button
-        type="button"
-        className="button-secondary draw-panel__clear-btn header-player__download"
-        onClick={downloadWav}
-        disabled={isPreparingAudio || (musicModeEnabled ? !musicHasExportContent : !audioUrl)}
-      >
-        Скачать WAV
-      </button>
-
-      {musicModeEnabled ? (
+      {!musicModeEnabled ? (
         <button
           type="button"
           className="button-secondary draw-panel__clear-btn header-player__download"
-          onClick={onDownloadMusicMidi}
-          disabled={!musicHasExportContent}
+          onClick={downloadWav}
+          disabled={isPreparingAudio || !audioUrl}
         >
-          Скачать MIDI
+          Скачать WAV
         </button>
       ) : null}
 
