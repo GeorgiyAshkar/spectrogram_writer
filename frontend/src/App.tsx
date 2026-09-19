@@ -71,6 +71,10 @@ export default function App() {
   const [musicPhotoUrl, setMusicPhotoUrl] = useState<string | null>(null);
   const [musicDraftHydrated, setMusicDraftHydrated] = useState(false);
   const [musicDraftStatus, setMusicDraftStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [isTakeRecording, setIsTakeRecording] = useState(false);
+  const [takeUrl, setTakeUrl] = useState<string | null>(null);
+  const [takeMimeType, setTakeMimeType] = useState('video/webm');
+  const [takeError, setTakeError] = useState<string | null>(null);
   const tapTimesRef = useRef<number[]>([]);
   const pendingMidiNotesRef = useRef(
     new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
@@ -79,6 +83,10 @@ export default function App() {
     new Map<string, { midi: number; startBeat: number; velocity: number; id: string }>(),
   );
   const realtimePlayingRef = useRef(false);
+  const musicCanvasElementRef = useRef<HTMLCanvasElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const takeChunksRef = useRef<Blob[]>([]);
+  const takeVideoTracksRef = useRef<MediaStreamTrack[]>([]);
 
   useEffect(() => {
     const draft = loadMusicDraft();
@@ -283,6 +291,13 @@ export default function App() {
     [musicPhotoUrl],
   );
 
+  useEffect(
+    () => () => {
+      if (takeUrl) URL.revokeObjectURL(takeUrl);
+    },
+    [takeUrl],
+  );
+
   const downloadMusicWav = () => {
     if (!activeMusicEvents.length) return;
     const url = renderNoteEventsToWavUrl(activeMusicEvents, musicPlaybackSettings);
@@ -311,6 +326,93 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const startTakeRecording = async () => {
+    const canvas = musicCanvasElementRef.current;
+    if (!canvas) {
+      setTakeError('Музыкальный холст недоступен.');
+      return;
+    }
+    if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') {
+      setTakeError('Запись take не поддерживается этим браузером.');
+      return;
+    }
+
+    try {
+      setTakeError(null);
+      if (takeUrl) {
+        URL.revokeObjectURL(takeUrl);
+        setTakeUrl(null);
+      }
+
+      const videoStream = canvas.captureStream(30);
+      const audioStream = await realtimeMusic.getCaptureStream();
+      const combined = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...audioStream.getAudioTracks(),
+      ]);
+
+      const candidates = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4',
+      ];
+      const mimeType =
+        candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';
+      const recorder = mimeType
+        ? new MediaRecorder(combined, { mimeType })
+        : new MediaRecorder(combined);
+
+      takeChunksRef.current = [];
+      takeVideoTracksRef.current = videoStream.getVideoTracks();
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) takeChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        setTakeError('Не удалось записать take.');
+      };
+      recorder.onstop = () => {
+        const finalType = recorder.mimeType || mimeType || 'video/webm';
+        const blob = new Blob(takeChunksRef.current, { type: finalType });
+        setTakeMimeType(finalType);
+        setTakeUrl(URL.createObjectURL(blob));
+        setIsTakeRecording(false);
+        takeChunksRef.current = [];
+        for (const track of takeVideoTracksRef.current) track.stop();
+        takeVideoTracksRef.current = [];
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(250);
+      setIsTakeRecording(true);
+
+      if (!realtimeMusic.isPlaying) {
+        await realtimeMusic.togglePlayback();
+      }
+    } catch {
+      setTakeError('Не удалось запустить запись take.');
+      setIsTakeRecording(false);
+    }
+  };
+
+  const stopTakeRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    mediaRecorderRef.current = null;
+    realtimeMusic.stop();
+  };
+
+  const downloadTake = () => {
+    if (!takeUrl) return;
+    const extension = takeMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const link = document.createElement('a');
+    link.href = takeUrl;
+    link.download = `music_take_${new Date().toISOString().replace(/[:.]/g, '-') }.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const undoMusic = () => {
@@ -753,6 +855,21 @@ export default function App() {
                     }}
                   />
                 </label>
+                <button
+                  type="button"
+                  className={isTakeRecording ? 'button-secondary music-record is-active' : 'button-secondary music-record'}
+                  onClick={() => {
+                    if (isTakeRecording) stopTakeRecording();
+                    else void startTakeRecording();
+                  }}
+                >
+                  {isTakeRecording ? 'stop' : 'record'}
+                </button>
+                {takeUrl ? (
+                  <button type="button" className="button-secondary" onClick={downloadTake}>
+                    Скачать take
+                  </button>
+                ) : null}
                 <button type="button" className="button-secondary" onClick={clearMusic} disabled={activeMusicEvents.length === 0}>
                   Очистить
                 </button>
@@ -764,6 +881,9 @@ export default function App() {
                 activeColor={musicColor}
                 background={musicCanvasBackground}
                 playheadProgress={realtimeMusic.progress}
+                onCanvasReady={(canvas) => {
+                  musicCanvasElementRef.current = canvas;
+                }}
                 onChange={setMusicStrokes}
               />
 
@@ -775,6 +895,8 @@ export default function App() {
                 {midiInput.devices.length > 0 ? <span>Устройства: <strong>{midiInput.devices.join(', ')}</strong></span> : null}
                 <span>MIDI-событий: <strong>{midiRecordedEvents.length}</strong></span>
                 <span>Автосохранение: <strong>{musicDraftStatus === 'saved' ? 'сохранено' : musicDraftStatus === 'error' ? 'ошибка' : '…'}</strong></span>
+                <span>Take: <strong>{isTakeRecording ? 'recording' : takeUrl ? 'готов' : '—'}</strong></span>
+                {takeError ? <span className="error-banner">{takeError}</span> : null}
               </div>
 
               <div className="music-octaves">
