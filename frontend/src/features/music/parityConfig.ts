@@ -1,0 +1,42 @@
+import type { DrawingResolutionPreset, RhythmPreset } from './model/types';
+
+export const PARITY_KEY_OPTIONS = [
+  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+] as const;
+
+export const PARITY_SCALE_OPTIONS = [
+  { value: 'major', label: 'Major' },
+  { value: 'minor', label: 'Minor' },
+] as const;
+
+/**
+ * Exact original Range labels remain VERIFY.
+ * These values are isolated here so parity measurements can replace them
+ * without touching theory/audio code.
+ */
+export const PROVISIONAL_RANGE_OPTIONS = [1, 2, 3] as const;
+
+/**
+ * Exact original BPM range/default remains VERIFY.
+ */
+export const PROVISIONAL_BPM = {
+  min: 30,
+  max: 300,
+  default: 120,
+} as const;
+
+export const DRAWING_PRESETS: readonly DrawingResolutionPreset[] = [1, 2, 3];
+export const RHYTHM_PRESETS: readonly RhythmPreset[] = [1, 2, 3];
+
+export const DEFAULT_MUSIC_COLORS = [
+  '#171717',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#6366f1',
+  '#a855f7',
+  '#ec4899',
+] as const;
