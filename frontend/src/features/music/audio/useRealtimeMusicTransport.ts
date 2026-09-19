@@ -108,6 +108,12 @@ export function useRealtimeMusicTransport(
     [],
   );
 
+  const getCaptureStream = useCallback(async () => {
+    const transport = transportRef.current;
+    if (!transport) throw new Error('Music transport is unavailable.');
+    return transport.getCaptureStream();
+  }, []);
+
   return {
     isPlaying,
     positionBeat,
@@ -118,5 +124,6 @@ export function useRealtimeMusicTransport(
     getPositionBeat,
     noteOn,
     noteOff,
+    getCaptureStream,
   };
 }
