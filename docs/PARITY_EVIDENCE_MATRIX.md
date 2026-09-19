@@ -99,16 +99,24 @@ The DOM contains:
 
 But the current rendered public UI applies `display:none` to Program 3. The clone therefore keeps it hidden rather than exposing an incomplete feature as current parity.
 
-## Confirmed but semantically unresolved controls
+## Freestyle / Freehand measurements
 
 The current rendered DOM contains independent controls:
 
 - `Freestyle` (`lockBtn`);
 - `Freehand` (`freeBtn`).
 
-Interaction probing confirms they can be toggled independently, but the public UI does not expose enough descriptive text to determine their exact sound/drawing transformation with confidence.
+A controlled identical pointer gesture produced **pixel-for-pixel identical canvas geometry** in default, Freestyle, and Freehand.
 
-**Status: VERIFY behavior before implementation.**
+A black-box analyser attached only to the final Web Audio destination showed:
+
+- default and Freestyle produced essentially the same stepped pitch spectrum under the tested gesture;
+- Freehand produced a substantially denser, smoothly moving fundamental frequency sequence.
+
+Therefore:
+
+- **Freehand: CONFIRMED behavior** — it preserves the visual line but removes discrete scale-pitch stepping and follows continuous vertical pitch. The clone implements a clean-room continuous `Y → fractional MIDI` curve with realtime/WAV pitch ramps.
+- **Freestyle: still VERIFY** — it does not change visible geometry and did not produce a material spectral difference in the tested gesture. No behavior is invented until a distinguishing interaction is measured.
 
 ## Still unresolved exact behavior
 
@@ -120,8 +128,8 @@ Interaction probing confirms they can be toggled independently, but the public U
 6. Exact reference MIDI file track/channel structure.
 7. Exact browser take codec/container policy.
 8. Exact behavior of Freestyle.
-9. Exact behavior of Freehand.
-10. Exact color-picker model beyond observable recolor/reset interaction.
+9. Exact continuous Freehand mapping curve used by the reference; high-level continuous-pitch behavior is confirmed.
+10. Exact color-picker interpolation/model beyond measured preset colors and custom picker.
 11. Exact public-gallery open/edit permissions and lifecycle.
 
 ## Compatibility decisions
