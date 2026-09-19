@@ -9,14 +9,14 @@ type AudioPlayerProps = {
   onDownloadSnapshot: (baseName: string) => void;
   onClearCanvas: () => void;
   musicModeEnabled: boolean;
-  musicSequence: string[];
-  onRemoveLastMusicNote: () => void;
+  musicUndoDisabled: boolean;
+  onUndoMusic: () => void;
   onPlayMusicSequence: () => Promise<void>;
 };
 
 const WAVE_SAMPLES = 220;
 
-export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onDownloadSnapshot, onClearCanvas, musicModeEnabled, musicSequence, onRemoveLastMusicNote, onPlayMusicSequence }: AudioPlayerProps) {
+export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onToggleEraser, eraserEnabled, onDownloadSnapshot, onClearCanvas, musicModeEnabled, musicUndoDisabled, onUndoMusic, onPlayMusicSequence }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
@@ -136,7 +136,7 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onDownloadSnapshot(baseName);
+    if (!musicModeEnabled) onDownloadSnapshot(baseName);
   };
 
   return (
@@ -202,10 +202,10 @@ export function AudioPlayer({ audioUrl, isPreparingAudio, onRequestAudio, onTogg
         <button
           type="button"
           className="button-secondary draw-panel__clear-btn header-player__clear"
-          onClick={onRemoveLastMusicNote}
-          disabled={musicSequence.length === 0}
+          onClick={onUndoMusic}
+          disabled={musicUndoDisabled}
         >
-          Отменить ноту
+          Отменить
         </button>
       ) : null}
 
