@@ -3,6 +3,7 @@ import {
   buildPitchRange,
   compileStroke,
   mapYToMidi,
+  mapYToContinuousMidi,
   midiToFrequency,
   noteNameToMidi,
   quantizeBeat,
@@ -57,6 +58,7 @@ function testTheory() {
   );
   assert(mapYToMidi(0, range) === 71, 'Top of canvas must map to highest note');
   assert(mapYToMidi(1, range) === 60, 'Bottom of canvas must map to lowest note');
+  approx(mapYToContinuousMidi(0.5, range), 65.5, 1e-9, 'Freehand midpoint must remain continuous');
 
   const expectedScaleSizes = {
     majorPentatonic: 5,
@@ -110,6 +112,43 @@ function testStrokeCompiler() {
   assert(events[0].midi === 48, 'Bottom flat stroke should map to C3');
   approx(events[0].startBeat, 0, 1e-9, 'Flat stroke start beat');
   assert(events[0].durationBeats >= 3.9, 'Flat stroke should span essentially the whole loop');
+}
+
+function testFreehandCompiler() {
+  const stroke: Stroke = {
+    id: 'freehand-stroke',
+    layerId: 'instrument:keys',
+    color: '#1d9e75',
+    createdAt: 0,
+    points: [
+      { x: 0, y: 0.31, t: 0 },
+      { x: 1, y: 0.69, t: 1000 },
+    ],
+  };
+
+  const normal = compileStroke(stroke, {
+    ...DEFAULT_MUSIC_SETTINGS,
+    rangeOctaves: 1,
+    quantizeStepBeats: 0.5,
+    freehandEnabled: false,
+  }, { baseOctave: 4 });
+
+  const freehand = compileStroke(stroke, {
+    ...DEFAULT_MUSIC_SETTINGS,
+    rangeOctaves: 1,
+    quantizeStepBeats: 0.5,
+    freehandEnabled: true,
+  }, { baseOctave: 4 });
+
+  assert(normal.every((event) => Number.isInteger(event.midi)), 'Normal drawing must stay on discrete scale notes');
+  assert(
+    freehand.some((event) => Math.abs(event.midi - Math.round(event.midi)) > 1e-6),
+    'Freehand must produce fractional MIDI pitches between scale notes',
+  );
+  assert(
+    freehand.length > normal.length,
+    'Freehand must sample pitch more densely than discrete drawing',
+  );
 }
 
 function testVoiceProfiles() {
@@ -278,6 +317,7 @@ function testExports() {
 testTheory();
 testRhythm();
 testStrokeCompiler();
+testFreehandCompiler();
 testVoiceProfiles();
 testAccompaniment();
 testReferencePalette();
