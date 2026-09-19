@@ -75,6 +75,11 @@ export function MusicCanvas({
   );
 
   useEffect(() => {
+    onCanvasReady?.(canvasRef.current);
+    return () => onCanvasReady?.(null);
+  }, [onCanvasReady]);
+
+  useEffect(() => {
     if (background.kind !== 'photo' || !background.url) {
       setBackgroundImage(null);
       return;
@@ -212,10 +217,7 @@ export function MusicCanvas({
 
   return (
     <canvas
-      ref={(node) => {
-        canvasRef.current = node;
-        onCanvasReady?.(node);
-      }}
+      ref={canvasRef}
       width={WIDTH}
       height={HEIGHT}
       className="music-draw-canvas"
