@@ -36,45 +36,66 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       cssHeight: node.getBoundingClientRect().height,
     }));
 
-    const capture = async () => page.$eval('#c', (node) =>
-      Array.from(node.getContext('2d').getImageData(0, 0, node.width, node.height).data)
-    );
+    const storeBaseline = async () => page.$eval('#c', (node) => {
+      const ctx = node.getContext('2d');
+      window.__pixelProbeBaseline = new Uint8ClampedArray(
+        ctx.getImageData(0, 0, node.width, node.height).data,
+      );
+      return true;
+    });
 
-    const diff = async (before) => page.$eval('#c', (node, previous) => {
+    const diffFromBaseline = async () => page.$eval('#c', (node) => {
+      const previous = window.__pixelProbeBaseline;
       const after = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
-      const xs = [];
-      const ys = [];
+      if (!previous || previous.length !== after.length) {
+        window.__pixelProbeBaseline = new Uint8ClampedArray(after);
+        return { changed: 0, bbox: null, distinctX: 0, distinctY: 0 };
+      }
+
       let changed = 0;
+      let minX = node.width;
+      let maxX = -1;
+      let minY = node.height;
+      let maxY = -1;
+      const xSet = new Set();
+      const ySet = new Set();
+
       for (let p = 0; p < after.length; p += 4) {
         const delta =
           Math.abs(after[p] - previous[p]) +
           Math.abs(after[p + 1] - previous[p + 1]) +
           Math.abs(after[p + 2] - previous[p + 2]) +
           Math.abs(after[p + 3] - previous[p + 3]);
-        if (delta > 30) {
-          const pixel = p / 4;
-          xs.push(pixel % node.width);
-          ys.push(Math.floor(pixel / node.width));
-          changed += 1;
-        }
+        if (delta <= 30) continue;
+
+        const pixel = p / 4;
+        const x = pixel % node.width;
+        const y = Math.floor(pixel / node.width);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        xSet.add(x);
+        ySet.add(y);
+        changed += 1;
       }
+
+      window.__pixelProbeBaseline = new Uint8ClampedArray(after);
       if (!changed) return { changed: 0, bbox: null, distinctX: 0, distinctY: 0 };
-      const xSet = new Set(xs);
-      const ySet = new Set(ys);
       return {
         changed,
         bbox: {
-          minX: Math.min(...xs),
-          maxX: Math.max(...xs),
-          minY: Math.min(...ys),
-          maxY: Math.max(...ys),
-          width: Math.max(...xs) - Math.min(...xs) + 1,
-          height: Math.max(...ys) - Math.min(...ys) + 1,
+          minX,
+          maxX,
+          minY,
+          maxY,
+          width: maxX - minX + 1,
+          height: maxY - minY + 1,
         },
         distinctX: xSet.size,
         distinctY: ySet.size,
       };
-    }, before);
+    });
 
     const probes = [];
     for (const [index, point] of [
@@ -82,7 +103,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       [1, { x: 0.51, y: 0.53 }],
       [2, { x: 0.77, y: 0.72 }],
     ]) {
-      const before = await capture();
+      await storeBaseline();
       const x = box.x + box.width * point.x;
       const y = box.y + box.height * point.y;
       await page.mouse.move(x, y);
@@ -93,7 +114,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       probes.push({
         index,
         normalized: point,
-        result: await diff(before),
+        result: await diffFromBaseline(),
       });
     }
 
@@ -101,7 +122,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
     const verticalSnapMap = [];
     for (let step = 0; step <= 20; step += 1) {
       const yNorm = 0.02 + (0.96 * step) / 20;
-      const before = await capture();
+      await storeBaseline();
       const x = box.x + box.width * 0.5;
       const y = box.y + box.height * yNorm;
       await page.mouse.move(x, y);
@@ -109,7 +130,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       await page.mouse.move(x + 1, y + 1);
       await page.mouse.up();
       await new Promise((resolve) => setTimeout(resolve, 30));
-      const result = await diff(before);
+      const result = await diffFromBaseline();
       verticalSnapMap.push({
         y: Math.round(yNorm * 1000) / 1000,
         bbox: result.bbox,
@@ -121,7 +142,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
     const horizontalSnapMap = [];
     for (let step = 0; step <= 24; step += 1) {
       const xNorm = 0.02 + (0.96 * step) / 24;
-      const before = await capture();
+      await storeBaseline();
       const x = box.x + box.width * xNorm;
       const y = box.y + box.height * 0.5;
       await page.mouse.move(x, y);
@@ -129,7 +150,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
       await page.mouse.move(x + 1, y + 1);
       await page.mouse.up();
       await new Promise((resolve) => setTimeout(resolve, 25));
-      const result = await diff(before);
+      const result = await diffFromBaseline();
       horizontalSnapMap.push({
         x: Math.round(xNorm * 1000) / 1000,
         bbox: result.bbox,
@@ -138,7 +159,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
     }
 
     // Horizontal drag reveals the step spacing between adjacent pixel cells.
-    const beforeDrag = await capture();
+    await storeBaseline();
     const y = box.y + box.height * 0.42;
     const x0 = box.x + box.width * 0.12;
     const x1 = box.x + box.width * 0.88;
@@ -150,9 +171,13 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
     await page.mouse.up();
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const horizontal = await page.$eval('#c', (node, previous) => {
+    const horizontal = await page.$eval('#c', (node) => {
+      const previous = window.__pixelProbeBaseline;
       const after = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
       const byX = new Map();
+      if (!previous || previous.length !== after.length) {
+        return { activeXCount: 0, runs: [] };
+      }
       for (let p = 0; p < after.length; p += 4) {
         const delta =
           Math.abs(after[p] - previous[p]) +
@@ -182,7 +207,7 @@ if (!executablePath) throw new Error('Chrome executable path is required.');
           width: run.end - run.start + 1,
         })).slice(0, 100),
       };
-    }, beforeDrag);
+    });
 
     console.log(JSON.stringify({
       label: 'pixel-mode-geometry',
