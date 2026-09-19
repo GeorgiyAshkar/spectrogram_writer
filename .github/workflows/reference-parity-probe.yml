@@ -19,3 +19,9 @@ jobs:
           node-version: "22"
       - name: Probe public reference DOM
         run: node scripts/reference-dom-probe.mjs
+      - name: Render reference DOM in headless Chrome
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          "$CHROME" --headless --disable-gpu --no-sandbox --virtual-time-budget=5000 --dump-dom https://playmusictheory.net/play > /tmp/play-rendered.html
+          node scripts/reference-dom-probe.mjs /tmp/play-rendered.html
