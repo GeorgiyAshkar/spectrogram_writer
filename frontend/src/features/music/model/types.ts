@@ -73,7 +73,7 @@ export interface MusicProject {
 
 export const DEFAULT_MUSIC_SETTINGS: MusicSettings = {
   key: 'C',
-  scale: 'major',
+  scale: 'majorPentatonic',
   octaveOffset: 0,
   rangeOctaves: 3,
   loopLengthBeats: 4,
