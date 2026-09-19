@@ -36,7 +36,56 @@ function snapPoint(point: Point, preset: MusicSettings['drawingResolutionPreset'
 
 function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   if (stroke.points.length === 0) return;
+
+  const preset = stroke.drawingResolutionPreset ?? 1;
   ctx.save();
+
+  if (preset > 1) {
+    const columns = preset === 2 ? 32 : 16;
+    const rows = preset === 2 ? 24 : 12;
+    const cellWidth = WIDTH / columns;
+    const cellHeight = HEIGHT / rows;
+    const visited = new Set<string>();
+
+    const paintCell = (x: number, y: number) => {
+      const col = Math.min(columns, Math.max(0, Math.round(x * columns)));
+      const row = Math.min(rows, Math.max(0, Math.round(y * rows)));
+      const key = `${col}:${row}`;
+      if (visited.has(key)) return;
+      visited.add(key);
+
+      const cx = (col / columns) * WIDTH;
+      const cy = (row / rows) * HEIGHT;
+      ctx.fillStyle = stroke.color;
+      ctx.fillRect(
+        cx - cellWidth * 0.44,
+        cy - cellHeight * 0.44,
+        cellWidth * 0.88,
+        cellHeight * 0.88,
+      );
+    };
+
+    stroke.points.forEach((point, index) => {
+      paintCell(point.x, point.y);
+      if (index === 0) return;
+
+      const previous = stroke.points[index - 1];
+      const dx = (point.x - previous.x) * columns;
+      const dy = (point.y - previous.y) * rows;
+      const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))));
+      for (let step = 1; step < steps; step += 1) {
+        const ratio = step / steps;
+        paintCell(
+          previous.x + (point.x - previous.x) * ratio,
+          previous.y + (point.y - previous.y) * ratio,
+        );
+      }
+    });
+
+    ctx.restore();
+    return;
+  }
+
   ctx.strokeStyle = stroke.color;
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
@@ -234,6 +283,7 @@ export function MusicCanvas({
           layerId: 'default',
           color: activeColor,
           createdAt: Date.now(),
+          drawingResolutionPreset: settings.drawingResolutionPreset,
           points: [point],
         };
         draftRef.current = nextDraft;
