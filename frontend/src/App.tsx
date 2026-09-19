@@ -73,6 +73,7 @@ export default function App() {
   const [musicSettings, setMusicSettings] = useState<MusicSettings>(DEFAULT_MUSIC_SETTINGS);
   const [virtualKeyboardEvents, setVirtualKeyboardEvents] = useState<NoteEvent[]>([]);
   const [musicStrokes, setMusicStrokes] = useState<Stroke[]>([]);
+  const [redoMusicStrokes, setRedoMusicStrokes] = useState<Stroke[]>([]);
   const [musicColor, setMusicColor] = useState<string>(DEFAULT_MUSIC_COLORS[0]);
   const [musicCustomColor, setMusicCustomColor] = useState<string>('#111827');
   const [midiEnabled, setMidiEnabled] = useState(false);
@@ -518,6 +519,7 @@ export default function App() {
     pendingVirtualNotesRef.current.clear();
     setMusicSettings(project.settings);
     setMusicStrokes(project.strokes);
+    setRedoMusicStrokes([]);
     setVirtualKeyboardEvents(project.virtualKeyboardEvents ?? []);
     setMidiRecordedEvents(project.midiRecordedEvents ?? []);
     setMusicColor(project.activeColor || DEFAULT_MUSIC_COLORS[0]);
@@ -562,8 +564,27 @@ export default function App() {
     }
   };
 
+  const handleMusicStrokesChange = (next: Stroke[]) => {
+    setMusicStrokes(next);
+    setRedoMusicStrokes([]);
+  };
+
   const undoMusic = () => {
-    setMusicStrokes((current) => current.slice(0, -1));
+    setMusicStrokes((current) => {
+      if (current.length === 0) return current;
+      const last = current[current.length - 1];
+      setRedoMusicStrokes((redo) => [...redo, last]);
+      return current.slice(0, -1);
+    });
+  };
+
+  const redoMusic = () => {
+    setRedoMusicStrokes((current) => {
+      if (current.length === 0) return current;
+      const stroke = current[current.length - 1];
+      setMusicStrokes((strokes) => [...strokes, stroke]);
+      return current.slice(0, -1);
+    });
   };
 
   useEffect(() => {
@@ -572,9 +593,15 @@ export default function App() {
       const target = event.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
 
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+      const modifier = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+
+      if (modifier && key === 'z' && !event.shiftKey) {
         event.preventDefault();
-        setMusicStrokes((current) => current.slice(0, -1));
+        undoMusic();
+      } else if ((modifier && key === 'z' && event.shiftKey) || (event.ctrlKey && key === 'y')) {
+        event.preventDefault();
+        redoMusic();
       }
     };
 
@@ -589,6 +616,7 @@ export default function App() {
     realtimeMusic.stop();
     clearMusicDraft();
     setMusicStrokes([]);
+    setRedoMusicStrokes([]);
     setVirtualKeyboardEvents([]);
     setMidiRecordedEvents([]);
     pendingMidiNotesRef.current.clear();
@@ -814,11 +842,13 @@ export default function App() {
             onClearCanvas={() => { clearCanvas(); setInputSource('draw'); }}
             musicModeEnabled={activePanel === 'music'}
             musicUndoDisabled={musicStrokes.length === 0}
+            musicRedoDisabled={redoMusicStrokes.length === 0}
             musicHasContent={activeMusicEvents.length > 0 || musicSettings.metronomeEnabled}
             musicHasExportContent={activeMusicEvents.length > 0}
             musicIsPlaying={realtimeMusic.isPlaying}
             musicProgress={realtimeMusic.progress}
             onUndoMusic={undoMusic}
+            onRedoMusic={redoMusic}
             onToggleMusicPlayback={realtimeMusic.togglePlayback}
             onSeekMusic={(progress) => realtimeMusic.seek(progress * musicPlaybackSettings.loopLengthBeats)}
           />
@@ -1261,7 +1291,7 @@ export default function App() {
                 background={musicCanvasBackground}
                 playheadProgress={realtimeMusic.progress}
                 onCanvasReady={handleMusicCanvasReady}
-                onChange={setMusicStrokes}
+                onChange={handleMusicStrokesChange}
               />
 
               <div className="music-event-summary">
