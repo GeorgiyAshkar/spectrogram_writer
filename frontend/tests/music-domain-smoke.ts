@@ -39,6 +39,12 @@ function testTheory() {
     JSON.stringify(range) === JSON.stringify([60, 62, 64, 65, 67, 69, 71]),
     'C major range must contain the expected seven notes',
   );
+
+  const pentatonic = buildPitchRange('C', 'majorPentatonic', 4, 1);
+  assert(
+    JSON.stringify(pentatonic) === JSON.stringify([60, 62, 64, 67, 69]),
+    'C major pentatonic must match the reference scale',
+  );
   assert(mapYToMidi(0, range) === 71, 'Top of canvas must map to highest note');
   assert(mapYToMidi(1, range) === 60, 'Bottom of canvas must map to lowest note');
 
@@ -66,6 +72,7 @@ function testRhythm() {
   approx(quantizeBeat(0.76, null), 0.76, 1e-9, 'Quantize off');
   approx(applySwing(0.5, 0.5, 0.5), 0.625, 1e-9, 'Odd subdivision swing delay');
   approx(applySwing(1.0, 0.5, 0.5), 1.0, 1e-9, 'Even subdivision remains straight');
+  approx(applySwing(1 / 3, 1 / 3, 0.33), 1 / 3, 1e-9, 'Triplet grid ignores swing');
 }
 
 function testStrokeCompiler() {
