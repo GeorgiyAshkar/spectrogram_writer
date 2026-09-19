@@ -73,7 +73,7 @@ The rendered web UI exposes stable instrument identity separately from color:
 
 The application now stores instrument identity as `instrument:<id>`, while color remains customizable. This is important because Recolor must not change the selected sound identity.
 
-**Exact synthesis recipes are still unknown.** Current oscillator/envelope choices are clean-room approximations behind a configurable voice-profile layer.
+**Exact synthesis recipes are still unknown.** Current synthesis is a clean-room approximation behind a configurable voice-profile layer. The nine named instruments now have distinct waveform/partial/envelope profiles, and realtime playback and WAV export use the same profiles.
 
 
 
