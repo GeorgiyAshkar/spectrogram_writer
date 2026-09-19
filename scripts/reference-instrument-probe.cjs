@@ -1,5 +1,6 @@
 const puppeteer = require('/tmp/parity-probe/node_modules/puppeteer-core');
 
+async function main() {
 const executablePath = process.argv[2];
 if (!executablePath) throw new Error('Chrome executable path is required.');
 
@@ -176,3 +177,11 @@ try {
 } finally {
   await browser.close();
 }
+
+
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
