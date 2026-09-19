@@ -53,7 +53,6 @@ export function useRealtimeMusicTransport(
     () => () => {
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
       const transport = transportRef.current;
-      transportRef.current = null;
       if (transport) void transport.dispose();
     },
     [],
