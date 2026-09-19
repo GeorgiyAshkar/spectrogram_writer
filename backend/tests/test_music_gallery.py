@@ -20,25 +20,30 @@ class MusicGalleryTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_create_list_and_get_piece(self) -> None:
+        thumbnail = "data:image/jpeg;base64,AA=="
         created = gallery.create_piece(
             title="  Test piece  ",
             author="  Tester  ",
             project={"schemaVersion": 1, "strokes": []},
+            thumbnail=thumbnail,
         )
 
         self.assertEqual(created["title"], "Test piece")
         self.assertEqual(created["author"], "Tester")
+        self.assertEqual(created["thumbnail"], thumbnail)
         self.assertTrue(created["id"])
 
         items = gallery.list_pieces()
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["id"], created["id"])
+        self.assertEqual(items[0]["thumbnail"], thumbnail)
 
         detail = gallery.get_piece(created["id"])
         self.assertIsNotNone(detail)
         assert detail is not None
         self.assertEqual(detail["project"]["schemaVersion"], 1)
         self.assertEqual(detail["project"]["strokes"], [])
+        self.assertEqual(detail["thumbnail"], thumbnail)
 
     def test_latest_piece_is_first(self) -> None:
         first = gallery.create_piece("First", "A", {"schemaVersion": 1})
@@ -56,6 +61,15 @@ class MusicGalleryTests(unittest.TestCase):
 
         with self.assertRaises(gallery.GalleryError):
             gallery.create_piece("Title", "  ", {"schemaVersion": 1})
+
+    def test_invalid_thumbnail_is_rejected(self) -> None:
+        with self.assertRaises(gallery.GalleryError):
+            gallery.create_piece(
+                "Bad thumb",
+                "Tester",
+                {"schemaVersion": 2},
+                thumbnail="https://example.com/not-data-url.jpg",
+            )
 
     def test_large_project_is_rejected(self) -> None:
         oversized = {"schemaVersion": 1, "payload": "x" * (gallery.MAX_PROJECT_BYTES + 100)}
