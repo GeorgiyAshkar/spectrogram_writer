@@ -225,9 +225,36 @@ async function clickId(page, id) {
   return result;
 }
 
+async function enableInstrumentIfPossible(page) {
+  const before = await page.evaluate(() => {
+    const el = document.getElementById('proswitch');
+    return el ? {
+      className: el.className,
+      text: el.textContent?.trim() ?? '',
+      ariaPressed: el.getAttribute('aria-pressed'),
+    } : null;
+  });
+  const click = await clickId(page, 'proswitch');
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  const after = await page.evaluate(() => {
+    const el = document.getElementById('proswitch');
+    const dialogs = [...document.querySelectorAll('[role="dialog"], dialog, .modal, .paywall, .purchase')]
+      .filter((node) => getComputedStyle(node).display !== 'none')
+      .map((node) => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 240));
+    return el ? {
+      className: el.className,
+      text: el.textContent?.trim() ?? '',
+      ariaPressed: el.getAttribute('aria-pressed'),
+      dialogs,
+    } : { dialogs };
+  });
+  return { before, click, after };
+}
+
 async function captureMidiCase(browser, label, enableId) {
   const page = await createPage(browser);
   try {
+    const instrumentSwitchState = await enableInstrumentIfPossible(page);
     await clickId(page, 'clear');
     if (enableId) await clickId(page, enableId);
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -246,6 +273,7 @@ async function captureMidiCase(browser, label, enableId) {
     console.log(JSON.stringify({
       label: 'midi-export-case',
       case: label,
+      instrumentSwitchState,
       state,
       click,
       captured: Boolean(download),
@@ -259,6 +287,7 @@ async function captureMidiCase(browser, label, enableId) {
 async function captureWavClickPolicy(browser) {
   const page = await createPage(browser);
   try {
+    const instrumentSwitchState = await enableInstrumentIfPossible(page);
     await clickId(page, 'shuffle');
     await new Promise((resolve) => setTimeout(resolve, 120));
 
@@ -301,6 +330,7 @@ async function captureWavClickPolicy(browser) {
 
     console.log(JSON.stringify({
       label: 'wav-click-policy',
+      instrumentSwitchState,
       clickBefore,
       clickAfter,
       offCaptured: Boolean(off.download),
