@@ -26,17 +26,23 @@ export function renderNoteEventsToWavBlob(
     const durationSeconds = Math.max(0.01, event.durationBeats * secondsPerBeat);
     const startSample = Math.max(0, Math.floor(startSeconds * sampleRate));
     const endSample = Math.min(totalSamples, Math.ceil((startSeconds + durationSeconds) * sampleRate));
-    const frequency = midiToFrequency(event.midi, settings.tuningCents);
     const voice = resolveVoiceProfile(event.layerId);
     const gain = Math.min(1, Math.max(0, event.velocity)) * 0.42 * voice.gain;
+    const endMidi = event.endMidi ?? event.midi;
+    let phase = 0;
 
     for (let sampleIndex = startSample; sampleIndex < endSample; sampleIndex += 1) {
       const t = (sampleIndex - startSample) / sampleRate;
+      const progress = durationSeconds > 0 ? Math.min(1, Math.max(0, t / durationSeconds)) : 0;
+      const midi = event.midi + (endMidi - event.midi) * progress;
+      const frequency = midiToFrequency(midi, settings.tuningCents);
+      phase += (2 * Math.PI * frequency) / sampleRate;
+
       const attack = Math.min(1, t / 0.015);
       const timeToEnd = durationSeconds - t;
       const release = Math.min(1, Math.max(0, timeToEnd / 0.06));
       const envelope = Math.min(attack, release);
-      pcm[sampleIndex] += sampleWaveform(voice.waveform, 2 * Math.PI * frequency * t) * gain * envelope;
+      pcm[sampleIndex] += sampleWaveform(voice.waveform, phase) * gain * envelope;
     }
   }
 
