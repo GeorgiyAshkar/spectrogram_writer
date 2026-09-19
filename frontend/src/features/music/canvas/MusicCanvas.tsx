@@ -13,6 +13,7 @@ type Props = {
   settings: MusicSettings;
   strokes: Stroke[];
   activeColor: string;
+  activeLayerId: string;
   background: MusicCanvasBackground;
   playheadProgress?: number;
   showGrid?: boolean;
@@ -110,6 +111,7 @@ export function MusicCanvas({
   settings,
   strokes,
   activeColor,
+  activeLayerId,
   background,
   playheadProgress = 0,
   showGrid = false,
@@ -383,7 +385,7 @@ export function MusicCanvas({
             typeof crypto.randomUUID === 'function'
               ? crypto.randomUUID()
               : `stroke-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          layerId: `color:${activeColor.toLowerCase()}`,
+          layerId: activeLayerId,
           color: activeColor,
           createdAt: Date.now(),
           programMode: settings.programMode,
