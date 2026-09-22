@@ -27,6 +27,7 @@ import {
 } from './features/music/persistence/musicDraft';
 import { prepareBackgroundPhoto } from './features/music/background/prepareBackgroundPhoto';
 import { captureCanvasThumbnail } from './features/music/gallery/captureCanvasThumbnail';
+import { selectTakeMimeType, takeFileExtension } from './features/music/recording/takeMedia';
 import {
   generateRandomDrawing,
   recolorInstrumentStrokes,
@@ -104,7 +105,7 @@ export default function App() {
   const [isTakeRecording, setIsTakeRecording] = useState(false);
   const [takeUrl, setTakeUrl] = useState<string | null>(null);
   const [takeBlob, setTakeBlob] = useState<Blob | null>(null);
-  const [takeMimeType, setTakeMimeType] = useState('video/webm');
+  const [takeMimeType, setTakeMimeType] = useState('video/mp4');
   const [takeError, setTakeError] = useState<string | null>(null);
   const [showInstrumentPanel, setShowInstrumentPanel] = useState(false);
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
@@ -439,14 +440,9 @@ export default function App() {
         ...audioStream.getAudioTracks(),
       ]);
 
-      const candidates = [
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/webm',
-        'video/mp4',
-      ];
-      const mimeType =
-        candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';
+      const mimeType = selectTakeMimeType((candidate) =>
+        MediaRecorder.isTypeSupported(candidate),
+      );
       const recorder = mimeType
         ? new MediaRecorder(combined, { mimeType })
         : new MediaRecorder(combined);
@@ -460,7 +456,7 @@ export default function App() {
         setTakeError('Не удалось записать take.');
       };
       recorder.onstop = () => {
-        const finalType = recorder.mimeType || mimeType || 'video/webm';
+        const finalType = recorder.mimeType || mimeType || 'video/mp4';
         const blob = new Blob(takeChunksRef.current, { type: finalType });
         setTakeMimeType(finalType);
         setTakeBlob(blob);
@@ -493,7 +489,7 @@ export default function App() {
 
   const downloadTake = () => {
     if (!takeUrl) return;
-    const extension = takeMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const extension = takeFileExtension(takeMimeType);
     const link = document.createElement('a');
     link.href = takeUrl;
     link.download = `music_take_${new Date().toISOString().replace(/[:.]/g, '-') }.${extension}`;
@@ -508,9 +504,9 @@ export default function App() {
       return;
     }
 
-    const extension = takeMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const extension = takeFileExtension(takeMimeType);
     const filename = `music_take_${new Date().toISOString().replace(/[:.]/g, '-') }.${extension}`;
-    const file = new File([takeBlob], filename, { type: takeMimeType || takeBlob.type || 'video/webm' });
+    const file = new File([takeBlob], filename, { type: takeMimeType || takeBlob.type || 'video/mp4' });
     const nav = navigator as Navigator & {
       canShare?: (data?: ShareData) => boolean;
     };
