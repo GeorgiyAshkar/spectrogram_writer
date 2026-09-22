@@ -13,6 +13,7 @@ on:
       - scripts/reference-freestyle-pitch-probe.cjs
       - scripts/reference-accompaniment-probe.cjs
       - scripts/reference-arpeggio-scale-probe.cjs
+      - scripts/reference-arpeggio-flux-probe.cjs
       - scripts/reference-drums-transient-probe.cjs
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
@@ -83,6 +84,8 @@ jobs:
         run: node scripts/reference-accompaniment-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Arpeggio scale mapping
         run: node scripts/reference-arpeggio-scale-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Arpeggio spectral flux
+        run: node scripts/reference-arpeggio-flux-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Drums transients
         run: node scripts/reference-drums-transient-probe.cjs "${{ steps.chrome.outputs.path }}"
 
