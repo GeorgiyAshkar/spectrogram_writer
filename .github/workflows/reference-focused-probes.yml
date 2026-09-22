@@ -11,6 +11,7 @@ on:
       - scripts/reference-freehand-curve-probe.cjs
       - scripts/reference-freestyle-timing-probe.cjs
       - scripts/reference-accompaniment-probe.cjs
+      - scripts/reference-arpeggio-scale-probe.cjs
       - scripts/reference-drums-transient-probe.cjs
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
@@ -77,6 +78,8 @@ jobs:
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe accompaniment patterns
         run: node scripts/reference-accompaniment-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Arpeggio scale mapping
+        run: node scripts/reference-arpeggio-scale-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Drums transients
         run: node scripts/reference-drums-transient-probe.cjs "${{ steps.chrome.outputs.path }}"
 
