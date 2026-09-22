@@ -1,4 +1,4 @@
-import { buildPitchRange, mapYToContinuousMidi, mapYToMidi } from './theory';
+import { buildPitchRange, mapYToFreehandMidi, mapYToMidi } from './theory';
 import { applySwing, mapXToBeat, quantizeBeat } from './rhythm';
 import type { MusicSettings, NoteEvent, Point, Stroke } from './types';
 
@@ -103,7 +103,13 @@ export function compileStroke(
 
   if (settings.freehandEnabled) {
     const continuous = samples.map((sample) => ({
-      midi: Math.round(mapYToContinuousMidi(sample.point.y, pitchRange) * 100) / 100,
+      midi: Math.round(
+        mapYToFreehandMidi(
+          sample.point.y,
+          settings.key,
+          settings.octaveOffset,
+        ) * 100,
+      ) / 100,
       beat: sample.beat,
     }));
 
