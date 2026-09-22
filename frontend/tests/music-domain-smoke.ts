@@ -74,7 +74,11 @@ function testTheory() {
   approx(midiToFrequency(mapYToFreehandMidi(0.5, 'C')), 320.24, 0.35, 'Measured C Freehand center frequency');
   approx(midiToFrequency(mapYToFreehandMidi(0.98, 'C')), 135.58, 2.2, 'Measured C Freehand lower frequency');
   approx(midiToFrequency(mapYToFreehandMidi(0.5, 'D')), 359.46, 0.5, 'D key transposes Freehand up two semitones');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'F#')), 452.89, 2.5, 'F# remains the +6-semitone boundary');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'G')), 239.99, 1.0, 'G wraps to -5 semitones around C');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'A')), 269.29, 0.8, 'A wraps to -3 semitones around C');
   approx(midiToFrequency(mapYToFreehandMidi(0.5, 'Bb')), 285.31, 0.8, 'Bb key uses the nearest signed transpose around C');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'B')), 302.27, 2.2, 'B wraps to -1 semitone around C');
 
   const expectedScaleSizes = {
     majorPentatonic: 5,
