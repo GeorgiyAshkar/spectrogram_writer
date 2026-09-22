@@ -49,6 +49,7 @@
 | Photo fit | Fill / Fit / Stretch | Implemented |
 | Photo preprocessing | reference downsizes photos only past ~2000 px and uses JPEG 0.9 | Implemented |
 | Record | record/take control | Implemented |
+| Take container | current Chromium reference requests `video/mp4`; actual recorder/data chunks report `video/mp4;codecs=vp9,opus` | Implemented as MP4-first with WebM fallbacks |
 | Share take | separate share control appears after take | Implemented with Web Share file sharing and download fallback |
 | Share title | maxlength 48 | Implemented frontend/backend |
 | Share name/handle | maxlength 120 | Implemented frontend/backend |
@@ -147,11 +148,21 @@ Therefore:
 4. Exact MIDI input interaction with scale/freestyle modes.
 5. Whether metronome Click is included in reference WAV export.
 6. Exact reference MIDI file track/channel structure.
-7. Exact browser take codec/container policy.
-8. Exact behavior of Freestyle.
+7. Exact behavior of Freestyle.
 9. Exact effect of the Octave +/- control on Freehand while the public entitlement state prevents observing octave changes.
 10. Exact color-picker interpolation/model beyond measured preset colors and custom picker.
 11. Exact public-gallery open/edit permissions and lifecycle.
+
+## Take recorder policy
+
+Black-box MediaRecorder instrumentation of the current reference page established:
+
+- the reference calls `new MediaRecorder(..., { mimeType: 'video/mp4' })`;
+- Chromium reports the active recorder MIME as `video/mp4;codecs=vp9,opus`;
+- emitted `dataavailable` blobs carry the same `video/mp4;codecs=vp9,opus` type;
+- the hidden “Share the take” control becomes visible after the recorder stops.
+
+The clone now follows the same MP4-first policy and falls back to VP9/Opus WebM, VP8/Opus WebM, then generic WebM only when MP4 is unavailable.
 
 ## Compatibility decisions
 
