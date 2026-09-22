@@ -192,9 +192,14 @@ async function runCase(browser, config) {
   const cases = [
     { name: 'C-pentatonic', key: '0', scale: 'pentatonic' },
     { name: 'D-pentatonic', key: '2', scale: 'pentatonic' },
+    { name: 'C-minor-pentatonic', key: '0', scale: 'minor' },
     { name: 'C-major', key: '0', scale: 'major' },
     { name: 'C-minor', key: '0', scale: 'natural' },
     { name: 'C-harmonic-minor', key: '0', scale: 'harmonic' },
+    { name: 'C-dorian', key: '0', scale: 'dorian' },
+    { name: 'C-phrygian', key: '0', scale: 'phrygian' },
+    { name: 'C-lydian', key: '0', scale: 'lydian' },
+    { name: 'C-mixolydian', key: '0', scale: 'mixolydian' },
     { name: 'C-blues', key: '0', scale: 'blues' },
   ];
 
