@@ -35,6 +35,11 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] realtime playhead
 - [x] Program 1 — Drawing mode
 - [x] Program 2 — Pixel mode
+- [x] measured 48-column Pixel grid
+- [x] measured square-cell fill ratio 18/19
+- [x] Pixel rows follow the active pitch-range row count
+- [x] `pixelRowCount` persisted per new Pixel stroke
+- [x] legacy Program-2 32×24 fallback retained for old saved work
 - [x] Program 3 retained in model but hidden because the current reference UI hides it
 - [x] Grid toggle, default On
 - [x] Pen
