@@ -62,9 +62,9 @@ At the default C / Major pentatonic / 120 BPM settings, black-box output analysi
 
 - **Bass**: fundamental around C3 / MIDI 48, retriggered approximately once per beat and sustained through most of the beat.
 - **Arpeggio**: a repeating 1/8-triplet sequence approximately C5–E5–G5–A5–C6–A5–G5–E5.
-- **Drums**: strong low-frequency accents repeat on the larger beat structure, but exact kick/snare/hat subdivision is being resolved with a shorter FFT/transient probe.
+- **Drums**: short-window transient analysis resolves a closed-hi-hat transient every 1/3 beat, kick accents on beats 0 and 2, and snare accents on beats 1 and 3.
 
-The clone now matches the measured default Bass and Arpeggio behavior. Non-default Scale arpeggios remain a documented clean-room fallback until measured separately.
+The clone now matches the measured default Bass, Drums and Arpeggio behavior. Non-default Scale arpeggios remain a documented clean-room fallback until measured separately.
 
 ## Exact instrument palette
 
@@ -148,13 +148,13 @@ Therefore:
 
 - **Freehand: CONFIRMED behavior** — it preserves the visual line but removes discrete scale-pitch stepping and follows continuous vertical pitch.
 - **Freehand vertical mapping: MEASURED at octave offset 0** — Scale and Range do not change the curve. For Key=C, the observed frequencies are consistent with `MIDI ≈ 79 - 31*y` across the canvas. Key transposes the entire curve using the nearest signed pitch-class offset around C: C=0, D=+2, F#=+6, G=-5, A=-3, Bb=-2, B=-1. The implementation now uses this measured mapping for realtime and WAV glissando.
-- **Freestyle: still VERIFY** — it does not change visible geometry and did not produce a material spectral difference in the tested gesture. No behavior is invented until a distinguishing interaction is measured.
+- **Freestyle: still VERIFY** — it does not change visible geometry and did not produce a material spectral difference in the tested gesture. A separate onset-timing probe at x=0.19/0.23/0.29 produced default vs Freestyle onsets that matched within only a few milliseconds, so Freestyle is not treated as a Quantize bypass. No behavior is invented until a distinguishing interaction is measured.
 
 ## Still unresolved exact behavior
 
 1. Octave min/max clamp.
 2. Exact waveform/envelope/harmonic recipe for each of the nine named instruments.
-3. Exact Drums subdivision/transient pattern and non-default Scale behavior of Arpeggio; default Bass and default Major-pentatonic Arpeggio are measured and implemented.
+3. Non-default Scale behavior of Arpeggio; the default Bass, Drums and Major-pentatonic Arpeggio are measured and implemented.
 4. Exact MIDI input interaction with scale/freestyle modes.
 5. Whether metronome Click is included in reference WAV export.
 6. Exact reference MIDI file track/channel structure.
