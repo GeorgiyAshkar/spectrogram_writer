@@ -82,8 +82,8 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] MIDI drums routed to percussion channel 10
 - [x] measured default Bass: tonic at C3/MIDI 48 for Key=C, retrigger every beat
 - [x] measured default Arpeggio: C5-E5-G5-A5-C6-A5-G5-E5 on 1/8-triplet steps
-- [x] measured Bass/Arpeggio implemented for default Major-pentatonic behavior
-- [ ] exact Drums transient/subdivision pattern — short-window probe pending
+- [x] measured default Drums: hi-hat every 1/3 beat, kick on 0/2, snare on 1/3
+- [x] measured Bass/Drums/Arpeggio implemented for default Major-pentatonic behavior
 - [ ] non-default Scale behavior of Arpeggio — clean-room triad fallback currently used
 
 ### Realtime audio
@@ -197,7 +197,7 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] Freehand help text
 - [x] old drafts default Freehand to Off
 - [x] Freehand regression tests
-- [ ] Freestyle — exact transformation still VERIFY
+- [ ] Freestyle — exact transformation still VERIFY; geometry, pitch spectrum, theory-control state, backward drawing and onset timing all tested without a distinguishing effect
 
 ## Verification
 
