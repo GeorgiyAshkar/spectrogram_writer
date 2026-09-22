@@ -17,7 +17,7 @@ on:
       - .github/workflows/reference-focused-probes.yml
 
 jobs:
-  geometry:
+  pixel:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,10 +37,44 @@ jobs:
         run: node scripts/reference-pixel-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Pixel vertical rows
         run: node scripts/reference-pixel-rows-probe.cjs "${{ steps.chrome.outputs.path }}"
+
+  pitch-modes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe pitch curves
         run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Freestyle onset timing
         run: node scripts/reference-freestyle-timing-probe.cjs "${{ steps.chrome.outputs.path }}"
+
+  accompaniment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe accompaniment patterns
         run: node scripts/reference-accompaniment-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Drums transients
