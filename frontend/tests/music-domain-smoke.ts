@@ -10,7 +10,12 @@ import {
   applySwing,
   type Stroke,
 } from '../src/features/music/model';
-import { renderNoteEventsToMidiBlob } from '../src/features/music/export/renderMidi';
+import {
+  buildMidiMessages,
+  FREEHAND_PITCH_BEND_RANGE_SEMITONES,
+  pitchBend14BitForSemitones,
+  renderNoteEventsToMidiBlob,
+} from '../src/features/music/export/renderMidi';
 import { renderNoteEventsToWavBlob } from '../src/features/music/audio/renderWav';
 import {
   DEFAULT_VOICE_PROFILE,
@@ -425,6 +430,61 @@ function testTakeMediaPolicy() {
   assert(takeFileExtension('video/webm;codecs=vp8,opus') === 'webm', 'WebM MIME must use .webm extension');
 }
 
+function testMidiPitchBendExport() {
+  assert(
+    pitchBend14BitForSemitones(0) === 8192,
+    'Zero semitone offset must map to centered 14-bit pitch bend',
+  );
+  assert(
+    pitchBend14BitForSemitones(FREEHAND_PITCH_BEND_RANGE_SEMITONES) === 16383,
+    'Positive bend range must map to maximum pitch bend',
+  );
+  assert(
+    pitchBend14BitForSemitones(-FREEHAND_PITCH_BEND_RANGE_SEMITONES) === 1 ||
+      pitchBend14BitForSemitones(-FREEHAND_PITCH_BEND_RANGE_SEMITONES) === 0,
+    'Negative bend range must map to minimum pitch bend',
+  );
+
+  const expressive = {
+    id: 'gliss-test',
+    layerId: 'instrument:flute',
+    midi: 63.5,
+    endMidi: 68.75,
+    velocity: 0.7,
+    startBeat: 0.25,
+    durationBeats: 0.75,
+  };
+  const drum = {
+    id: 'drum-test',
+    layerId: 'accompaniment:drums:kick',
+    midi: 36,
+    velocity: 0.9,
+    startBeat: 0,
+    durationBeats: 0.25,
+  };
+
+  const messages = buildMidiMessages([drum, expressive], { bpm: 120 });
+  const bendMessages = messages.filter((message) => (message.bytes[0] & 0xf0) === 0xe0);
+  const expressiveNoteOns = messages.filter(
+    (message) =>
+      (message.bytes[0] & 0xf0) === 0x90 &&
+      (message.bytes[0] & 0x0f) !== 9,
+  );
+  const drumNoteOns = messages.filter(
+    (message) =>
+      (message.bytes[0] & 0xf0) === 0x90 &&
+      (message.bytes[0] & 0x0f) === 9,
+  );
+
+  assert(bendMessages.length >= 3, 'Freehand MIDI export must contain start/ramp/reset pitch-bend messages');
+  assert(expressiveNoteOns.length === 1, 'Freehand event must use one melodic note-on with pitch bend');
+  assert(
+    (expressiveNoteOns[0].bytes[0] & 0x0f) !== 0,
+    'Expressive Freehand note must use an isolated melodic channel',
+  );
+  assert(drumNoteOns.length === 1, 'Drum event must remain on MIDI channel 10');
+}
+
 function testExports() {
   const settings = {
     ...DEFAULT_MUSIC_SETTINGS,
@@ -472,6 +532,7 @@ testMeasuredPixelGrid();
 testDrawingTools();
 testDraftMigration();
 testTakeMediaPolicy();
+testMidiPitchBendExport();
 testExports();
 
 console.log('music-domain-smoke: all checks passed');
