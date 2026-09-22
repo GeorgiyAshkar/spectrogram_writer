@@ -3,7 +3,7 @@ import {
   buildPitchRange,
   compileStroke,
   mapYToMidi,
-  mapYToContinuousMidi,
+  mapYToFreehandMidi,
   midiToFrequency,
   noteNameToMidi,
   quantizeBeat,
@@ -69,7 +69,12 @@ function testTheory() {
   );
   assert(mapYToMidi(0, range) === 71, 'Top of canvas must map to highest note');
   assert(mapYToMidi(1, range) === 60, 'Bottom of canvas must map to lowest note');
-  approx(mapYToContinuousMidi(0.5, range), 65.5, 1e-9, 'Freehand midpoint must remain continuous');
+  approx(mapYToFreehandMidi(0.5, 'C'), 63.5, 1e-9, 'Measured C Freehand midpoint MIDI');
+  approx(midiToFrequency(mapYToFreehandMidi(0.02, 'C')), 756.41, 0.35, 'Measured C Freehand upper frequency');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'C')), 320.24, 0.35, 'Measured C Freehand center frequency');
+  approx(midiToFrequency(mapYToFreehandMidi(0.98, 'C')), 135.58, 2.2, 'Measured C Freehand lower frequency');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'D')), 359.46, 0.5, 'D key transposes Freehand up two semitones');
+  approx(midiToFrequency(mapYToFreehandMidi(0.5, 'Bb')), 285.31, 0.8, 'Bb key uses the nearest signed transpose around C');
 
   const expectedScaleSizes = {
     majorPentatonic: 5,
@@ -163,6 +168,45 @@ function testFreehandCompiler() {
   assert(
     freehand.length > normal.length,
     'Freehand must sample pitch more densely than discrete drawing',
+  );
+
+  const freehandMajorRange1 = compileStroke(stroke, {
+    ...DEFAULT_MUSIC_SETTINGS,
+    key: 'C',
+    scale: 'major',
+    rangeOctaves: 1,
+    quantizeStepBeats: 0.5,
+    freehandEnabled: true,
+  }, { baseOctave: 4 });
+
+  const freehandBluesRange3 = compileStroke(stroke, {
+    ...DEFAULT_MUSIC_SETTINGS,
+    key: 'C',
+    scale: 'blues',
+    rangeOctaves: 3,
+    quantizeStepBeats: 0.5,
+    freehandEnabled: true,
+  }, { baseOctave: 4 });
+
+  assert(
+    JSON.stringify(freehandMajorRange1) === JSON.stringify(freehandBluesRange3),
+    'Measured Freehand mapping must be independent from Scale and Range',
+  );
+
+  const freehandD = compileStroke(stroke, {
+    ...DEFAULT_MUSIC_SETTINGS,
+    key: 'D',
+    scale: 'majorPentatonic',
+    rangeOctaves: 3,
+    quantizeStepBeats: 0.5,
+    freehandEnabled: true,
+  }, { baseOctave: 4 });
+
+  approx(
+    freehandD[0].midi - freehand[0].midi,
+    2,
+    1e-9,
+    'Changing Key C→D must transpose the whole Freehand curve by two semitones',
   );
 }
 
