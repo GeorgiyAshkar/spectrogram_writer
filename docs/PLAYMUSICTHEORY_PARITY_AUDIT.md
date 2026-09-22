@@ -396,104 +396,134 @@ DOM одновременно показывает отдельный `Key` butto
 
 ---
 
-# 18. Что удалось снять из VERIFY
+# 18. Что удалось снять из VERIFY — update 2026-09-22
 
-| Пункт | Новый статус | Результат |
+После первичного аудита был добавлен интерактивный clean-room browser harness на headless Chrome. Он позволяет:
+
+- читать rendered DOM и реальные `option/min/max/default`;
+- нажимать controls и сравнивать state before/after;
+- измерять canvas geometry;
+- анализировать выход reference через Web Audio `AnalyserNode`;
+- наблюдать `MediaRecorder` policy;
+- запускать отдельные production browser smoke tests нашей реализации.
+
+Текущий статус:
+
+| Пункт | Статус | Измеренный результат |
 |---|---|---|
-| 1/2/3 | PARTIALLY CONFIRMED | drawing resolution/pixelization presets, не layers |
-| Background | CONFIRMED | paper / sky / photo, cloud entry control |
-| Undo | CONFIRMED | last line, Cmd-Z on iPad |
-| Record/take | CONFIRMED high-level | take сохраняется после окончания перед sharing |
-| The instrument | CONFIRMED | advanced paid feature bundle |
-| Major/Minor | CONFIRMED | официальный changelog |
-| Three-octave keyboard | CONFIRMED | официальный changelog |
-| Gallery | CONFIRMED | публичная gallery существует |
-| Palette | CONFIRMED visually | ряд готовых swatches + selected state |
-| •/••/••• | STRONG OBSERVATION | rhythm-related, exact mapping pending |
+| Key | CONFIRMED | C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B |
+| Scale | CONFIRMED | Major pentatonic, Minor pentatonic, Major, Minor, Harmonic minor, Dorian, Phrygian, Lydian, Mixolydian, Blues |
+| Default Scale | CONFIRMED | Major pentatonic |
+| Range | CONFIRMED | 1 / 2 / 3 octaves, default 3 |
+| Tune | CONFIRMED | -50..+50 cents, default 0 |
+| Tempo | CONFIRMED | 60..200 BPM, default 120 |
+| Quantize | CONFIRMED | 1/4, 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32; default 1/8 triplet |
+| Swing | CONFIRMED | Off / Light / Medium / Hard = 0 / 0.1 / 0.2 / 0.33 |
+| Swing + triplet | CONFIRMED | triplet grids не получают дополнительный swing |
+| 1 | CONFIRMED | Drawing mode |
+| 2 | CONFIRMED | Pixel mode |
+| 3 | CONFIRMED label | Video mode; “Map a photo to each instrument”; control скрыт в текущем public UI |
+| Pixel geometry | CONFIRMED | 48 horizontal columns; vertical rows следуют active discrete pitch range |
+| • | CONFIRMED | Bass |
+| •• | CONFIRMED | Drums |
+| ••• | CONFIRMED | Arpeggio |
+| Default Bass | MEASURED | C3/MIDI48 для Key=C, retrigger каждый beat |
+| Default Drums | MEASURED | hi-hat каждые 1/3 beat; kick 0/2; snare 1/3 |
+| Default Arpeggio | MEASURED | C5-E5-G5-A5-C6-A5-G5-E5, 1/3 beat step |
+| Freehand | MEASURED | geometry неизменна; pitch continuous; Scale/Range не влияют |
+| Freehand curve | MEASURED | при C: примерно MIDI = 79 - 31*y; Key транспонирует signed pitch-class offset |
+| Grid | CONFIRMED | default On |
+| Instruments | CONFIRMED IDs | keys, pluck, bell, marimba, flute, strings, chime, bass, 8bit |
+| Recolor | CONFIRMED | 27 preset colors + custom + original colors reset |
+| Background | CONFIRMED | Paper / Sky / Photo |
+| Photo fit | CONFIRMED | Fill / Fit / Stretch |
+| Record container | CONFIRMED | request video/mp4; Chromium actual video/mp4;codecs=vp9,opus |
+| Share limits | CONFIRMED | title maxlength 48; name/handle maxlength 120 |
+| Mobile implementation | VERIFIED | production smoke 390×844 без horizontal document overflow |
 
 ---
 
 # 19. Остающиеся VERIFY-пункты
 
-До окончательного parity sign-off все еще нужно получить интерактивным замером:
+После интерактивных измерений осталось значительно меньше неопределенностей:
 
-- exact Key options;
-- exact Scale options кроме Major/Minor;
-- Range options;
-- Octave min/max;
-- Tune semantics и диапазон;
-- Quantize option values;
-- Swing option values;
-- BPM min/max/default;
-- Tap averaging behavior;
-- Click timbre/accent;
-- точное поведение `3` в drawing resolution;
-- exact mapping `•/••/•••`;
-- точное назначение `+`;
-- custom color flow;
-- exact behavior `Key` button;
-- color → audio mapping;
-- список timbres/instruments;
-- MIDI input → scale mapping;
-- WAV metronome policy;
-- MIDI file track structure;
-- browser record container/codec;
-- share validation;
-- gallery item open/edit behavior.
+- Octave min/max: current public entitlement state не позволяет наблюдать изменение offset;
+- точный effect Octave на Freehand за пределами принятой conventional ±12 semitone модели;
+- Tap averaging/window behavior;
+- exact Click timbre и включение/исключение click в WAV export;
+- exact MIDI file layout reference, включая reference policy для Freehand pitch bend;
+- exact original synthesis recipes/envelopes для 9 instruments;
+- exact MIDI input → scale/freehand mapping;
+- exact Freestyle semantics;
+- gallery item open/edit/ownership lifecycle;
+- exact behavior Arpeggio для всех non-default Scale до завершения текущего scale probe.
+
+Freestyle уже проверен по нескольким гипотезам и **не** должен реализовываться наугад:
+
+- forward geometry = default;
+- backward/backtracking geometry = default;
+- tested pitch spectrum ≈ default;
+- theory controls не меняют enabled/value/display state;
+- onset timing на нескольких X не показывает Quantize bypass.
 
 ---
 
-# 20. Ограничение текущего аудита
+# 20. Ограничения текущего аудита
 
-Текущий web-indexer надежно показывает controls и text, но не раскрывает значения HTML `<option>` и не позволяет программно менять select/range values как полноценный interactive browser.
+Browser harness снимает существенно больше данных, чем первоначальный DOM-indexer, но остаются объективные ограничения:
 
-Поэтому exact option lists нельзя честно объявлять подтвержденными только по DOM extraction.
+1. часть `The instrument` actions в public reference entitlement-locked;
+2. WAV/MIDI buttons видимы, но в такой session не materialize download;
+3. Octave +/- визуально доступны, но не меняют offset в текущем entitlement state;
+4. прямой захват некоторых instrument-specific audio paths зависит от browser/audio backend;
+5. black-box spectral measurement имеет FFT/time-resolution error и не используется как “точный исходный DSP”.
 
-Следующая проверка должна выполняться в интерактивном browser session/DevTools либо вручную пользователем с фиксацией:
-
-- screenshots каждого expanded select;
-- min/max input;
-- behavior before/after;
-- audio comparison.
-
----
-
-# 21. Решение для разработки до финального замера
-
-Разработку core можно начинать без ожидания оставшихся значений, если:
-
-1. все unknown values живут в конфигурации;
-2. UI labels не зашиты в DSP;
-3. `1/2/3` реализуются отдельным `DrawingQuantizer`;
-4. `•/••/•••` реализуются через отдельный `RhythmPresetMapper`;
-5. theory settings приходят в engine через typed model;
-6. exact parity values можно заменить одной конфигурацией без переписывания canvas/audio engine.
-
-Это позволяет двигаться к MVP, не превращая временные догадки в архитектурные ограничения.
-
+Поэтому каждый measured fact хранится отдельно от clean-room approximation.
 
 ---
 
-# 22. Hardening update — 2026-09-19
+# 21. Решение для дальнейшей разработки
 
-После первого аудита реализация была повторно сверена с текущим web UI и официальным App Store version history.
+Архитектура уже не зависит от старых временных mapper-гипотез:
 
-Подтверждено и приведено в соответствие:
+1. `ProgramMode` отделен от audio accompaniment;
+2. Bass / Drums / Arpeggio — независимые boolean layers;
+3. exact theory options находятся в `parityConfig.ts`;
+4. Freehand имеет отдельный continuous-pitch mapper;
+5. Pixel mode имеет отдельную measured grid geometry;
+6. instrument identity отделена от цвета;
+7. realtime / WAV / MIDI используют общий canonical `NoteEvent[]`;
+8. все ещё неизвестные детали изолированы в конфигурируемых слоях.
 
-- `The instrument` по умолчанию закрыт и открывается отдельным переключателем;
-- внутри панели присутствует собственный close `×`;
-- WAV/MIDI Export находится внутри `The instrument`;
-- отдельный `Key` control открывает трехоктавную экранную клавиатуру;
-- Undo действует только на последнюю нарисованную линию;
-- Cmd/Ctrl+Z отменяет последнюю линию;
-- отдельная `?` справка реализована в music mode;
-- tempo имеет числовое управление, Tap и связанный range-control;
-- preset `2`/coarse drawing отображается как grid/pixel stroke, а не только координатный snap;
-- `1/2/3` и `•/••/•••` остаются конфигурируемыми до exact interactive measurement.
+Это позволяет продолжать hardening без повторного переписывания canvas/audio domain.
 
-Дополнительные источники подтверждают общий характер controls:
+---
 
-- https://80.lv/articles/this-website-turns-your-sketches-into-minecraft-like-music
-- https://note.com/aoyamaan_h1/n/nc6318c5a8581
+# 22. Hardening update — 2026-09-22
 
-Exact HTML option values текущий публичный индексатор по-прежнему не раскрывает. Они не считаются подтвержденными и остаются в `parityConfig.ts`.
+К этому этапу в ветке `playmusictheory` реализованы и проверены:
+
+- realtime Web Audio loop scheduler;
+- measured Key/Scale/Range/Tune/Tempo/Quantize/Swing defaults;
+- Drawing + measured Pixel mode;
+- continuous measured Freehand mapping;
+- Bass/Drums/default Arpeggio;
+- 9 stable instrument IDs и exact reference colors;
+- Recolor workflow;
+- Paper/Sky/Photo + Fill/Fit/Stretch;
+- Web MIDI input;
+- three-octave virtual keyboard;
+- WAV export;
+- MIDI export с Freehand pitch bend;
+- Take recording с MP4-first reference policy;
+- Web Share take flow;
+- autosave/versioned project state;
+- share/gallery backend;
+- desktop + mobile production browser smoke.
+
+Текущий authoritative measured-status находится в:
+
+- `docs/PARITY_EVIDENCE_MATRIX.md`;
+- `docs/IMPLEMENTATION_STATUS.md`.
+
+Этот audit теперь отражает текущую measured baseline, а не состояние первого DOM-only прохода.
