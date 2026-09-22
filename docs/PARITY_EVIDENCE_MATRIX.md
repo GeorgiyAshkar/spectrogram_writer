@@ -56,6 +56,16 @@
 | Gallery | public gallery | Implemented MVP with thumbnail cards |
 | Help | ? control | Implemented |
 
+## Measured accompaniment behavior
+
+At the default C / Major pentatonic / 120 BPM settings, black-box output analysis established:
+
+- **Bass**: fundamental around C3 / MIDI 48, retriggered approximately once per beat and sustained through most of the beat.
+- **Arpeggio**: a repeating 1/8-triplet sequence approximately C5–E5–G5–A5–C6–A5–G5–E5.
+- **Drums**: strong low-frequency accents repeat on the larger beat structure, but exact kick/snare/hat subdivision is being resolved with a shorter FFT/transient probe.
+
+The clone now matches the measured default Bass and Arpeggio behavior. Non-default Scale arpeggios remain a documented clean-room fallback until measured separately.
+
 ## Exact instrument palette
 
 The rendered web UI exposes stable instrument identity separately from color:
@@ -144,7 +154,7 @@ Therefore:
 
 1. Octave min/max clamp.
 2. Exact waveform/envelope/harmonic recipe for each of the nine named instruments.
-3. Exact Bass/Drums/Arpeggio musical patterns; control identities are exact, patterns in our clone are clean-room approximations.
+3. Exact Drums subdivision/transient pattern and non-default Scale behavior of Arpeggio; default Bass and default Major-pentatonic Arpeggio are measured and implemented.
 4. Exact MIDI input interaction with scale/freestyle modes.
 5. Whether metronome Click is included in reference WAV export.
 6. Exact reference MIDI file track/channel structure.
