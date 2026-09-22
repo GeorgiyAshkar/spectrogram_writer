@@ -264,6 +264,12 @@ function testAccompaniment() {
 
   const bass = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, bassEnabled: true });
   assert(bass.length > 0 && bass.every((event) => event.layerId === 'accompaniment:bass'), 'Bass control must create only bass events');
+  assert(bass[0].midi === 48, 'Measured default Bass root must be C3 / MIDI 48');
+  approx(bass[0].durationBeats, 0.82, 1e-9, 'Measured Bass note should occupy most of one beat');
+  assert(
+    JSON.stringify(bass.slice(0, 4).map((event) => event.startBeat)) === JSON.stringify([0, 1, 2, 3]),
+    'Measured Bass must retrigger on each beat',
+  );
 
   const drums = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, drumsEnabled: true });
   assert(drums.some((event) => event.layerId === 'accompaniment:drums:kick'), 'Drums must include kick');
@@ -272,6 +278,19 @@ function testAccompaniment() {
 
   const arpeggio = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, arpeggioEnabled: true });
   assert(arpeggio.length > 0 && arpeggio.every((event) => event.layerId === 'accompaniment:arpeggio'), 'Arpeggio control must create arpeggio events');
+  assert(
+    JSON.stringify(arpeggio.slice(0, 8).map((event) => event.midi)) ===
+      JSON.stringify([72, 76, 79, 81, 84, 81, 79, 76]),
+    'Measured default Arpeggio must follow C5-E5-G5-A5-C6-A5-G5-E5',
+  );
+  for (let i = 1; i < 8; i += 1) {
+    approx(
+      arpeggio[i].startBeat - arpeggio[i - 1].startBeat,
+      1 / 3,
+      1e-9,
+      'Measured Arpeggio must advance on 1/8-triplet steps',
+    );
+  }
 }
 
 function testReferencePalette() {
