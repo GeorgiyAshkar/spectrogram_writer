@@ -11,6 +11,7 @@ on:
       - scripts/reference-freehand-curve-probe.cjs
       - scripts/reference-freestyle-timing-probe.cjs
       - scripts/reference-accompaniment-probe.cjs
+      - scripts/reference-drums-transient-probe.cjs
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
       - .github/workflows/reference-focused-probes.yml
@@ -42,6 +43,8 @@ jobs:
         run: node scripts/reference-freestyle-timing-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe accompaniment patterns
         run: node scripts/reference-accompaniment-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Drums transients
+        run: node scripts/reference-drums-transient-probe.cjs "${{ steps.chrome.outputs.path }}"
 
   exports:
     runs-on: ubuntu-latest
