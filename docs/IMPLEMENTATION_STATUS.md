@@ -155,10 +155,12 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] realtime Web Audio capture
 - [x] MediaRecorder
 - [x] capability detection
+- [x] measured reference policy: request `video/mp4` first
+- [x] observed Chromium result: `video/mp4;codecs=vp9,opus`
+- [x] WebM fallbacks for browsers without MP4 MediaRecorder support
 - [x] record/stop lifecycle
 - [x] downloadable take
-- [x] cleanup on clear/mode switch
-- [ ] exact original take codec/container policy
+- [x] cleanup on mode switch
 - [x] Web Share file flow for “share take”
 - [x] download fallback when file sharing is unavailable
 
@@ -248,6 +250,5 @@ Measured facts are recorded in:
 3. compare named instrument audio behavior and refine configurable voice profiles;
 4. verify metronome export policy;
 5. verify MIDI structure, especially Freehand pitch-bend behavior;
-6. verify the reference take codec/container policy;
-7. keep production browser smoke green across desktop/mobile-sized viewports;
-8. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
+6. keep production browser smoke green across desktop/mobile-sized viewports;
+7. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
