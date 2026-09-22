@@ -9,6 +9,7 @@ on:
       - scripts/reference-pixel-probe.cjs
       - scripts/reference-pixel-rows-probe.cjs
       - scripts/reference-freehand-curve-probe.cjs
+      - scripts/reference-freestyle-timing-probe.cjs
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
       - .github/workflows/reference-focused-probes.yml
@@ -36,6 +37,8 @@ jobs:
         run: node scripts/reference-pixel-rows-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe pitch curves
         run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Freestyle onset timing
+        run: node scripts/reference-freestyle-timing-probe.cjs "${{ steps.chrome.outputs.path }}"
 
   exports:
     runs-on: ubuntu-latest
