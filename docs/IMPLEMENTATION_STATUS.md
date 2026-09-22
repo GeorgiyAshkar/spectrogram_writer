@@ -1,7 +1,7 @@
 # play_music_theory — Implementation Status
 
 **Branch:** `playmusictheory`  
-**Updated:** 2026-09-19  
+**Updated:** 2026-09-22  
 **Reference:** https://playmusictheory.net/play
 
 ## Status
@@ -180,12 +180,14 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] Freehand control
 - [x] Freehand leaves canvas geometry unchanged
 - [x] Freehand maps Y to continuous fractional pitch
+- [x] measured Freehand curve at octave offset 0: C ≈ MIDI 79 − 31·y
+- [x] Freehand is independent from Scale and Range
+- [x] measured signed Key transpose: F#=+6 boundary, G=-5 wrap
 - [x] Freehand realtime glissando ramps
 - [x] Freehand WAV glissando ramps
 - [x] Freehand help text
 - [x] old drafts default Freehand to Off
 - [x] Freehand regression tests
-- [ ] exact reference Freehand Y→Hz curve — clean-room linear range mapping currently used
 - [ ] Freestyle — exact transformation still VERIFY
 
 ## Verification
@@ -226,7 +228,11 @@ The branch contains disposable clean-room measurement workflows:
 
 - `scripts/reference-dom-probe.mjs`
 - `scripts/reference-interaction-probe.cjs`
+- `scripts/reference-freehand-curve-probe.cjs`
+- `scripts/reference-export-probe.cjs`
+- `scripts/reference-take-probe.cjs`
 - `.github/workflows/reference-parity-probe.yml`
+- `.github/workflows/reference-focused-probes.yml`
 
 They inspect only public rendered UI/interaction state and are not runtime dependencies.
 
@@ -238,10 +244,10 @@ Measured facts are recorded in:
 ## Next work
 
 1. experimentally determine Freestyle behavior;
-2. determine whether the reference applies any nonlinear curve to Freehand Y→Hz;
-3. resolve octave min/max outside the currently locked public entitlement state;
-4. compare named instrument audio behavior and refine configurable voice profiles;
-5. verify metronome export policy;
-6. verify MIDI structure, especially Freehand pitch-bend behavior;
+2. resolve octave min/max and Freehand octave-offset behavior outside the currently locked public entitlement state;
+3. compare named instrument audio behavior and refine configurable voice profiles;
+4. verify metronome export policy;
+5. verify MIDI structure, especially Freehand pitch-bend behavior;
+6. verify the reference take codec/container policy;
 7. keep production browser smoke green across desktop/mobile-sized viewports;
 8. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
