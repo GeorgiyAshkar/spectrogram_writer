@@ -18,6 +18,7 @@
     "src/features/music/audio/accompaniment.ts",
     "src/features/music/drawing/drawingTools.ts",
     "src/features/music/parityConfig.ts",
-    "src/features/music/canvas/pixelGrid.ts"
+    "src/features/music/canvas/pixelGrid.ts",
+    "src/features/music/recording/takeMedia.ts"
   ]
 }
