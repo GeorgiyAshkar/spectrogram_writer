@@ -111,14 +111,48 @@ export function mapYToMidi(y: number, pitchRange: readonly number[]): number {
 
 
 /**
- * Clean-room approximation of the reference Freehand behavior.
- * Unlike mapYToMidi(), this does not snap to scale degrees.
+ * Measured reference Freehand mapping at octave offset 0.
+ *
+ * Black-box spectral probing on 2026-09-22 established that:
+ * - Scale does not change Freehand pitch.
+ * - Range does not change Freehand pitch.
+ * - Key transposes the whole curve.
+ * - For Key=C the vertical curve is consistent with ~31 semitones
+ *   from MIDI 79 at y=0 to MIDI 48 at y=1.
+ *
+ * The octave control is not measurable in the public web session, so
+ * octaveOffset is kept as the conventional ±12-semitone transpose.
+ */
+export const FREEHAND_C_TOP_MIDI = 79;
+export const FREEHAND_C_SPAN_SEMITONES = 31;
+
+export function signedKeyTranspose(key: string): number {
+  const pitchClass = tonicToPitchClass(key);
+  return pitchClass > 6 ? pitchClass - 12 : pitchClass;
+}
+
+export function mapYToFreehandMidi(
+  y: number,
+  key: string,
+  octaveOffset = 0,
+): number {
+  const clamped = Math.min(1, Math.max(0, y));
+  return (
+    FREEHAND_C_TOP_MIDI -
+    FREEHAND_C_SPAN_SEMITONES * clamped +
+    signedKeyTranspose(key) +
+    octaveOffset * 12
+  );
+}
+
+/**
+ * @deprecated Use mapYToFreehandMidi(y, key, octaveOffset).
+ * Retained only for source compatibility while callers migrate.
  */
 export function mapYToContinuousMidi(y: number, pitchRange: readonly number[]): number {
   if (pitchRange.length === 0) {
     throw new Error('Cannot map Y to continuous pitch: pitch range is empty.');
   }
-
   const low = pitchRange[0];
   const high = pitchRange[pitchRange.length - 1];
   const clamped = Math.min(1, Math.max(0, y));
