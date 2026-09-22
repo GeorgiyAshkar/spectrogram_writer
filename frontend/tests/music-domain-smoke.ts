@@ -276,6 +276,24 @@ function testAccompaniment() {
   assert(drums.some((event) => event.layerId === 'accompaniment:drums:snare'), 'Drums must include snare');
   assert(drums.some((event) => event.layerId === 'accompaniment:drums:hat'), 'Drums must include hat');
 
+  const hats = drums.filter((event) => event.layerId === 'accompaniment:drums:hat');
+  const kicks = drums.filter((event) => event.layerId === 'accompaniment:drums:kick');
+  const snares = drums.filter((event) => event.layerId === 'accompaniment:drums:snare');
+
+  assert(
+    JSON.stringify(hats.slice(0, 7).map((event) => Math.round(event.startBeat * 3))) ===
+      JSON.stringify([0, 1, 2, 3, 4, 5, 6]),
+    'Measured hi-hat must advance every 1/3 beat',
+  );
+  assert(
+    JSON.stringify(kicks.map((event) => event.startBeat)) === JSON.stringify([0, 2]),
+    'Measured kick accents must land on beats 0 and 2',
+  );
+  assert(
+    JSON.stringify(snares.map((event) => event.startBeat)) === JSON.stringify([1, 3]),
+    'Measured snare accents must land on beats 1 and 3',
+  );
+
   const arpeggio = buildAccompanimentEvents({ ...DEFAULT_MUSIC_SETTINGS, arpeggioEnabled: true });
   assert(arpeggio.length > 0 && arpeggio.every((event) => event.layerId === 'accompaniment:arpeggio'), 'Arpeggio control must create arpeggio events');
   assert(
