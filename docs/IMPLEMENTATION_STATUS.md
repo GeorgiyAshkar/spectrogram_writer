@@ -197,7 +197,7 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] Freehand help text
 - [x] old drafts default Freehand to Off
 - [x] Freehand regression tests
-- [ ] Freestyle — exact transformation still VERIFY; geometry, pitch spectrum, theory-control state, backward drawing and onset timing all tested without a distinguishing effect
+- [ ] Freestyle — exact transformation still VERIFY; geometry, pitch spectrum, theory-control state, backward drawing and onset timing all tested without a distinguishing effect; geometry, pitch spectrum, theory-control state, backward drawing and onset timing all tested without a distinguishing effect
 
 ## Verification
 
