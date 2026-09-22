@@ -1,5 +1,4 @@
 import { SCALE_INTERVALS, signedKeyTranspose } from '../model/theory';
-import { applySwing } from '../model/rhythm';
 import type { MusicSettings, NoteEvent } from '../model/types';
 
 const DEFAULT_ARP_STEP_BEATS = 1 / 3;
@@ -34,8 +33,7 @@ function arpeggioOffsets(settings: MusicSettings): readonly number[] {
  * - Bass: tonic around C3 (MIDI 48 for Key=C), retriggered every beat.
  * - Arpeggio: 1/8-triplet step (1/3 beat) and, for C Major pentatonic,
  *   C5-E5-G5-A5-C6-A5-G5-E5 repeating.
- *
- * Drum subdivision is still being refined by a short-window transient probe.
+ * - Drums: closed-hat every 1/3 beat; kick on beats 0/2; snare on beats 1/3.
  */
 export function buildAccompanimentEvents(settings: MusicSettings): NoteEvent[] {
   const events: NoteEvent[] = [];
@@ -56,30 +54,35 @@ export function buildAccompanimentEvents(settings: MusicSettings): NoteEvent[] {
   }
 
   if (settings.drumsEnabled) {
-    for (let beat = 0; beat < loopLength; beat += 0.5) {
-      const step = Math.round(beat * 2);
-      const swungBeat = applySwing(beat, 0.5, settings.swing);
+    // Measured reference pattern at 120 BPM:
+    // closed-hat transient every 1/3 beat, kick on beats 0/2,
+    // snare on beats 1/3. Triplet subdivisions remain unswung.
+    for (
+      let beat = 0, step = 0;
+      beat < loopLength;
+      beat += 1 / 3, step += 1
+    ) {
       events.push({
         id: `hat:${step}`,
         layerId: 'accompaniment:drums:hat',
         midi: 42,
-        velocity: step % 2 === 0 ? 0.42 : 0.3,
-        startBeat: swungBeat,
-        durationBeats: 0.08,
+        velocity: step % 3 === 0 ? 0.42 : 0.3,
+        startBeat: beat,
+        durationBeats: Math.min(0.08, loopLength - beat),
       });
+    }
 
-      if (step % 2 === 0) {
-        const integerBeat = Math.round(beat);
-        const snare = integerBeat % 4 === 1 || integerBeat % 4 === 3;
-        events.push({
-          id: `drum:${integerBeat}`,
-          layerId: snare ? 'accompaniment:drums:snare' : 'accompaniment:drums:kick',
-          midi: snare ? 38 : 36,
-          velocity: 0.7,
-          startBeat: beat,
-          durationBeats: 0.12,
-        });
-      }
+    for (let beat = 0; beat < loopLength; beat += 1) {
+      const integerBeat = Math.round(beat);
+      const snare = integerBeat % 4 === 1 || integerBeat % 4 === 3;
+      events.push({
+        id: `drum:${integerBeat}`,
+        layerId: snare ? 'accompaniment:drums:snare' : 'accompaniment:drums:kick',
+        midi: snare ? 38 : 36,
+        velocity: 0.7,
+        startBeat: beat,
+        durationBeats: Math.min(0.12, loopLength - beat),
+      });
     }
   }
 
