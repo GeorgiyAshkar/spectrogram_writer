@@ -80,7 +80,11 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] realtime/WAV/MIDI all consume the same accompaniment events
 - [x] drums use GM kick/snare/closed-hat note numbers
 - [x] MIDI drums routed to percussion channel 10
-- [ ] exact reference Bass/Drums/Arpeggio patterns — clean-room approximation currently used
+- [x] measured default Bass: tonic at C3/MIDI 48 for Key=C, retrigger every beat
+- [x] measured default Arpeggio: C5-E5-G5-A5-C6-A5-G5-E5 on 1/8-triplet steps
+- [x] measured Bass/Arpeggio implemented for default Major-pentatonic behavior
+- [ ] exact Drums transient/subdivision pattern — short-window probe pending
+- [ ] non-default Scale behavior of Arpeggio — clean-room triad fallback currently used
 
 ### Realtime audio
 - [x] Web Audio engine
@@ -119,6 +123,9 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] velocity
 - [x] deterministic PPQ
 - [x] percussion channel for drum accompaniment
+- [x] Freehand MIDI pitch-bend export with isolated expressive channels
+- [x] 14-bit bend curve and RPN pitch-bend range setup
+- [x] graceful rounded-note fallback if all expressive channels are occupied
 - [x] WAV and MIDI use the same musical timeline
 - [ ] exact reference metronome-in-WAV policy
 - [ ] exact reference MIDI track layout
