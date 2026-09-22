@@ -168,7 +168,7 @@ async function measureCase(browser, settings) {
     await setReferenceSettings(page, settings);
 
     const measurements = [];
-    for (const y of [0.02, 0.5, 0.98]) {
+    for (const y of settings.ys ?? [0.02, 0.5, 0.98]) {
       await clearReferenceDrawing(page);
       await drawFlatStroke(page, y);
       const result = await sampleFundamental(page);
@@ -201,10 +201,13 @@ async function measureCase(browser, settings) {
 
   try {
     const cases = [
-      { name: 'C-range1', key: '0', range: '1' },
-      { name: 'C-range3', key: '0', range: '3' },
-      { name: 'D-range3', key: '2', range: '3' },
-      { name: 'Bb-range3', key: '10', range: '3' },
+      { name: 'C-pentatonic-range1', key: '0', scale: 'pentatonic', range: '1' },
+      { name: 'C-pentatonic-range3', key: '0', scale: 'pentatonic', range: '3' },
+      { name: 'D-pentatonic-range3', key: '2', scale: 'pentatonic', range: '3' },
+      { name: 'Bb-pentatonic-range3', key: '10', scale: 'pentatonic', range: '3' },
+      { name: 'C-major-range3', key: '0', scale: 'major', range: '3', ys: [0.5] },
+      { name: 'C-minor-range3', key: '0', scale: 'natural', range: '3', ys: [0.5] },
+      { name: 'C-blues-range3', key: '0', scale: 'blues', range: '3', ys: [0.5] },
     ];
 
     const measurements = [];
