@@ -158,3 +158,22 @@ Therefore:
 - New strokes use stable `instrument:<id>` layer IDs.
 - Old drafts are migrated instead of being rejected.
 - Unknown reference synthesis details are kept behind configuration, not encoded as alleged parity facts.
+
+
+## Pixel mode geometry
+
+Black-box image-difference probing of Program 2 established the following geometry:
+
+- horizontal grid: **48 columns** across the 960 px reference canvas;
+- cell side: approximately **18/19 of one 20 px column pitch**;
+- cells are rendered as squares;
+- horizontal snap uses the center of the selected 1/48 column;
+- vertical rows follow the active discrete pitch range rather than a fixed 24-row grid;
+- at the current default Major pentatonic / 3-octave settings the measured row count is **15**;
+- row centers are distributed between half a cell from the top and half a cell from the bottom.
+
+Implementation details:
+- new Program-2 strokes persist `pixelRowCount`;
+- reload/share therefore preserve the exact row geometry that existed when the stroke was drawn;
+- legacy Program-2 strokes without `pixelRowCount` keep the older clean-room 32×24 fallback for backward compatibility.
+
