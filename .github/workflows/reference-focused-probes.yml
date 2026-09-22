@@ -10,6 +10,7 @@ on:
       - scripts/reference-pixel-rows-probe.cjs
       - scripts/reference-freehand-curve-probe.cjs
       - scripts/reference-freestyle-timing-probe.cjs
+      - scripts/reference-freestyle-pitch-probe.cjs
       - scripts/reference-accompaniment-probe.cjs
       - scripts/reference-arpeggio-scale-probe.cjs
       - scripts/reference-drums-transient-probe.cjs
@@ -59,6 +60,8 @@ jobs:
         run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Freestyle onset timing
         run: node scripts/reference-freestyle-timing-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Freestyle vertical pitch
+        run: node scripts/reference-freestyle-pitch-probe.cjs "${{ steps.chrome.outputs.path }}"
 
   accompaniment:
     runs-on: ubuntu-latest
