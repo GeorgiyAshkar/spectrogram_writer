@@ -23,6 +23,10 @@ import {
 import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
 import { buildAccompanimentEvents } from '../src/features/music/audio/accompaniment';
 import {
+  selectTakeMimeType,
+  takeFileExtension,
+} from '../src/features/music/recording/takeMedia';
+import {
   PIXEL_COLUMNS,
   pixelCellSide,
   pixelColumnIndex,
@@ -393,6 +397,34 @@ function testDraftMigration() {
   assert(normalizeMusicDraft({ schemaVersion: 999 }) === null, 'Unknown schema must be rejected');
 }
 
+function testTakeMediaPolicy() {
+  const allSupported = new Set([
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+  ]);
+  assert(
+    selectTakeMimeType((type) => allSupported.has(type)) === 'video/mp4',
+    'Measured reference take policy must prefer video/mp4',
+  );
+
+  const webmOnly = new Set([
+    'video/webm;codecs=vp9,opus',
+    'video/webm',
+  ]);
+  assert(
+    selectTakeMimeType((type) => webmOnly.has(type)) === 'video/webm;codecs=vp9,opus',
+    'Take policy must fall back to VP9/Opus WebM',
+  );
+  assert(
+    selectTakeMimeType(() => false) === '',
+    'Take policy must allow native MediaRecorder fallback when no preferred MIME is reported',
+  );
+  assert(takeFileExtension('video/mp4;codecs=vp9,opus') === 'mp4', 'MP4 MIME must use .mp4 extension');
+  assert(takeFileExtension('video/webm;codecs=vp8,opus') === 'webm', 'WebM MIME must use .webm extension');
+}
+
 function testExports() {
   const settings = {
     ...DEFAULT_MUSIC_SETTINGS,
@@ -439,6 +471,7 @@ testReferencePalette();
 testMeasuredPixelGrid();
 testDrawingTools();
 testDraftMigration();
+testTakeMediaPolicy();
 testExports();
 
 console.log('music-domain-smoke: all checks passed');
