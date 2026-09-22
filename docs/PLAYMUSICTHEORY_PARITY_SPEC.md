@@ -1372,38 +1372,50 @@ MIDI:
 
 # 55. Parity checklist с оригиналом
 
-Перед объявлением feature complete вручную сравнить side-by-side:
+Статус на 2026-09-22. Пункты `[x]` закрыты rendered-DOM, interaction, spectral или production-browser измерениями.
 
-- [ ] внешний порядок основных controls;
-- [ ] Key options;
-- [ ] Scale options;
-- [ ] Range options;
-- [ ] Octave min/max;
-- [ ] Paper behavior;
-- [ ] Tune semantics;
-- [ ] Quantize option values;
-- [ ] Swing option values;
-- [ ] BPM min/max/default;
-- [ ] Tap behavior;
-- [ ] Click sound/accent;
-- [x] buttons 1/2/3: семейство drawing resolution/pixelization presets; exact preset 3 еще уточнить;
-- [ ] exact mapping buttons •/••/••• (rhythm-related по текущему аудиту);
-- [ ] значение `+` (сильная гипотеза: custom color workflow);
-- [ ] color input behavior;
-- [ ] `Key` button behavior;
-- [ ] instrument list;
-- [ ] layer count;
-- [ ] drawing-to-note sampling density;
-- [ ] note duration;
-- [ ] polyphony behavior;
-- [ ] loop restart behavior;
-- [ ] MIDI scale mapping;
-- [ ] WAV includes/excludes metronome;
-- [ ] MIDI track structure;
-- [ ] record output type;
-- [ ] share validation;
-- [ ] gallery open behavior;
-- [ ] mobile layout.
+- [ ] внешний порядок основных controls — functional parity есть, exact visual order еще hardening;
+- [x] Key options;
+- [x] Scale options;
+- [x] Range options;
+- [ ] Octave min/max — public entitlement state не дает изменить offset;
+- [x] Paper / Sky / Photo behavior;
+- [x] Tune semantics и диапазон;
+- [x] Quantize option values;
+- [x] Swing option values;
+- [x] BPM min/max/default;
+- [x] Tap меняет BPM в нашей production flow; exact averaging window reference остается внутренней деталью;
+- [x] Click control + first-beat-higher reference hint;
+- [x] buttons 1/2/3 = Drawing / Pixel / hidden Video mode;
+- [x] Pixel geometry = 48 columns + pitch-dependent rows;
+- [x] buttons •/••/••• = Bass / Drums / Arpeggio;
+- [x] default Bass pattern;
+- [x] default Drums triplet pattern;
+- [x] default Major-pentatonic Arpeggio pattern;
+- [x] custom recolor flow: 27 presets + custom + original colors;
+- [x] instrument list: keys / pluck / bell / marimba / flute / strings / chime / bass / 8bit;
+- [x] instrument identity отделена от color;
+- [x] Grid default On;
+- [x] Freehand continuous pitch behavior;
+- [x] Freehand C curve + signed Key transpose measured;
+- [ ] Freestyle exact semantics;
+- [x] three-octave virtual keyboard;
+- [x] Web MIDI input flow в нашей версии;
+- [ ] exact reference MIDI input → scale/freehand mapping;
+- [x] realtime loop restart без hanging notes в production smoke/domain tests;
+- [x] WAV export нашей версии;
+- [ ] WAV includes/excludes reference metronome click — entitlement-locked export не materialize;
+- [x] MIDI export нашей версии, включая Freehand pitch bend;
+- [ ] exact reference MIDI file track/channel structure — entitlement-locked export не materialize;
+- [x] record output policy: request video/mp4; Chromium actual video/mp4;codecs=vp9,opus;
+- [x] share title maxlength 48;
+- [x] share name/handle maxlength 120;
+- [x] shared-project safe-open flow в нашей версии;
+- [ ] exact original gallery ownership/edit lifecycle;
+- [x] mobile production layout smoke 390×844 без horizontal overflow.
+
+Точный measured status и ограничения measurement harness находятся в
+`PARITY_EVIDENCE_MATRIX.md` и `IMPLEMENTATION_STATUS.md`.
 
 ---
 
@@ -1523,32 +1535,41 @@ NoteEvent[]
 
 # 60. Статус Parity Audit
 
-Первый аудит выполнен 2026-09-19. Результаты находятся в:
+Первый DOM/screenshot аудит выполнен 2026-09-19. К 2026-09-22 он расширен интерактивным clean-room browser harness:
 
-`docs/PLAYMUSICTHEORY_PARITY_AUDIT.md`
+- rendered DOM;
+- control state before/after;
+- canvas geometry;
+- Web Audio spectral measurements;
+- MediaRecorder policy observation;
+- production desktop/mobile browser smoke.
 
-Он уже снял несколько критичных неопределенностей:
+Актуальные результаты:
 
-- `1/2/3` — drawing resolution / pixelization presets, не layers;
-- background = paper / sky / photo;
-- undo = последняя line;
-- take/record — materialized recording перед sharing;
-- `The instrument` — advanced feature bundle;
-- Major/Minor, three-octave keyboard и loop export подтверждены официально;
-- `•/••/•••` имеют rhythm-related behavior, но exact mapping еще требует интерактивного замера.
+- `docs/PLAYMUSICTHEORY_PARITY_AUDIT.md`;
+- `docs/PARITY_EVIDENCE_MATRIX.md`;
+- `docs/IMPLEMENTATION_STATUS.md`.
 
-# 61. Следующий шаг после первого аудита
+Критичные старые гипотезы сняты:
 
-Сформировать `IMPLEMENTATION_PLAN.md` и начинать core-реализацию на конфигурируемых abstractions.
+- `1/2/3` = Drawing / Pixel / Video, не layers и не три pixel-density preset;
+- `•/••/•••` = Bass / Drums / Arpeggio;
+- exact Key/Scale/Range/Tune/Tempo/Quantize/Swing options измерены;
+- Pixel geometry измерена;
+- Freehand continuous-pitch curve измерена;
+- Take container policy измерена;
+- default accompaniment patterns измерены.
 
-Параллельно закрыть оставшиеся exact-value пункты интерактивным browser audit:
+# 61. Следующий шаг hardening
 
-- значения select;
-- диапазоны inputs;
-- mapping rhythm presets;
-- Tune;
-- custom color flow;
-- MIDI behavior;
-- export details.
+Core parity уже реализован. Дальнейшая работа концентрируется на небольшом наборе объективно недоступных или еще измеряемых деталей:
 
-Оставшиеся VERIFY-пункты не должны блокировать архитектуру, если они изолированы в конфигурационных mapper-слоях.
+1. завершить scale-dependent Arpeggio measurement;
+2. определить Freestyle semantics без догадок;
+3. уточнить original instrument spectra/envelopes, если black-box analyser даст устойчивые данные;
+4. определить Octave min/max при доступном entitlement state;
+5. проверить reference WAV metronome policy и MIDI layout, если export materialization станет доступна;
+6. продолжать regression/browser/mobile hardening.
+
+Оставшиеся VERIFY не должны менять уже стабилизированные границы:
+`Stroke[] → NoteEvent[] → realtime/WAV/MIDI/share`.
