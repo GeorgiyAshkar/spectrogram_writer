@@ -131,61 +131,59 @@ Version history официально подтверждает:
 
 ---
 
-# 5. Кнопки 1 / 2 / 3 — исправление первоначальной гипотезы
+# 5. Кнопки 1 / 2 / 3 — измерено интерактивно
 
-Первичная спецификация допускала, что `1/2/3` могут быть слоями. Эта гипотеза не подтверждается.
+Первичная гипотеза о трех вариантах drawing resolution была уточнена интерактивным DOM/browser-аудитом.
 
-Наблюдаемое:
+Текущий reference UI показывает:
 
-- при выбранном `1` на официальном screenshot рисунок представлен плавными/непрерывными линиями;
-- при выбранном `2` на официальном screenshot изображение представлено как явно дискретная grid/pixel композиция из квадратных элементов;
-- вторичный японский обзор независимо описывает эти кнопки как controls, позволяющие сделать рисунок “pixel-art like”;
-- `3` наблюдается как третий selectable preset, но доступный screenshot с `3` не содержит достаточно stroke-геометрии, чтобы точно измерить его разрешение.
+- `1` — **Drawing mode**;
+- `2` — **Pixel mode**;
+- `3` — **Video mode**, hint: “Map a photo to each instrument.”
+
+В текущем публичном rendered UI `3` присутствует в DOM, но скрыт через `display:none`.
 
 ### Parity requirement
 
-Модель должна трактовать `1/2/3` как **drawing quantization / drawing resolution presets**, а не layer selector.
-
-Рекомендуемая абстракция:
-
 ```ts
-type DrawingResolutionPreset = 1 | 2 | 3;
+type ProgramMode = 1 | 2 | 3;
 ```
 
-Поведение:
+- Program 1 сохраняет свободную векторную геометрию stroke.
+- Program 2 использует измеренную pixel/grid геометрию: 48 horizontal columns; число vertical rows следует текущему discrete pitch range.
+- Program 3 сохраняется в domain model, но не должен отображаться как доступный control, пока текущий reference сам его скрывает.
 
-- `1` — continuous/freehand baseline;
-- `2` — grid/pixelized drawing;
-- `3` — третий, более выраженный preset того же семейства; exact mapping [VERIFY].
-
-Не связывать эти buttons с audio layers.
+Не трактовать `1/2/3` как audio layers или три степени pixelization.
 
 ---
 
-# 6. Кнопки • / •• / •••
+# 6. Кнопки • / •• / ••• — измерено интерактивно
 
-Первичная гипотеза “brush thickness” недостаточно обоснована.
+Rendered DOM и black-box audio analysis подтвердили точную семантику:
 
-Факты:
+- `•` — **Bass**;
+- `••` — **Drums**;
+- `•••` — **Arpeggio**.
 
-- группа существует в официальном UI;
-- вторичный hands-on обзор сообщает, что переключение этой группы добавляет/меняет rhythm;
-- обозначения `•`, `••`, `•••` естественно соответствуют трем уровням rhythmic density/subdivision;
-- при этом App Store review отдельно упоминает желание иметь больше brush/eraser sizes, поэтому исключать связь с drawing thickness только по одному внешнему обзору нельзя.
+Controls независимы и могут быть включены одновременно.
 
-### Статус
+Для default C / Major pentatonic / 120 BPM также измерено:
 
-**[STRONG OBSERVATION, exact semantics VERIFY]**
+- Bass: tonic C3 / MIDI 48, retrigger каждый beat;
+- Drums: closed hi-hat каждые 1/3 beat, kick на beats 0/2, snare на beats 1/3;
+- Arpeggio: triplet-grid sequence C5–E5–G5–A5–C6–A5–G5–E5.
 
-До прямой интерактивной проверки не называть эти buttons “brush size” в коде.
+### Parity requirement
 
-Использовать нейтральную модель:
+В domain model это три независимых boolean layer-controls:
 
 ```ts
-type RhythmPreset = 1 | 2 | 3;
+bassEnabled: boolean;
+drumsEnabled: boolean;
+arpeggioEnabled: boolean;
 ```
 
-и UI adapter, который можно переназначить после окончательного замера.
+Не использовать старую абстракцию `RhythmPreset = 1 | 2 | 3`.
 
 ---
 
