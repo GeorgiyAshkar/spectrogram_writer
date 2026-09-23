@@ -19,6 +19,7 @@ import {
 import { renderNoteEventsToWavBlob } from '../src/features/music/audio/renderWav';
 import {
   DEFAULT_VOICE_PROFILE,
+  amplitudeFromRelativeDb,
   envelopeAt,
   normalizedPartialGain,
   resolveVoiceProfile,
@@ -248,7 +249,26 @@ function testVoiceProfiles() {
     });
   });
 
-  assert(new Set(signatures).size === PARITY_INSTRUMENT_SWATCHES.length, 'All nine named instruments must have distinct clean-room synthesis profiles');
+  assert(new Set(signatures).size === PARITY_INSTRUMENT_SWATCHES.length, 'All nine named instruments must have distinct measured spectral profiles');
+
+  approx(amplitudeFromRelativeDb(-8.8), 0.363, 0.003, 'dB to amplitude conversion');
+  const keysVoice = resolveVoiceProfile('instrument:keys');
+  approx(keysVoice.partials[1]?.gain ?? 0, amplitudeFromRelativeDb(-8.8), 1e-12, 'Keys second harmonic must match measured spectrum');
+  approx(keysVoice.partials[2]?.gain ?? 0, amplitudeFromRelativeDb(-16.8), 1e-12, 'Keys third harmonic must match measured spectrum');
+
+  const marimbaVoice = resolveVoiceProfile('instrument:marimba');
+  const marimbaFourth = marimbaVoice.partials.find((partial) => partial.ratio === 4);
+  approx(marimbaFourth?.gain ?? 0, amplitudeFromRelativeDb(-10.3), 1e-12, 'Marimba fourth harmonic must match measured spectrum');
+
+  const chimeVoice = resolveVoiceProfile('instrument:chime');
+  const chimeFourth = chimeVoice.partials.find((partial) => partial.ratio === 4);
+  approx(chimeFourth?.gain ?? 0, amplitudeFromRelativeDb(-13), 1e-12, 'Chime fourth harmonic must match measured spectrum');
+
+  const bitVoice = resolveVoiceProfile('instrument:8bit');
+  assert(
+    bitVoice.partials.map((partial) => partial.ratio).join(',') === '1,3,5,7,9',
+    '8bit measured spectrum must retain odd-harmonic structure',
+  );
 }
 
 function testAccompaniment() {
