@@ -163,6 +163,15 @@ Therefore:
 10. Exact color-picker interpolation/model beyond measured preset colors and custom picker.
 11. Exact public-gallery open/edit permissions and lifecycle.
 
+## Instrument envelope measurement boundary
+
+The public reference exposes the instrument controls and a small `#octave` Key canvas, but the containing `#prorow` is rendered with the `locked` class in the non-entitled web session. Pointer probing on that canvas produces no audio.
+
+Therefore:
+- harmonic ratios/relative levels are measured from normal drawn playback and implemented;
+- exact attack/release envelope values are **not** claimed as measured;
+- the clone keeps clean-room envelope values until an observable, non-entitlement-bypassing measurement path exists.
+
 ## Take recorder policy
 
 Black-box MediaRecorder instrumentation of the current reference page established:
