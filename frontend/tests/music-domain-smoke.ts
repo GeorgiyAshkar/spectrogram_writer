@@ -60,6 +60,11 @@ function approx(actual: number, expected: number, tolerance: number, message: st
   assert(Math.abs(actual - expected) <= tolerance, `${message}: expected ${expected}, got ${actual}`);
 }
 
+function testDefaults() {
+  assert(DEFAULT_MUSIC_SETTINGS.freestyleEnabled === false, 'Freestyle must default to off');
+  assert(DEFAULT_MUSIC_SETTINGS.freehandEnabled === false, 'Freehand must default to off');
+}
+
 function testTheory() {
   assert(noteNameToMidi('C4') === 60, 'C4 must be MIDI 60');
   assert(noteNameToMidi('A4') === 69, 'A4 must be MIDI 69');
@@ -469,6 +474,8 @@ function testDraftMigration() {
   assert(legacy?.settings.bassEnabled === false, 'Legacy rhythm guess must not become Bass');
   assert(legacy?.settings.drumsEnabled === false, 'Legacy rhythm guess must not become Drums');
   assert(legacy?.settings.arpeggioEnabled === false, 'Legacy rhythm guess must not become Arpeggio');
+  assert(legacy?.settings.freestyleEnabled === false, 'Legacy draft must migrate with Freestyle off');
+  assert(legacy?.settings.freehandEnabled === false, 'Legacy draft must migrate with Freehand off');
 
   const photoDataUrl = 'data:image/jpeg;base64,AA==';
   const current = normalizeMusicDraft({
@@ -610,6 +617,7 @@ function testExports() {
   assert(midi.size > 20, 'MIDI export must contain header and track data');
 }
 
+testDefaults();
 testTheory();
 testRhythm();
 testStrokeCompiler();
