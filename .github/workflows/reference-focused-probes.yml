@@ -18,6 +18,7 @@ on:
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
       - scripts/reference-instrument-envelope-probe.cjs
+      - scripts/reference-keyboard-dom-probe.cjs
       - scripts/reference-freestyle-handler-probe.cjs
       - .github/workflows/reference-focused-probes.yml
 
@@ -131,5 +132,7 @@ jobs:
           test -n "$CHROME"
       - name: Install probe dependency
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
+      - name: Probe virtual keyboard DOM
+        run: node scripts/reference-keyboard-dom-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe instrument envelopes
         run: node scripts/reference-instrument-envelope-probe.cjs "${{ steps.chrome.outputs.path }}"
