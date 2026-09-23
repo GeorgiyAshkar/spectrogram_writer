@@ -84,7 +84,9 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] measured default Arpeggio: C5-E5-G5-A5-C6-A5-G5-E5 on 1/8-triplet steps
 - [x] measured default Drums: hi-hat every 1/3 beat, kick on 0/2, snare on 1/3
 - [x] measured Bass/Drums/Arpeggio implemented for default Major-pentatonic behavior
-- [ ] non-default Scale behavior of Arpeggio — clean-room triad fallback currently used
+- [x] measured Arpeggio scale families across all 10 Scale options
+- [x] major-family Arpeggio: 0,4,7,9,12,9,7,4
+- [x] minor-family Arpeggio: 0,3,7,10,12,10,7,3
 
 ### Realtime audio
 - [x] Web Audio engine
@@ -98,11 +100,12 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] live note audition
 - [x] active voice cleanup
 - [x] configurable voice profiles
-- [x] named instrument layers route to distinct clean-room voice profiles
+- [x] named instrument layers route to distinct voice profiles
+- [x] measured harmonic partial ratios for all nine named instruments
+- [x] measured relative harmonic gains stored as dB→amplitude values
 - [x] per-instrument clean-room attack/release/sustain envelopes
-- [x] per-instrument harmonic partial profiles
 - [x] realtime and WAV share the same voice-profile model
-- [ ] exact original synthesis recipes
+- [ ] exact original envelope/phase synthesis recipe
 
 ### Virtual keyboard / MIDI input
 - [x] three-octave virtual keyboard
