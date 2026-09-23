@@ -1,8 +1,22 @@
-import { SCALE_INTERVALS, signedKeyTranspose } from '../model/theory';
+import { signedKeyTranspose } from '../model/theory';
 import type { MusicSettings, NoteEvent } from '../model/types';
 
 const DEFAULT_ARP_STEP_BEATS = 1 / 3;
-const DEFAULT_MAJOR_PENTATONIC_ARP_OFFSETS = [0, 4, 7, 9, 12, 9, 7, 4] as const;
+const MAJOR_FAMILY_ARP_OFFSETS = [0, 4, 7, 9, 12, 9, 7, 4] as const;
+const MINOR_FAMILY_ARP_OFFSETS = [0, 3, 7, 10, 12, 10, 7, 3] as const;
+
+const ARPEGGIO_SCALE_FAMILY: Record<MusicSettings['scale'], 'major' | 'minor'> = {
+  majorPentatonic: 'major',
+  minorPentatonic: 'minor',
+  major: 'major',
+  minor: 'minor',
+  harmonicMinor: 'minor',
+  dorian: 'minor',
+  phrygian: 'minor',
+  lydian: 'major',
+  mixolydian: 'major',
+  blues: 'minor',
+};
 
 function bassRootMidi(settings: MusicSettings): number {
   return 48 + signedKeyTranspose(settings.key) + settings.octaveOffset * 12;
@@ -13,17 +27,9 @@ function arpeggioTonicMidi(settings: MusicSettings): number {
 }
 
 function arpeggioOffsets(settings: MusicSettings): readonly number[] {
-  if (settings.scale === 'majorPentatonic') {
-    return DEFAULT_MAJOR_PENTATONIC_ARP_OFFSETS;
-  }
-
-  // Only the default Major-pentatonic arpeggio has been measured directly.
-  // For the other scales use a conservative clean-room triad fallback until
-  // dedicated reference measurements are available.
-  const intervals = SCALE_INTERVALS[settings.scale];
-  const third = intervals[Math.min(2, intervals.length - 1)] ?? 4;
-  const fifth = intervals[Math.min(4, intervals.length - 1)] ?? 7;
-  return [0, third, fifth, 12, fifth, third];
+  return ARPEGGIO_SCALE_FAMILY[settings.scale] === 'major'
+    ? MAJOR_FAMILY_ARP_OFFSETS
+    : MINOR_FAMILY_ARP_OFFSETS;
 }
 
 /**
@@ -31,8 +37,9 @@ function arpeggioOffsets(settings: MusicSettings): readonly number[] {
  *
  * Measured on the 2026-09-22 public reference at the default settings:
  * - Bass: tonic around C3 (MIDI 48 for Key=C), retriggered every beat.
- * - Arpeggio: 1/8-triplet step (1/3 beat) and, for C Major pentatonic,
- *   C5-E5-G5-A5-C6-A5-G5-E5 repeating.
+ * - Arpeggio: 1/8-triplet step (1/3 beat) with two measured families:
+ *   major-family = 0,4,7,9,12,9,7,4;
+ *   minor-family = 0,3,7,10,12,10,7,3.
  * - Drums: closed-hat every 1/3 beat; kick on beats 0/2; snare on beats 1/3.
  */
 export function buildAccompanimentEvents(settings: MusicSettings): NoteEvent[] {
