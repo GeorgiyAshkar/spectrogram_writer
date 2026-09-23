@@ -1,14 +1,14 @@
 # play_music_theory — Implementation Status
 
 **Branch:** `playmusictheory`  
-**Updated:** 2026-09-22  
+**Updated:** 2026-09-23  
 **Reference:** https://playmusictheory.net/play
 
 ## Status
 
 The music-mode architecture is stable. Exact reference values are no longer provisional for Key, Scale, Range, Tune, Tempo, Quantize, Swing, Program 1/2, accompaniment identities, instrument names/colors, Grid default, photo-fit modes, and share field limits.
 
-Remaining parity work is concentrated in behaviors that cannot yet be inferred safely from public observation alone: Freestyle, exact original synthesis recipes, octave entitlement/clamp behavior, and a few export details.
+Remaining parity work is concentrated in reference details hidden behind the current entitlement state: exact envelope/phase synthesis, octave clamp behavior, and export-file policy details. Freestyle is now implemented from measured runtime-handler evidence as the keyboard/MIDI scale-lock toggle.
 
 ## Implemented
 
@@ -117,6 +117,10 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] velocity
 - [x] held-note cleanup on disconnect/disable
 - [x] stable instrument layer identity on recorded notes
+- [x] Freestyle scale-lock shared by virtual keyboard and Web MIDI
+- [x] out-of-scale virtual keys disabled while Freestyle is Off
+- [x] chromatic virtual/MIDI input while Freestyle is On
+- [x] held notes released when Key, Scale or Freestyle changes
 
 ### Export
 - [x] WAV from canonical timeline
@@ -189,6 +193,12 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] responsive visual gallery cards
 
 ### Freehand / Freestyle
+- [x] Freestyle control, default Off
+- [x] Freestyle implemented as keyboard/MIDI scale unlock
+- [x] Freestyle does not alter drawing/Freehand compilation
+- [x] Freestyle persisted/shared through MusicSettings
+- [x] legacy drafts default Freestyle to Off
+- [x] held live notes are released on Freestyle/Key/Scale changes
 - [x] Freehand control
 - [x] Freehand leaves canvas geometry unchanged
 - [x] Freehand maps Y to continuous fractional pitch
@@ -200,7 +210,7 @@ Remaining parity work is concentrated in behaviors that cannot yet be inferred s
 - [x] Freehand help text
 - [x] old drafts default Freehand to Off
 - [x] Freehand regression tests
-- [ ] Freestyle — exact transformation still VERIFY; geometry, pitch spectrum, theory-control state, backward drawing and onset timing all tested without a distinguishing effect
+- [x] Freestyle runtime evidence: handler toggles `freestyle`, releases `held` notes through `noteUp`, then calls `drawLock`/`drawKeys`; drawing listeners do not depend on Freestyle
 
 ## Verification
 
@@ -255,10 +265,9 @@ Measured facts are recorded in:
 
 ## Next work
 
-1. experimentally determine Freestyle behavior;
-2. resolve octave min/max and Freehand octave-offset behavior outside the currently locked public entitlement state;
-3. compare named instrument audio behavior and refine configurable voice profiles;
-4. verify metronome export policy;
-5. verify MIDI structure, especially Freehand pitch-bend behavior;
-6. keep production browser smoke green across desktop/mobile-sized viewports;
-7. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
+1. resolve octave min/max and Freehand octave-offset behavior outside the currently locked public entitlement state;
+2. refine clean-room envelope/phase behavior if a public measurable path becomes available;
+3. verify metronome export policy;
+4. verify exact reference MIDI file structure;
+5. keep production browser smoke green across desktop/mobile-sized viewports;
+6. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
