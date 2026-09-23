@@ -309,6 +309,31 @@ function testAccompaniment() {
       'Measured Arpeggio must advance on 1/8-triplet steps',
     );
   }
+
+  const measuredArpeggioPatterns = {
+    majorPentatonic: [72, 76, 79, 81, 84, 81, 79, 76],
+    minorPentatonic: [72, 75, 79, 82, 84, 82, 79, 75],
+    major: [72, 76, 79, 81, 84, 81, 79, 76],
+    minor: [72, 75, 79, 82, 84, 82, 79, 75],
+    harmonicMinor: [72, 75, 79, 82, 84, 82, 79, 75],
+    dorian: [72, 75, 79, 82, 84, 82, 79, 75],
+    phrygian: [72, 75, 79, 82, 84, 82, 79, 75],
+    lydian: [72, 76, 79, 81, 84, 81, 79, 76],
+    mixolydian: [72, 76, 79, 81, 84, 81, 79, 76],
+    blues: [72, 75, 79, 82, 84, 82, 79, 75],
+  } as const;
+
+  for (const [scale, expected] of Object.entries(measuredArpeggioPatterns)) {
+    const events = buildAccompanimentEvents({
+      ...DEFAULT_MUSIC_SETTINGS,
+      scale: scale as keyof typeof measuredArpeggioPatterns,
+      arpeggioEnabled: true,
+    });
+    assert(
+      JSON.stringify(events.slice(0, 8).map((event) => event.midi)) === JSON.stringify(expected),
+      `Measured Arpeggio scale mapping mismatch for ${scale}`,
+    );
+  }
 }
 
 function testReferencePalette() {
