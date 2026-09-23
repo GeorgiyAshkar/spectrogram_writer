@@ -153,6 +153,73 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       throw new Error(`Measured Pixel metadata was not persisted: ${JSON.stringify(persistedPixelStroke)}`);
     }
 
+    const freestyleInitial = await page.evaluate(
+      () => [...document.querySelectorAll('button')].some(
+        (button) =>
+          button.getAttribute('aria-label') === 'Freestyle' &&
+          !button.classList.contains('is-active') &&
+          button.getAttribute('aria-pressed') === 'false',
+      ),
+    );
+    if (!freestyleInitial) throw new Error('Freestyle must start disabled.');
+
+    await clickByText('Key');
+    await page.waitForSelector('.music-octaves', { timeout: 5000 });
+
+    const cSharpLocked = await page.evaluate(() => {
+      const key = [...document.querySelectorAll('.music-key')].find(
+        (button) => button.textContent?.trim() === 'C#2',
+      );
+      return key instanceof HTMLButtonElement
+        ? {
+            disabled: key.disabled,
+            lockedClass: key.classList.contains('music-key--locked'),
+          }
+        : null;
+    });
+    if (!cSharpLocked?.disabled || !cSharpLocked.lockedClass) {
+      throw new Error(`C#2 must be scale-locked before Freestyle: ${JSON.stringify(cSharpLocked)}`);
+    }
+
+    await clickByAria('Freestyle');
+    const freestyleActive = await page.evaluate(
+      () => [...document.querySelectorAll('button')].some(
+        (button) =>
+          button.getAttribute('aria-label') === 'Freestyle' &&
+          button.classList.contains('is-active') &&
+          button.getAttribute('aria-pressed') === 'true',
+      ),
+    );
+    if (!freestyleActive) throw new Error('Freestyle did not become active.');
+
+    const cSharpUnlocked = await page.evaluate(() => {
+      const key = [...document.querySelectorAll('.music-key')].find(
+        (button) => button.textContent?.trim() === 'C#2',
+      );
+      return key instanceof HTMLButtonElement
+        ? {
+            disabled: key.disabled,
+            lockedClass: key.classList.contains('music-key--locked'),
+          }
+        : null;
+    });
+    if (!cSharpUnlocked || cSharpUnlocked.disabled || cSharpUnlocked.lockedClass) {
+      throw new Error(`C#2 must unlock in Freestyle: ${JSON.stringify(cSharpUnlocked)}`);
+    }
+
+    await page.waitForFunction(
+      () => {
+        const raw = localStorage.getItem('spectrogram-writer:playmusictheory:draft');
+        if (!raw) return false;
+        try {
+          return JSON.parse(raw).settings?.freestyleEnabled === true;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 7000 },
+    );
+
     await clickByAria('Freehand');
     const freehandActive = await page.evaluate(
       () => [...document.querySelectorAll('button')].some(
@@ -313,7 +380,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       throw new Error(`Mobile music canvas exceeds viewport: ${JSON.stringify(mobileLayout)}`);
     }
 
-    for (const label of ['Grid', 'Freehand', 'Pen', 'Eraser', 'Undo', 'Redo', 'Restart', 'Shuffle']) {
+    for (const label of ['Grid', 'Freestyle', 'Freehand', 'Pen', 'Eraser', 'Undo', 'Redo', 'Restart', 'Shuffle']) {
       const exists = await mobilePage.evaluate(
         (target) => [...document.querySelectorAll('button')].some(
           (button) => button.getAttribute('aria-label') === target,
