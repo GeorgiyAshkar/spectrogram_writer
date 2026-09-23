@@ -1372,7 +1372,7 @@ MIDI:
 
 # 55. Parity checklist с оригиналом
 
-Статус на 2026-09-22. Пункты `[x]` закрыты rendered-DOM, interaction, spectral или production-browser измерениями.
+Статус на 2026-09-23. Пункты `[x]` закрыты rendered-DOM, interaction, spectral или production-browser измерениями.
 
 - [ ] внешний порядок основных controls — functional parity есть, exact visual order еще hardening;
 - [x] Key options;
@@ -1391,17 +1391,17 @@ MIDI:
 - [x] buttons •/••/••• = Bass / Drums / Arpeggio;
 - [x] default Bass pattern;
 - [x] default Drums triplet pattern;
-- [x] default Major-pentatonic Arpeggio pattern;
+- [x] Arpeggio patterns measured for all 10 Scale options;
 - [x] custom recolor flow: 27 presets + custom + original colors;
 - [x] instrument list: keys / pluck / bell / marimba / flute / strings / chime / bass / 8bit;
 - [x] instrument identity отделена от color;
 - [x] Grid default On;
 - [x] Freehand continuous pitch behavior;
 - [x] Freehand C curve + signed Key transpose measured;
-- [ ] Freestyle exact semantics;
+- [x] Freestyle implemented as evidence-based keyboard/MIDI scale unlock; drawing path is independent;
 - [x] three-octave virtual keyboard;
 - [x] Web MIDI input flow в нашей версии;
-- [ ] exact reference MIDI input → scale/freehand mapping;
+- [x] virtual keyboard + MIDI share the same selected-Scale lock while Freestyle Off; chromatic input while On;
 - [x] realtime loop restart без hanging notes в production smoke/domain tests;
 - [x] WAV export нашей версии;
 - [ ] WAV includes/excludes reference metronome click — entitlement-locked export не materialize;
@@ -1558,18 +1558,18 @@ NoteEvent[]
 - Pixel geometry измерена;
 - Freehand continuous-pitch curve измерена;
 - Take container policy измерена;
-- default accompaniment patterns измерены.
+- Bass/Drums и Arpeggio для всех Scale измерены;
+- harmonic spectra всех 9 instruments измерены;
+- Freestyle локализован по runtime handler как keyboard/MIDI scale-lock и реализован.
 
 # 61. Следующий шаг hardening
 
 Core parity уже реализован. Дальнейшая работа концентрируется на небольшом наборе объективно недоступных или еще измеряемых деталей:
 
-1. завершить scale-dependent Arpeggio measurement;
-2. определить Freestyle semantics без догадок;
-3. уточнить original instrument spectra/envelopes, если black-box analyser даст устойчивые данные;
-4. определить Octave min/max при доступном entitlement state;
-5. проверить reference WAV metronome policy и MIDI layout, если export materialization станет доступна;
-6. продолжать regression/browser/mobile hardening.
+1. определить Octave min/max и exact Freehand octave effect при доступном entitlement state;
+2. уточнить original envelopes/phase, если появится публично наблюдаемый путь без обхода entitlement;
+3. проверить reference WAV metronome policy и MIDI layout, если export materialization станет доступна;
+4. продолжать regression/browser/mobile hardening и compact UI parity.
 
 Оставшиеся VERIFY не должны менять уже стабилизированные границы:
 `Stroke[] → NoteEvent[] → realtime/WAV/MIDI/share`.
