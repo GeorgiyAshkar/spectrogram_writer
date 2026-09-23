@@ -10,6 +10,7 @@ import type { GenerationFormData } from './types/config';
 import {
   compileStrokes,
   DEFAULT_MUSIC_SETTINGS,
+  isMidiInScale,
   noteNameToMidi,
   type MusicSettings,
   type NoteEvent,
@@ -240,12 +241,51 @@ export default function App() {
   const realtimeMusic = useRealtimeMusicTransport(activeMusicEvents, musicPlaybackSettings);
   const activeMusicLayerId = `instrument:${activeMusicInstrumentId}`;
 
+  const isPerformanceMidiAllowed = useCallback(
+    (midi: number) =>
+      musicSettings.freestyleEnabled ||
+      isMidiInScale(midi, musicSettings.key, musicSettings.scale),
+    [musicSettings.freestyleEnabled, musicSettings.key, musicSettings.scale],
+  );
+
+  const releaseHeldMusicNotes = useCallback(() => {
+    realtimeMusic.releaseLiveNotes();
+    pendingMidiNotesRef.current.clear();
+    pendingVirtualNotesRef.current.clear();
+  }, [realtimeMusic.releaseLiveNotes]);
+
+  const previousPerformanceModeRef = useRef({
+    key: musicSettings.key,
+    scale: musicSettings.scale,
+    freestyleEnabled: musicSettings.freestyleEnabled,
+  });
+
+  useEffect(() => {
+    const previous = previousPerformanceModeRef.current;
+    const changed =
+      previous.key !== musicSettings.key ||
+      previous.scale !== musicSettings.scale ||
+      previous.freestyleEnabled !== musicSettings.freestyleEnabled;
+    if (changed) releaseHeldMusicNotes();
+    previousPerformanceModeRef.current = {
+      key: musicSettings.key,
+      scale: musicSettings.scale,
+      freestyleEnabled: musicSettings.freestyleEnabled,
+    };
+  }, [
+    musicSettings.freestyleEnabled,
+    musicSettings.key,
+    musicSettings.scale,
+    releaseHeldMusicNotes,
+  ]);
+
   useEffect(() => {
     realtimePlayingRef.current = realtimeMusic.isPlaying;
   }, [realtimeMusic.isPlaying]);
 
   const handleMidiNoteOn = useCallback(
     (midi: number, velocity: number, deviceId: string) => {
+      if (!isPerformanceMidiAllowed(midi)) return;
       const voiceId = `${deviceId}:${midi}`;
       const layerId = activeMusicLayerId;
       void realtimeMusic.noteOn(midi, velocity, voiceId, layerId);
@@ -259,7 +299,7 @@ export default function App() {
         id: `midi-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       });
     },
-    [activeMusicLayerId, realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
+    [activeMusicLayerId, isPerformanceMidiAllowed, realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
   );
 
   const handleMidiNoteOff = useCallback(
@@ -295,7 +335,7 @@ export default function App() {
   const handleVirtualNoteOn = useCallback(
     (noteName: string) => {
       const midi = noteNameToMidi(noteName);
-      if (midi === null) return;
+      if (midi === null || !isPerformanceMidiAllowed(midi)) return;
 
       const voiceId = `virtual:${midi}`;
       const layerId = activeMusicLayerId;
@@ -310,7 +350,7 @@ export default function App() {
         id: `virtual-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       });
     },
-    [activeMusicLayerId, realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
+    [activeMusicLayerId, isPerformanceMidiAllowed, realtimeMusic.getPositionBeat, realtimeMusic.noteOn],
   );
 
   const handleVirtualNoteOff = useCallback(
@@ -596,6 +636,7 @@ export default function App() {
     setMusicSettings({
       ...DEFAULT_MUSIC_SETTINGS,
       ...project.settings,
+      freestyleEnabled: project.settings.freestyleEnabled ?? false,
       freehandEnabled: project.settings.freehandEnabled ?? false,
     });
     setMusicStrokes(project.strokes);
@@ -1039,6 +1080,16 @@ export default function App() {
                 </button>
                 <button
                   type="button"
+                  className={musicSettings.freestyleEnabled ? 'button-secondary is-active' : 'button-secondary'}
+                  aria-pressed={musicSettings.freestyleEnabled}
+                  aria-label="Freestyle"
+                  title="Freestyle — unlock all chromatic notes for Key and MIDI input"
+                  onClick={() => updateMusicSetting('freestyleEnabled', !musicSettings.freestyleEnabled)}
+                >
+                  Freestyle
+                </button>
+                <button
+                  type="button"
                   className={musicSettings.freehandEnabled ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicSettings.freehandEnabled}
                   aria-label="Freehand"
@@ -1145,7 +1196,7 @@ export default function App() {
                   <p>Палитра — это 9 инструментов: keys, pluck, bell, marimba, flute, strings, chime, bass и 8bit. Recolor меняет их цвет, но не сам инструмент.</p>
                   <p>1 — Drawing mode, 2 — Pixel mode. • / •• / ••• независимо включают Bass, Drums и Arpeggio и могут работать одновременно.</p>
                   <p>Key, Scale, Range и Octave задают набор нот. Quantize, Swing, Tempo/Tap и Click управляют ритмом; swing применяется только к прямым сеткам, не к triplet.</p>
-                  <p>Grid показывает ноты и доли под рисунком. Freehand оставляет ту же линию, но ведёт pitch плавно между нотами. Pen рисует, Eraser удаляет линии, Restart очищает рисунок без остановки beat, Shuffle создаёт новый случайный рисунок.</p>
+                  <p>Grid показывает ноты и доли под рисунком. Freestyle снимает scale-lock с экранной клавиатуры и MIDI-входа; Freehand оставляет ту же линию, но ведёт pitch плавно между нотами. Pen рисует, Eraser удаляет линии, Restart очищает рисунок без остановки beat, Shuffle создаёт новый случайный рисунок.</p>
                   <p>Paper/Sky/Photo меняют фон; для Photo доступны Fill, Fit и Stretch. WAV/MIDI экспортируют loop, Record создаёт take, а Share/Gallery публикуют проект.</p>
                 </div>
               ) : null}
@@ -1642,11 +1693,18 @@ export default function App() {
                       <div className="music-piano__white">
                         {whiteKeys.map((key) => {
                           const note = `${key}${octave}`;
+                          const midi = noteNameToMidi(note);
+                          const locked =
+                            midi !== null &&
+                            !musicSettings.freestyleEnabled &&
+                            !isMidiInScale(midi, musicSettings.key, musicSettings.scale);
                           return (
                             <button
                               key={note}
                               type="button"
-                              className="music-key music-key--white"
+                              className={locked ? 'music-key music-key--white music-key--locked' : 'music-key music-key--white'}
+                              disabled={locked}
+                              aria-label={locked ? `${note} — outside selected scale` : note}
                               onPointerDown={(e) => {
                                 e.currentTarget.setPointerCapture(e.pointerId);
                                 handleVirtualNoteOn(note);
@@ -1671,11 +1729,18 @@ export default function App() {
                       <div className="music-piano__black">
                         {[{ key: 'C#', col: 1 }, { key: 'D#', col: 2 }, { key: 'F#', col: 4 }, { key: 'G#', col: 5 }, { key: 'A#', col: 6 }].map((item) => {
                           const note = `${item.key}${octave}`;
+                          const midi = noteNameToMidi(note);
+                          const locked =
+                            midi !== null &&
+                            !musicSettings.freestyleEnabled &&
+                            !isMidiInScale(midi, musicSettings.key, musicSettings.scale);
                           return (
                             <button
                               key={note}
                               type="button"
-                              className="music-key music-key--black"
+                              className={locked ? 'music-key music-key--black music-key--locked' : 'music-key music-key--black'}
+                              disabled={locked}
+                              aria-label={locked ? `${note} — outside selected scale` : note}
                               style={{ gridColumn: item.col }}
                               onPointerDown={(e) => {
                                 e.currentTarget.setPointerCapture(e.pointerId);
