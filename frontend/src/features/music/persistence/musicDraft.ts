@@ -101,6 +101,7 @@ function normalizeSettings(settings: MusicSettings): MusicSettings {
     bassEnabled: current.bassEnabled ?? false,
     drumsEnabled: current.drumsEnabled ?? false,
     arpeggioEnabled: current.arpeggioEnabled ?? false,
+    freestyleEnabled: current.freestyleEnabled ?? false,
     freehandEnabled: current.freehandEnabled ?? false,
   };
 }
