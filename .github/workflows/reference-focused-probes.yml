@@ -18,6 +18,7 @@ on:
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
       - scripts/reference-instrument-envelope-probe.cjs
+      - scripts/reference-freestyle-handler-probe.cjs
       - .github/workflows/reference-focused-probes.yml
 
 jobs:
@@ -62,6 +63,8 @@ jobs:
         run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Freestyle onset timing
         run: node scripts/reference-freestyle-timing-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Freestyle runtime state
+        run: node scripts/reference-freestyle-handler-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Freestyle vertical pitch
         run: node scripts/reference-freestyle-pitch-probe.cjs "${{ steps.chrome.outputs.path }}"
 
