@@ -73,6 +73,18 @@ export function tonicToPitchClass(key: string): number {
   return value;
 }
 
+export function isMidiInScale(
+  midi: number,
+  key: string,
+  scale: ScaleName,
+): boolean {
+  if (!Number.isFinite(midi)) return false;
+  const pitchClass = ((Math.round(midi) % 12) + 12) % 12;
+  const tonic = tonicToPitchClass(key);
+  const interval = (pitchClass - tonic + 12) % 12;
+  return SCALE_INTERVALS[scale].includes(interval);
+}
+
 export function buildPitchRange(
   key: string,
   scale: ScaleName,
