@@ -184,6 +184,10 @@ export class RealtimeMusicTransport {
     this.liveVoices.delete(voiceId);
   }
 
+  releaseLiveNotes(): void {
+    this.stopLiveVoices();
+  }
+
   async getCaptureStream(): Promise<MediaStream> {
     await this.ensureContext();
     if (!this.context || !this.masterGain) {
