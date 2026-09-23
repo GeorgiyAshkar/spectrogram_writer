@@ -396,7 +396,7 @@ DOM одновременно показывает отдельный `Key` butto
 
 ---
 
-# 18. Что удалось снять из VERIFY — update 2026-09-22
+# 18. Что удалось снять из VERIFY — update 2026-09-23
 
 После первичного аудита был добавлен интерактивный clean-room browser harness на headless Chrome. Он позволяет:
 
@@ -430,6 +430,9 @@ DOM одновременно показывает отдельный `Key` butto
 | Default Bass | MEASURED | C3/MIDI48 для Key=C, retrigger каждый beat |
 | Default Drums | MEASURED | hi-hat каждые 1/3 beat; kick 0/2; snare 1/3 |
 | Default Arpeggio | MEASURED | C5-E5-G5-A5-C6-A5-G5-E5, 1/3 beat step |
+| All-scale Arpeggio | MEASURED | major-family 0/4/7/9/12/9/7/4; minor-family 0/3/7/10/12/10/7/3 |
+| Instrument harmonics | MEASURED | relative harmonic spectra measured for all 9 instrument IDs |
+| Freestyle | STRONG RUNTIME EVIDENCE | handler toggles freestyle, releases held notes via noteUp, redraws lock/keys; drawing listeners independent |
 | Freehand | MEASURED | geometry неизменна; pitch continuous; Scale/Range не влияют |
 | Freehand curve | MEASURED | при C: примерно MIDI = 79 - 31*y; Key транспонирует signed pitch-class offset |
 | Grid | CONFIRMED | default On |
@@ -452,19 +455,19 @@ DOM одновременно показывает отдельный `Key` butto
 - Tap averaging/window behavior;
 - exact Click timbre и включение/исключение click в WAV export;
 - exact MIDI file layout reference, включая reference policy для Freehand pitch bend;
-- exact original synthesis recipes/envelopes для 9 instruments;
-- exact MIDI input → scale/freehand mapping;
-- exact Freestyle semantics;
-- gallery item open/edit/ownership lifecycle;
-- exact behavior Arpeggio для всех non-default Scale до завершения текущего scale probe.
+- exact original envelopes/phase для 9 instruments; harmonic spectra уже measured;
+- direct entitled-reference verification of keyboard highlighting/availability under Freestyle;
+- gallery item open/edit/ownership lifecycle.
 
-Freestyle уже проверен по нескольким гипотезам и **не** должен реализовываться наугад:
+Freestyle прошел отдельный runtime probe:
 
-- forward geometry = default;
-- backward/backtracking geometry = default;
-- tested pitch spectrum ≈ default;
-- theory controls не меняют enabled/value/display state;
-- onset timing на нескольких X не показывает Quantize bypass.
+- forward/backtracking drawing geometry = default;
+- drawing pointer listeners не содержат зависимости от Freestyle;
+- tested drawing pitch spectrum ≈ default;
+- onset timing не показывает Quantize bypass;
+- `lockBtn` handler toggles `freestyle`, releases every `held` note through `noteUp`, then calls `drawLock` and `drawKeys`.
+
+На этой основе clone реализует Freestyle как scale-lock toggle для virtual keyboard/Web MIDI, при этом drawing/Freehand остаются независимыми.
 
 ---
 
@@ -499,7 +502,7 @@ Browser harness снимает существенно больше данных,
 
 ---
 
-# 22. Hardening update — 2026-09-22
+# 22. Hardening update — 2026-09-23
 
 К этому этапу в ветке `playmusictheory` реализованы и проверены:
 
@@ -507,8 +510,9 @@ Browser harness снимает существенно больше данных,
 - measured Key/Scale/Range/Tune/Tempo/Quantize/Swing defaults;
 - Drawing + measured Pixel mode;
 - continuous measured Freehand mapping;
-- Bass/Drums/default Arpeggio;
-- 9 stable instrument IDs и exact reference colors;
+- measured Bass/Drums и Arpeggio для всех 10 Scale options;
+- Freestyle scale-lock для virtual keyboard/Web MIDI + held-note cleanup;
+- 9 stable instrument IDs, exact reference colors и measured harmonic spectra;
 - Recolor workflow;
 - Paper/Sky/Photo + Fill/Fit/Stretch;
 - Web MIDI input;
