@@ -17,6 +17,7 @@ on:
       - scripts/reference-drums-transient-probe.cjs
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
+      - scripts/reference-instrument-envelope-probe.cjs
       - .github/workflows/reference-focused-probes.yml
 
 jobs:
@@ -109,3 +110,23 @@ jobs:
         run: node scripts/reference-export-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe take recorder policy
         run: node scripts/reference-take-probe.cjs "${{ steps.chrome.outputs.path }}"
+
+
+  envelopes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
+      - name: Probe instrument envelopes
+        run: node scripts/reference-instrument-envelope-probe.cjs "${{ steps.chrome.outputs.path }}"
