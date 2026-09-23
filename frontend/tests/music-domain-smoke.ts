@@ -2,6 +2,7 @@ import {
   DEFAULT_MUSIC_SETTINGS,
   buildPitchRange,
   compileStroke,
+  isMidiInScale,
   mapYToMidi,
   mapYToFreehandMidi,
   midiToFrequency,
@@ -89,6 +90,12 @@ function testTheory() {
   approx(midiToFrequency(mapYToFreehandMidi(0.5, 'A')), 269.29, 0.8, 'A wraps to -3 semitones around C');
   approx(midiToFrequency(mapYToFreehandMidi(0.5, 'Bb')), 285.31, 0.8, 'Bb key uses the nearest signed transpose around C');
   approx(midiToFrequency(mapYToFreehandMidi(0.5, 'B')), 302.27, 2.2, 'B wraps to -1 semitone around C');
+
+  assert(isMidiInScale(60, 'C', 'majorPentatonic'), 'C must belong to C major pentatonic');
+  assert(isMidiInScale(62, 'C', 'majorPentatonic'), 'D must belong to C major pentatonic');
+  assert(!isMidiInScale(61, 'C', 'majorPentatonic'), 'C# must be outside C major pentatonic');
+  assert(isMidiInScale(66, 'D', 'majorPentatonic'), 'F# must belong to D major pentatonic');
+  assert(!isMidiInScale(65, 'D', 'majorPentatonic'), 'F natural must be outside D major pentatonic');
 
   const expectedScaleSizes = {
     majorPentatonic: 5,
