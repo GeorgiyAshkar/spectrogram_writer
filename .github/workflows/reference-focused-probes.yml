@@ -20,6 +20,7 @@ on:
       - scripts/reference-instrument-envelope-probe.cjs
       - scripts/reference-keyboard-dom-probe.cjs
       - scripts/reference-freestyle-handler-probe.cjs
+      - scripts/reference-freestyle-listener-probe.cjs
       - .github/workflows/reference-focused-probes.yml
 
 jobs:
@@ -62,6 +63,8 @@ jobs:
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe Freestyle runtime state
         run: node scripts/reference-freestyle-handler-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe Freestyle listener dependencies
+        run: node scripts/reference-freestyle-listener-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe pitch curves
         run: node scripts/reference-freehand-curve-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe Freestyle onset timing
