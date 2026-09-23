@@ -153,8 +153,8 @@ Therefore:
 ## Still unresolved exact behavior
 
 1. Octave min/max clamp.
-2. Exact waveform/envelope/harmonic recipe for each of the nine named instruments.
-3. Non-default Scale behavior of Arpeggio; the default Bass, Drums and Major-pentatonic Arpeggio are measured and implemented.
+2. Exact envelope/phase recipe for each of the nine named instruments. Harmonic ratios and relative gains are measured and implemented.
+3. Arpeggio behavior is measured for all 10 Scale options: major-family scales use 0/4/7/9/12/9/7/4 and minor-family scales use 0/3/7/10/12/10/7/3.
 4. Exact MIDI input interaction with scale/freestyle modes.
 5. Whether metronome Click is included in reference WAV export.
 6. Exact reference MIDI file track/channel structure.
