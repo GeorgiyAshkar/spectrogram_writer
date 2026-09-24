@@ -268,6 +268,26 @@ function testVoiceProfiles() {
   assert(new Set(signatures).size === PARITY_INSTRUMENT_SWATCHES.length, 'All nine named instruments must have distinct measured spectral profiles');
 
   approx(amplitudeFromRelativeDb(-8.8), 0.363, 0.003, 'dB to amplitude conversion');
+  const measuredAttackSeconds = {
+    keys: 0.080,
+    pluck: 0.082,
+    bell: 0.078,
+    marimba: 0.079,
+    flute: 0.180,
+    strings: 0.317,
+    chime: 0.083,
+    bass: 0.136,
+    '8bit': 0.132,
+  } as const;
+  for (const [instrument, expectedAttack] of Object.entries(measuredAttackSeconds)) {
+    approx(
+      resolveVoiceProfile(`instrument:${instrument}`).attackSeconds,
+      expectedAttack,
+      1e-12,
+      `${instrument} attack must match measured reference rise time`,
+    );
+  }
+
   const keysVoice = resolveVoiceProfile('instrument:keys');
   approx(keysVoice.partials[1]?.gain ?? 0, amplitudeFromRelativeDb(-8.8), 1e-12, 'Keys second harmonic must match measured spectrum');
   approx(keysVoice.partials[2]?.gain ?? 0, amplitudeFromRelativeDb(-16.8), 1e-12, 'Keys third harmonic must match measured spectrum');
