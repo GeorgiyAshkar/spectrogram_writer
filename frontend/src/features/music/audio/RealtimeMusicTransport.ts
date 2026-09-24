@@ -135,11 +135,14 @@ export class RealtimeMusicTransport {
 
     const now = context.currentTime;
     const peakGain = Math.max(0.0002, Math.min(1, velocity) * 0.28 * voice.gain);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(
-      peakGain,
-      now + Math.max(0.002, voice.attackSeconds),
-    );
+    const floorGain = Math.max(1e-8, peakGain * ENVELOPE_EPSILON);
+    const attackEnd = now + Math.max(0.002, voice.attackSeconds);
+    const decayEnd = attackEnd + Math.max(0.002, voice.decaySeconds);
+    const sustainGain = Math.max(floorGain, peakGain * Math.min(1, Math.max(0, voice.sustain)));
+
+    gain.gain.setValueAtTime(floorGain, now);
+    gain.gain.exponentialRampToValueAtTime(peakGain, attackEnd);
+    gain.gain.linearRampToValueAtTime(sustainGain, decayEnd);
 
     const normalization = Math.max(
       1,
@@ -303,13 +306,19 @@ export class RealtimeMusicTransport {
     const scheduledDuration = Math.max(0.001, endTime - safeStart);
     const shape = scheduledEnvelope(voice, scheduledDuration);
     const attackEnd = safeStart + shape.attackEndSeconds;
+    const decayEnd = safeStart + shape.decayEndSeconds;
     const releaseStart = safeStart + shape.releaseStartSeconds;
     const sustainGain = peakGain * shape.sustain;
     const floorGain = Math.max(1e-8, peakGain * ENVELOPE_EPSILON);
 
     gain.gain.setValueAtTime(floorGain, safeStart);
     gain.gain.exponentialRampToValueAtTime(peakGain, attackEnd);
-    gain.gain.linearRampToValueAtTime(sustainGain, releaseStart);
+    if (decayEnd > attackEnd + 1e-9) {
+      gain.gain.linearRampToValueAtTime(sustainGain, decayEnd);
+    }
+    if (releaseStart > decayEnd + 1e-9) {
+      gain.gain.setValueAtTime(sustainGain, releaseStart);
+    }
     gain.gain.exponentialRampToValueAtTime(floorGain, endTime);
 
     const normalization = Math.max(
