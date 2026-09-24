@@ -25,6 +25,7 @@ import {
   envelopeAt,
   scheduledEnvelope,
   normalizedPartialGain,
+  periodicWaveCoefficients,
   resolveVoiceProfile,
   sampleVoice,
   sampleWaveform,
@@ -304,6 +305,33 @@ function testVoiceProfiles() {
   assert(
     bitVoice.partials.map((partial) => partial.ratio).join(',') === '1,3,5,7,9',
     '8bit measured spectrum must retain odd-harmonic structure',
+  );
+
+  const phaseVoice = {
+    ...DEFAULT_VOICE_PROFILE,
+    partials: [
+      { ratio: 1, gain: 1, phaseRadians: Math.PI / 2 },
+      { ratio: 2, gain: 0.5, phaseRadians: 0 },
+    ],
+  };
+  const periodic = periodicWaveCoefficients(phaseVoice);
+  assert(periodic !== null, 'Integer sine harmonics must produce PeriodicWave coefficients');
+  approx(periodic.real[1], 2 / 3, 1e-6, 'Fundamental cosine coefficient must encode +pi/2 phase');
+  approx(periodic.imag[1], 0, 1e-6, 'Fundamental sine coefficient must vanish at +pi/2 phase');
+  approx(periodic.real[2], 0, 1e-6, 'Second harmonic cosine coefficient at zero phase');
+  approx(periodic.imag[2], 1 / 3, 1e-6, 'Second harmonic sine coefficient must preserve normalized gain');
+  approx(
+    sampleVoice(phaseVoice, 0),
+    2 / 3,
+    1e-6,
+    'Offline voice sampling must apply the same partial phase offsets',
+  );
+  assert(
+    periodicWaveCoefficients({
+      ...DEFAULT_VOICE_PROFILE,
+      partials: [{ ratio: 1.5, gain: 1 }],
+    }) === null,
+    'Non-integer harmonic ratios must use oscillator-bank fallback',
   );
 
   const envelopeVoice = {
