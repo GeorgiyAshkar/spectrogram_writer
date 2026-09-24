@@ -59,8 +59,9 @@ const measuredPartials = (
  * Harmonic ratios below are black-box measurements of the public reference
  * captured on 2026-09-22 from a single drawn note near G4.
  *
- * Envelope values remain clean-room approximations until attack/release can be
- * isolated independently from the reference's sustained loop playback.
+ * Attack values are measured from the public reference's 2%→90% RMS rise
+ * using an isolated drawn note. Decay/sustain/release remain clean-room
+ * approximations until the shorter-note release probe is complete.
  */
 const MEASURED_INSTRUMENT_PARTIALS = {
   keys: measuredPartials([
@@ -123,15 +124,15 @@ const MEASURED_INSTRUMENT_PARTIALS = {
   ]),
 } as const;
 
-const KEYS_PROFILE = profile('sine', 0.92, 0.008, 0.12, 0.62, MEASURED_INSTRUMENT_PARTIALS.keys);
-const PLUCK_PROFILE = profile('sine', 0.86, 0.004, 0.08, 0.34, MEASURED_INSTRUMENT_PARTIALS.pluck);
-const BELL_PROFILE = profile('sine', 0.74, 0.003, 0.42, 0.4, MEASURED_INSTRUMENT_PARTIALS.bell);
-const MARIMBA_PROFILE = profile('sine', 0.78, 0.003, 0.16, 0.3, MEASURED_INSTRUMENT_PARTIALS.marimba);
-const FLUTE_PROFILE = profile('sine', 0.72, 0.045, 0.12, 0.86, MEASURED_INSTRUMENT_PARTIALS.flute);
-const STRINGS_PROFILE = profile('sine', 0.42, 0.08, 0.18, 0.9, MEASURED_INSTRUMENT_PARTIALS.strings);
-const CHIME_PROFILE = profile('sine', 0.66, 0.003, 0.5, 0.3, MEASURED_INSTRUMENT_PARTIALS.chime);
-const BASS_PROFILE = profile('sine', 0.9, 0.01, 0.11, 0.72, MEASURED_INSTRUMENT_PARTIALS.bass);
-const BIT8_PROFILE = profile('sine', 0.48, 0.002, 0.025, 0.95, MEASURED_INSTRUMENT_PARTIALS['8bit']);
+const KEYS_PROFILE = profile('sine', 0.92, 0.080, 0.12, 0.62, MEASURED_INSTRUMENT_PARTIALS.keys);
+const PLUCK_PROFILE = profile('sine', 0.86, 0.082, 0.08, 0.34, MEASURED_INSTRUMENT_PARTIALS.pluck);
+const BELL_PROFILE = profile('sine', 0.74, 0.078, 0.42, 0.4, MEASURED_INSTRUMENT_PARTIALS.bell);
+const MARIMBA_PROFILE = profile('sine', 0.78, 0.079, 0.16, 0.3, MEASURED_INSTRUMENT_PARTIALS.marimba);
+const FLUTE_PROFILE = profile('sine', 0.72, 0.180, 0.12, 0.86, MEASURED_INSTRUMENT_PARTIALS.flute);
+const STRINGS_PROFILE = profile('sine', 0.42, 0.317, 0.18, 0.9, MEASURED_INSTRUMENT_PARTIALS.strings);
+const CHIME_PROFILE = profile('sine', 0.66, 0.083, 0.5, 0.3, MEASURED_INSTRUMENT_PARTIALS.chime);
+const BASS_PROFILE = profile('sine', 0.9, 0.136, 0.11, 0.72, MEASURED_INSTRUMENT_PARTIALS.bass);
+const BIT8_PROFILE = profile('sine', 0.48, 0.132, 0.025, 0.95, MEASURED_INSTRUMENT_PARTIALS['8bit']);
 
 export const PARITY_LAYER_VOICE_PROFILES: Readonly<Record<string, VoiceProfile>> = {
   'instrument:keys': KEYS_PROFILE,
