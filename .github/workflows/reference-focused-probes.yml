@@ -139,3 +139,5 @@ jobs:
         run: node scripts/reference-keyboard-dom-probe.cjs "${{ steps.chrome.outputs.path }}"
       - name: Probe instrument envelopes
         run: node scripts/reference-instrument-envelope-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe instrument waveform envelopes
+        run: node scripts/reference-instrument-waveform-probe.cjs "${{ steps.chrome.outputs.path }}"
