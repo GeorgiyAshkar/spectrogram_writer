@@ -18,6 +18,7 @@ on:
       - scripts/reference-export-probe.cjs
       - scripts/reference-take-probe.cjs
       - scripts/reference-instrument-envelope-probe.cjs
+      - scripts/reference-instrument-waveform-probe.cjs
       - scripts/reference-keyboard-dom-probe.cjs
       - scripts/reference-freestyle-handler-probe.cjs
       - scripts/reference-freestyle-listener-probe.cjs
