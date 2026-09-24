@@ -9,6 +9,7 @@ export type VoiceProfile = {
   waveform: VoiceWaveform;
   gain: number;
   attackSeconds: number;
+  decaySeconds: number;
   releaseSeconds: number;
   sustain: number;
   partials: readonly VoicePartial[];
@@ -18,6 +19,7 @@ export const DEFAULT_VOICE_PROFILE: VoiceProfile = {
   waveform: 'sine',
   gain: 1,
   attackSeconds: 0.012,
+  decaySeconds: 0.12,
   releaseSeconds: 0.05,
   sustain: 1,
   partials: [{ ratio: 1, gain: 1 }],
@@ -30,10 +32,12 @@ const profile = (
   releaseSeconds: number,
   sustain: number,
   partials: readonly VoicePartial[],
+  decaySeconds = 0.12,
 ): VoiceProfile => ({
   waveform,
   gain,
   attackSeconds,
+  decaySeconds,
   releaseSeconds,
   sustain,
   partials,
@@ -201,6 +205,7 @@ export const ENVELOPE_EPSILON = 1e-4;
 export type ScheduledEnvelope = {
   durationSeconds: number;
   attackEndSeconds: number;
+  decayEndSeconds: number;
   releaseStartSeconds: number;
   sustain: number;
 };
@@ -213,10 +218,13 @@ export function scheduledEnvelope(
   const attack = Math.min(duration, Math.max(0.001, profile.attackSeconds));
   const release = Math.min(duration, Math.max(0.001, profile.releaseSeconds));
   const releaseStart = Math.max(attack, duration - release);
+  const decay = Math.max(0.001, profile.decaySeconds);
+  const decayEnd = Math.min(releaseStart, attack + decay);
 
   return {
     durationSeconds: duration,
     attackEndSeconds: attack,
+    decayEndSeconds: decayEnd,
     releaseStartSeconds: releaseStart,
     sustain: Math.min(1, Math.max(ENVELOPE_EPSILON, profile.sustain)),
   };
@@ -233,7 +241,7 @@ function exponentialInterpolation(start: number, end: number, progress: number):
  * Normalized envelope used by offline WAV rendering.
  *
  * It intentionally mirrors the scheduled Web Audio gain automation:
- * exponential attack -> linear decay toward sustain -> exponential release.
+ * exponential attack -> linear decay -> sustain hold -> exponential release.
  */
 export function envelopeAt(
   profile: VoiceProfile,
@@ -250,11 +258,15 @@ export function envelopeAt(
     return exponentialInterpolation(ENVELOPE_EPSILON, 1, progress);
   }
 
-  if (t < shape.releaseStartSeconds) {
-    const bodyDuration = shape.releaseStartSeconds - shape.attackEndSeconds;
-    if (bodyDuration <= 1e-9) return shape.sustain;
-    const progress = (t - shape.attackEndSeconds) / bodyDuration;
+  if (t < shape.decayEndSeconds) {
+    const decayDuration = shape.decayEndSeconds - shape.attackEndSeconds;
+    if (decayDuration <= 1e-9) return shape.sustain;
+    const progress = (t - shape.attackEndSeconds) / decayDuration;
     return 1 + (shape.sustain - 1) * progress;
+  }
+
+  if (t < shape.releaseStartSeconds) {
+    return shape.sustain;
   }
 
   const releaseDuration = shape.durationSeconds - shape.releaseStartSeconds;
