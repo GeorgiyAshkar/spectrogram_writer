@@ -134,8 +134,9 @@ Remaining parity work is concentrated in reference details hidden behind the cur
 - [x] 14-bit bend curve and RPN pitch-bend range setup
 - [x] graceful rounded-note fallback if all expressive channels are occupied
 - [x] WAV and MIDI use the same musical timeline
-- [ ] exact reference metronome-in-WAV policy
-- [ ] exact reference MIDI track layout
+- [x] product policy: exported WAV contains the musical loop, not the live metronome Click
+- [x] product MIDI policy: Standard MIDI format 0 / single track, tempo meta-event, drums on channel 10, isolated expressive channels for Freehand pitch bend
+- [x] reference export boundary documented: public non-entitled session does not emit WAV/MIDI files, so internal paid export layout is not observable without bypassing entitlement
 
 ### Backgrounds
 - [x] Paper
@@ -271,3 +272,18 @@ Measured facts are recorded in:
 4. verify exact reference MIDI file structure;
 5. keep production browser smoke green across desktop/mobile-sized viewports;
 6. refine UI layout toward the compact icon-oriented reference once behavior is fully stable.
+
+
+### External verification boundary
+
+The current public reference exposes WAV/MIDI buttons inside the paid `The instrument` surface, but the non-entitled browser session does not produce downloadable blobs and the Click control remains Off when probed. We do not bypass that entitlement.
+
+Therefore the clone has a fully implemented, deterministic export policy:
+
+- WAV exports the musical loop without the live metronome Click;
+- MIDI uses Standard MIDI format 0 with one track;
+- tempo is emitted as a meta-event;
+- drums use channel 10;
+- Freehand uses 14-bit Pitch Bend on isolated melodic channels.
+
+These are product decisions with regression coverage. Exact byte-for-byte comparison with the paid reference remains an external verification item, not unfinished application code.
