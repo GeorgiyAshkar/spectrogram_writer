@@ -1,0 +1,30 @@
+name: Reference instrument envelope probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - playmusictheory
+    paths:
+      - scripts/reference-instrument-waveform-probe.cjs
+      - .github/workflows/reference-envelope-probe.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Locate Chrome
+        id: chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+          test -n "$CHROME"
+      - name: Install probe dependency
+        run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
+      - name: Probe instrument waveform envelopes
+        run: node scripts/reference-instrument-waveform-probe.cjs "${{ steps.chrome.outputs.path }}"
