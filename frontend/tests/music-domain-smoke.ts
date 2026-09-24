@@ -248,6 +248,7 @@ function testVoiceProfiles() {
     const voice = resolveVoiceProfile(`instrument:${swatch.id}`);
     assert(voice.partials.length >= 1, `${swatch.id} must define at least one partial`);
     assert(voice.attackSeconds > 0, `${swatch.id} attack must be positive`);
+    assert(voice.decaySeconds > 0, `${swatch.id} decay must be positive`);
     assert(voice.releaseSeconds > 0, `${swatch.id} release must be positive`);
     assert(voice.sustain >= 0 && voice.sustain <= 1, `${swatch.id} sustain must be normalized`);
     assert(normalizedPartialGain(voice) > 0 && normalizedPartialGain(voice) <= 1, `${swatch.id} partial normalization must be safe`);
@@ -257,6 +258,7 @@ function testVoiceProfiles() {
     return JSON.stringify({
       waveform: voice.waveform,
       attack: voice.attackSeconds,
+      decay: voice.decaySeconds,
       release: voice.releaseSeconds,
       sustain: voice.sustain,
       partials: voice.partials,
@@ -287,19 +289,27 @@ function testVoiceProfiles() {
   const envelopeVoice = {
     ...DEFAULT_VOICE_PROFILE,
     attackSeconds: 0.1,
+    decaySeconds: 0.2,
     releaseSeconds: 0.2,
     sustain: 0.4,
   };
   const shape = scheduledEnvelope(envelopeVoice, 1);
   approx(shape.attackEndSeconds, 0.1, 1e-12, 'Envelope attack boundary');
+  approx(shape.decayEndSeconds, 0.3, 1e-12, 'Envelope decay boundary');
   approx(shape.releaseStartSeconds, 0.8, 1e-12, 'Envelope release boundary');
   approx(envelopeAt(envelopeVoice, 0, 1), ENVELOPE_EPSILON, 1e-12, 'Envelope starts at relative epsilon');
   approx(envelopeAt(envelopeVoice, 0.1, 1), 1, 1e-12, 'Envelope reaches peak at attack end');
   approx(envelopeAt(envelopeVoice, 0.8, 1), 0.4, 1e-12, 'Envelope reaches sustain at release start');
   approx(envelopeAt(envelopeVoice, 1, 1), ENVELOPE_EPSILON, 1e-12, 'Envelope ends at relative epsilon');
   assert(
-    envelopeAt(envelopeVoice, 0.45, 1) < 1 && envelopeAt(envelopeVoice, 0.45, 1) > 0.4,
-    'Envelope body must decay linearly from peak toward sustain',
+    envelopeAt(envelopeVoice, 0.2, 1) < 1 && envelopeAt(envelopeVoice, 0.2, 1) > 0.4,
+    'Envelope decay stage must move from peak toward sustain',
+  );
+  approx(
+    envelopeAt(envelopeVoice, 0.45, 1),
+    0.4,
+    1e-12,
+    'Envelope must hold sustain after decay and before release',
   );
 }
 
