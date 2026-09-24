@@ -7,6 +7,7 @@ on:
       - playmusictheory
     paths:
       - scripts/reference-instrument-waveform-probe.cjs
+      - scripts/reference-instrument-adsr-phase-probe.cjs
       - .github/workflows/reference-envelope-probe.yml
 
 jobs:
@@ -28,3 +29,5 @@ jobs:
         run: npm install --prefix /tmp/parity-probe --no-save puppeteer-core@24
       - name: Probe instrument waveform envelopes
         run: node scripts/reference-instrument-waveform-probe.cjs "${{ steps.chrome.outputs.path }}"
+      - name: Probe isolated ADSR and steady phase
+        run: node scripts/reference-instrument-adsr-phase-probe.cjs "${{ steps.chrome.outputs.path }}"
