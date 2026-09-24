@@ -212,13 +212,27 @@ async function phaseMeasurement(browser, instrument) {
         }
 
         if (elapsed >= 1250 && elapsed <= 1500 && rms > 0.01) {
+          let f0 = null;
+          if (strongestIndex >= 1 && strongestIndex < freq.length - 1) {
+            const alpha = freq[strongestIndex - 1];
+            const beta = freq[strongestIndex];
+            const gamma = freq[strongestIndex + 1];
+            const denominator = alpha - 2 * beta + gamma;
+            let delta = 0;
+            if (Number.isFinite(denominator) && Math.abs(denominator) > 1e-9) {
+              delta = 0.5 * (alpha - gamma) / denominator;
+              delta = Math.min(0.5, Math.max(-0.5, delta));
+            }
+            f0 =
+              ((strongestIndex + delta) * analyser.context.sampleRate) /
+              analyser.fftSize;
+          }
+
           window.__phaseSnapshots.push({
             ms: elapsed,
             rms,
             sampleRate: analyser.context.sampleRate,
-            f0: strongestIndex >= 0
-              ? (strongestIndex * analyser.context.sampleRate) / analyser.fftSize
-              : null,
+            f0,
             values: Array.from(time),
           });
         }
