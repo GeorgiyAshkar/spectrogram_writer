@@ -20,8 +20,10 @@ import {
 import { renderNoteEventsToWavBlob } from '../src/features/music/audio/renderWav';
 import {
   DEFAULT_VOICE_PROFILE,
+  ENVELOPE_EPSILON,
   amplitudeFromRelativeDb,
   envelopeAt,
+  scheduledEnvelope,
   normalizedPartialGain,
   resolveVoiceProfile,
   sampleVoice,
@@ -280,6 +282,24 @@ function testVoiceProfiles() {
   assert(
     bitVoice.partials.map((partial) => partial.ratio).join(',') === '1,3,5,7,9',
     '8bit measured spectrum must retain odd-harmonic structure',
+  );
+
+  const envelopeVoice = {
+    ...DEFAULT_VOICE_PROFILE,
+    attackSeconds: 0.1,
+    releaseSeconds: 0.2,
+    sustain: 0.4,
+  };
+  const shape = scheduledEnvelope(envelopeVoice, 1);
+  approx(shape.attackEndSeconds, 0.1, 1e-12, 'Envelope attack boundary');
+  approx(shape.releaseStartSeconds, 0.8, 1e-12, 'Envelope release boundary');
+  approx(envelopeAt(envelopeVoice, 0, 1), ENVELOPE_EPSILON, 1e-12, 'Envelope starts at relative epsilon');
+  approx(envelopeAt(envelopeVoice, 0.1, 1), 1, 1e-12, 'Envelope reaches peak at attack end');
+  approx(envelopeAt(envelopeVoice, 0.8, 1), 0.4, 1e-12, 'Envelope reaches sustain at release start');
+  approx(envelopeAt(envelopeVoice, 1, 1), ENVELOPE_EPSILON, 1e-12, 'Envelope ends at relative epsilon');
+  assert(
+    envelopeAt(envelopeVoice, 0.45, 1) < 1 && envelopeAt(envelopeVoice, 0.45, 1) > 0.4,
+    'Envelope body must decay linearly from peak toward sustain',
   );
 }
 
