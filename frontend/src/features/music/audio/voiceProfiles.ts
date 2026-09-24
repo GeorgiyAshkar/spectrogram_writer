@@ -3,6 +3,7 @@ export type VoiceWaveform = 'sine' | 'triangle' | 'square' | 'sawtooth';
 export type VoicePartial = {
   ratio: number;
   gain: number;
+  phaseRadians?: number;
 };
 
 export type VoiceProfile = {
@@ -48,11 +49,12 @@ export function amplitudeFromRelativeDb(relativeDb: number): number {
 }
 
 const measuredPartials = (
-  entries: readonly (readonly [ratio: number, relativeDb: number])[],
+  entries: readonly (readonly [ratio: number, relativeDb: number, phaseRadians?: number])[],
 ): readonly VoicePartial[] =>
-  entries.map(([ratio, relativeDb]) => ({
+  entries.map(([ratio, relativeDb, phaseRadians = 0]) => ({
     ratio,
     gain: amplitudeFromRelativeDb(relativeDb),
+    phaseRadians,
   }));
 
 /**
@@ -189,12 +191,56 @@ export function normalizedPartialGain(profile: VoiceProfile): number {
   return total > 1 ? 1 / total : 1;
 }
 
+export type PeriodicWaveCoefficients = {
+  real: Float32Array;
+  imag: Float32Array;
+};
+
+/**
+ * Convert an integer-harmonic sine profile into Web Audio Fourier
+ * coefficients. Returns null for non-sine or non-integer profiles.
+ */
+export function periodicWaveCoefficients(
+  profile: VoiceProfile,
+): PeriodicWaveCoefficients | null {
+  if (profile.waveform !== 'sine' || profile.partials.length === 0) return null;
+  if (
+    profile.partials.some(
+      (partial) =>
+        !Number.isInteger(partial.ratio) ||
+        partial.ratio < 1 ||
+        partial.ratio > 64,
+    )
+  ) {
+    return null;
+  }
+
+  const maxHarmonic = Math.max(...profile.partials.map((partial) => partial.ratio));
+  const real = new Float32Array(maxHarmonic + 1);
+  const imag = new Float32Array(maxHarmonic + 1);
+  const normalization = normalizedPartialGain(profile);
+
+  for (const partial of profile.partials) {
+    const amplitude = partial.gain * normalization;
+    const phase = partial.phaseRadians ?? 0;
+
+    // A*sin(nωt+φ) = A*sin(nωt)*cosφ + A*cos(nωt)*sinφ
+    real[partial.ratio] += amplitude * Math.sin(phase);
+    imag[partial.ratio] += amplitude * Math.cos(phase);
+  }
+
+  return { real, imag };
+}
+
 export function sampleVoice(profile: VoiceProfile, phase: number): number {
   const normalization = normalizedPartialGain(profile);
   let sample = 0;
   for (const partial of profile.partials) {
     sample +=
-      sampleWaveform(profile.waveform, phase * partial.ratio) *
+      sampleWaveform(
+        profile.waveform,
+        phase * partial.ratio + (partial.phaseRadians ?? 0),
+      ) *
       partial.gain *
       normalization;
   }
