@@ -2,6 +2,7 @@ import { midiToFrequency } from '../model/theory';
 import type { MusicSettings, NoteEvent } from '../model/types';
 import {
   ENVELOPE_EPSILON,
+  periodicWaveCoefficients,
   resolveVoiceProfile,
   scheduledEnvelope,
 } from './voiceProfiles';
@@ -13,6 +14,71 @@ type LiveVoice = {
   gain: GainNode;
   releaseSeconds: number;
 };
+
+function createVoiceOscillators(
+  context: AudioContext,
+  voice: ReturnType<typeof resolveVoiceProfile>,
+  startFrequency: number,
+  output: AudioNode,
+  startTime: number,
+  endTime?: number,
+  endFrequency = startFrequency,
+): OscillatorNode[] {
+  const periodic = periodicWaveCoefficients(voice);
+
+  if (periodic) {
+    const oscillator = context.createOscillator();
+    oscillator.setPeriodicWave(
+      context.createPeriodicWave(periodic.real, periodic.imag, {
+        disableNormalization: true,
+      }),
+    );
+    oscillator.frequency.setValueAtTime(startFrequency, startTime);
+    if (
+      endTime !== undefined &&
+      Math.abs(endFrequency - startFrequency) > 1e-9
+    ) {
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(0.01, endFrequency),
+        endTime,
+      );
+    }
+    oscillator.connect(output);
+    oscillator.start(startTime);
+    if (endTime !== undefined) oscillator.stop(endTime + 0.01);
+    return [oscillator];
+  }
+
+  const normalization = Math.max(
+    1,
+    voice.partials.reduce((sum, partial) => sum + Math.abs(partial.gain), 0),
+  );
+
+  return voice.partials.map((partial) => {
+    const oscillator = context.createOscillator();
+    const partialGain = context.createGain();
+    oscillator.type = voice.waveform;
+    oscillator.frequency.setValueAtTime(
+      startFrequency * partial.ratio,
+      startTime,
+    );
+    if (
+      endTime !== undefined &&
+      Math.abs(endFrequency - startFrequency) > 1e-9
+    ) {
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(0.01, endFrequency * partial.ratio),
+        endTime,
+      );
+    }
+    partialGain.gain.value = partial.gain / normalization;
+    oscillator.connect(partialGain);
+    partialGain.connect(output);
+    oscillator.start(startTime);
+    if (endTime !== undefined) oscillator.stop(endTime + 0.01);
+    return oscillator;
+  });
+}
 
 const LOOKAHEAD_MS = 25;
 const SCHEDULE_AHEAD_SECONDS = 0.12;
@@ -144,21 +210,13 @@ export class RealtimeMusicTransport {
     gain.gain.exponentialRampToValueAtTime(peakGain, attackEnd);
     gain.gain.linearRampToValueAtTime(sustainGain, decayEnd);
 
-    const normalization = Math.max(
-      1,
-      voice.partials.reduce((sum, partial) => sum + Math.abs(partial.gain), 0),
+    const oscillators = createVoiceOscillators(
+      context,
+      voice,
+      frequency,
+      gain,
+      now,
     );
-    const oscillators = voice.partials.map((partial) => {
-      const oscillator = context.createOscillator();
-      const partialGain = context.createGain();
-      oscillator.type = voice.waveform;
-      oscillator.frequency.value = frequency * partial.ratio;
-      partialGain.gain.value = partial.gain / normalization;
-      oscillator.connect(partialGain);
-      partialGain.connect(gain);
-      oscillator.start(now);
-      return oscillator;
-    });
 
     gain.connect(this.masterGain);
     this.liveVoices.set(voiceId, {
@@ -321,30 +379,16 @@ export class RealtimeMusicTransport {
     }
     gain.gain.exponentialRampToValueAtTime(floorGain, endTime);
 
-    const normalization = Math.max(
-      1,
-      voice.partials.reduce((sum, partial) => sum + Math.abs(partial.gain), 0),
+    const oscillators = createVoiceOscillators(
+      this.context,
+      voice,
+      startFrequency,
+      gain,
+      safeStart,
+      endTime,
+      endFrequency,
     );
-
-    for (const partial of voice.partials) {
-      const oscillator = this.context.createOscillator();
-      const partialGain = this.context.createGain();
-      oscillator.type = voice.waveform;
-      oscillator.frequency.setValueAtTime(
-        startFrequency * partial.ratio,
-        safeStart,
-      );
-      if (Math.abs(endFrequency - startFrequency) > 1e-9) {
-        oscillator.frequency.exponentialRampToValueAtTime(
-          Math.max(0.01, endFrequency * partial.ratio),
-          endTime,
-        );
-      }
-      partialGain.gain.value = partial.gain / normalization;
-      oscillator.connect(partialGain);
-      partialGain.connect(gain);
-      oscillator.start(safeStart);
-      oscillator.stop(endTime + 0.01);
+    for (const oscillator of oscillators) {
       this.trackSource(oscillator);
     }
 
