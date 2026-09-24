@@ -251,8 +251,8 @@ function testVoiceProfiles() {
     assert(voice.releaseSeconds > 0, `${swatch.id} release must be positive`);
     assert(voice.sustain >= 0 && voice.sustain <= 1, `${swatch.id} sustain must be normalized`);
     assert(normalizedPartialGain(voice) > 0 && normalizedPartialGain(voice) <= 1, `${swatch.id} partial normalization must be safe`);
-    approx(envelopeAt(voice, 0, 1), 0, 1e-9, `${swatch.id} envelope starts silent`);
-    approx(envelopeAt(voice, 1, 1), 0, 1e-9, `${swatch.id} envelope ends silent`);
+    approx(envelopeAt(voice, 0, 1), ENVELOPE_EPSILON, 1e-12, `${swatch.id} envelope starts at safe exponential floor`);
+    approx(envelopeAt(voice, 1, 1), ENVELOPE_EPSILON, 1e-12, `${swatch.id} envelope ends at safe exponential floor`);
     assert(Number.isFinite(sampleVoice(voice, 0.73)), `${swatch.id} voice sample must be finite`);
     return JSON.stringify({
       waveform: voice.waveform,
