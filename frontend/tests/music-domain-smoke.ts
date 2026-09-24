@@ -289,6 +289,19 @@ function testVoiceProfiles() {
     );
   }
 
+  const measuredBody = {
+    keys: { decay: 0.271, sustain: 0.843 },
+    pluck: { decay: 0.263, sustain: 0.841 },
+    bell: { decay: 1.129, sustain: 0.753 },
+    marimba: { decay: 0.221, sustain: 0.801 },
+    chime: { decay: 1.241, sustain: 0.770 },
+  } as const;
+  for (const [instrument, expected] of Object.entries(measuredBody)) {
+    const voice = resolveVoiceProfile(`instrument:${instrument}`);
+    approx(voice.decaySeconds, expected.decay, 1e-12, `${instrument} decay must match measured reference body`);
+    approx(voice.sustain, expected.sustain, 1e-12, `${instrument} sustain must match measured reference body`);
+  }
+
   const keysVoice = resolveVoiceProfile('instrument:keys');
   approx(keysVoice.partials[1]?.gain ?? 0, amplitudeFromRelativeDb(-8.8), 1e-12, 'Keys second harmonic must match measured spectrum');
   approx(keysVoice.partials[2]?.gain ?? 0, amplitudeFromRelativeDb(-16.8), 1e-12, 'Keys third harmonic must match measured spectrum');
