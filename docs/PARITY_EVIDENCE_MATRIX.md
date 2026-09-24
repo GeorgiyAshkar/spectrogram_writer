@@ -156,11 +156,21 @@ Therefore:
 2. Exact envelope/phase recipe for each of the nine named instruments. Harmonic ratios and relative gains are measured and implemented.
 3. Arpeggio behavior is measured for all 10 Scale options: major-family scales use 0/4/7/9/12/9/7/4 and minor-family scales use 0/3/7/10/12/10/7/3.
 4. Direct entitled-reference confirmation of keyboard key highlighting/availability under Freestyle; runtime handler behavior is implemented.
-5. Whether metronome Click is included in reference WAV export.
-6. Exact reference MIDI file track/channel structure.
+5. Paid export boundary: whether reference WAV includes Click and its exact MIDI track/channel layout cannot be observed in the non-entitled public session without bypassing entitlement. The clone's own deterministic export policy is implemented and tested.
 7. Exact effect of the Octave +/- control on Freehand while the public entitlement state prevents observing octave changes.
 10. Exact color-picker interpolation/model beyond measured preset colors and custom picker.
 11. Exact public-gallery open/edit permissions and lifecycle.
+
+## Paid export verification boundary
+
+Public black-box probing establishes that:
+
+- the `WAV` and `MIDI` buttons are rendered and visually enabled;
+- clicking them in the non-entitled session creates no downloadable Blob;
+- toggling `proswitch` does not enter the entitled instrument state;
+- the `Click` control remains `Off`, preventing an honest Click-on vs Click-off WAV comparison.
+
+No purchase/entitlement is bypassed. The clone therefore keeps its own explicit export contract: WAV excludes the live click, while MIDI is format 0 with tempo meta-event, channel-10 drums, and expressive pitch-bend channels.
 
 ## Instrument envelope measurement boundary
 
