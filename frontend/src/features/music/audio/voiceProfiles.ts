@@ -196,18 +196,69 @@ export function sampleVoice(profile: VoiceProfile, phase: number): number {
   return sample;
 }
 
+export const ENVELOPE_EPSILON = 1e-4;
+
+export type ScheduledEnvelope = {
+  durationSeconds: number;
+  attackEndSeconds: number;
+  releaseStartSeconds: number;
+  sustain: number;
+};
+
+export function scheduledEnvelope(
+  profile: VoiceProfile,
+  durationSeconds: number,
+): ScheduledEnvelope {
+  const duration = Math.max(0.001, durationSeconds);
+  const attack = Math.min(duration, Math.max(0.001, profile.attackSeconds));
+  const release = Math.min(duration, Math.max(0.001, profile.releaseSeconds));
+  const releaseStart = Math.max(attack, duration - release);
+
+  return {
+    durationSeconds: duration,
+    attackEndSeconds: attack,
+    releaseStartSeconds: releaseStart,
+    sustain: Math.min(1, Math.max(ENVELOPE_EPSILON, profile.sustain)),
+  };
+}
+
+function exponentialInterpolation(start: number, end: number, progress: number): number {
+  const safeStart = Math.max(ENVELOPE_EPSILON, start);
+  const safeEnd = Math.max(ENVELOPE_EPSILON, end);
+  const p = Math.min(1, Math.max(0, progress));
+  return safeStart * (safeEnd / safeStart) ** p;
+}
+
+/**
+ * Normalized envelope used by offline WAV rendering.
+ *
+ * It intentionally mirrors the scheduled Web Audio gain automation:
+ * exponential attack -> linear decay toward sustain -> exponential release.
+ */
 export function envelopeAt(
   profile: VoiceProfile,
   timeSeconds: number,
   durationSeconds: number,
 ): number {
-  const duration = Math.max(0.001, durationSeconds);
-  const attack = Math.max(0.001, profile.attackSeconds);
-  const release = Math.max(0.001, Math.min(profile.releaseSeconds, duration));
-  const attackLevel = Math.min(1, Math.max(0, timeSeconds / attack));
-  const timeToEnd = Math.max(0, duration - timeSeconds);
-  const releaseLevel = Math.min(1, timeToEnd / release);
+  const shape = scheduledEnvelope(profile, durationSeconds);
+  const t = Math.min(shape.durationSeconds, Math.max(0, timeSeconds));
 
-  const body = profile.sustain + (1 - profile.sustain) * attackLevel;
-  return Math.min(attackLevel, releaseLevel) * body;
+  if (t <= shape.attackEndSeconds) {
+    const progress = shape.attackEndSeconds > 0
+      ? t / shape.attackEndSeconds
+      : 1;
+    return exponentialInterpolation(ENVELOPE_EPSILON, 1, progress);
+  }
+
+  if (t < shape.releaseStartSeconds) {
+    const bodyDuration = shape.releaseStartSeconds - shape.attackEndSeconds;
+    if (bodyDuration <= 1e-9) return shape.sustain;
+    const progress = (t - shape.attackEndSeconds) / bodyDuration;
+    return 1 + (shape.sustain - 1) * progress;
+  }
+
+  const releaseDuration = shape.durationSeconds - shape.releaseStartSeconds;
+  if (releaseDuration <= 1e-9) return ENVELOPE_EPSILON;
+  const progress = (t - shape.releaseStartSeconds) / releaseDuration;
+  return exponentialInterpolation(shape.sustain, ENVELOPE_EPSILON, progress);
 }
