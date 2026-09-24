@@ -1,6 +1,10 @@
 import { midiToFrequency } from '../model/theory';
 import type { MusicSettings, NoteEvent } from '../model/types';
-import { resolveVoiceProfile } from './voiceProfiles';
+import {
+  ENVELOPE_EPSILON,
+  resolveVoiceProfile,
+  scheduledEnvelope,
+} from './voiceProfiles';
 
 type ScheduledSource = OscillatorNode;
 
@@ -294,25 +298,19 @@ export class RealtimeMusicTransport {
     const endFrequency = midiToFrequency(event.endMidi ?? event.midi, this.settings.tuningCents);
 
     const velocity = Math.min(1, Math.max(0, event.velocity));
-    const peakGain = 0.26 * velocity * voice.gain;
-    const sustainGain = Math.max(
-      0.0002,
-      peakGain * Math.min(1, Math.max(0, voice.sustain)),
-    );
+    const peakGain = Math.max(0.0002, 0.26 * velocity * voice.gain);
     const safeStart = Math.max(startTime, this.context.currentTime + 0.001);
-    const attackEnd = Math.min(
-      endTime,
-      safeStart + Math.max(0.002, voice.attackSeconds),
-    );
-    const releaseStart = Math.max(
-      attackEnd,
-      endTime - Math.max(0.005, voice.releaseSeconds),
-    );
+    const scheduledDuration = Math.max(0.001, endTime - safeStart);
+    const shape = scheduledEnvelope(voice, scheduledDuration);
+    const attackEnd = safeStart + shape.attackEndSeconds;
+    const releaseStart = safeStart + shape.releaseStartSeconds;
+    const sustainGain = peakGain * shape.sustain;
+    const floorGain = Math.max(1e-8, peakGain * ENVELOPE_EPSILON);
 
-    gain.gain.setValueAtTime(0.0001, safeStart);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peakGain), attackEnd);
+    gain.gain.setValueAtTime(floorGain, safeStart);
+    gain.gain.exponentialRampToValueAtTime(peakGain, attackEnd);
     gain.gain.linearRampToValueAtTime(sustainGain, releaseStart);
-    gain.gain.exponentialRampToValueAtTime(0.0001, endTime);
+    gain.gain.exponentialRampToValueAtTime(floorGain, endTime);
 
     const normalization = Math.max(
       1,
