@@ -302,6 +302,33 @@ function testVoiceProfiles() {
     approx(voice.sustain, expected.sustain, 1e-12, `${instrument} sustain must match measured reference body`);
   }
 
+  const measuredPhases = {
+    keys: { 2: 1.335, 3: -2.942 },
+    pluck: { 3: -0.120, 5: -0.920, 7: -0.996, 9: -0.938 },
+    bell: { 3: -3.023, 5: -0.253, 7: 2.887, 9: -3.086 },
+    marimba: { 2: 2.258, 3: -2.269, 4: -1.778, 6: 2.324 },
+    flute: { 2: 1.213, 3: -2.722 },
+    strings: { 3: -0.008, 5: -0.555, 7: 0.492, 9: -2.752 },
+    chime: { 2: -0.564, 3: -1.208, 4: 1.863, 6: -3.083 },
+    bass: { 2: 1.202, 3: 2.792, 4: -1.113 },
+    '8bit': { 3: 2.552, 5: -0.614, 7: 3.043, 9: 0.927 },
+  } as const;
+
+  for (const [instrument, phases] of Object.entries(measuredPhases)) {
+    const voice = resolveVoiceProfile(`instrument:${instrument}`);
+    for (const [ratioText, expectedPhase] of Object.entries(phases)) {
+      const ratio = Number(ratioText);
+      const partial = voice.partials.find((candidate) => candidate.ratio === ratio);
+      assert(partial !== undefined, `${instrument} must contain measured harmonic ${ratio}`);
+      approx(
+        partial?.phaseRadians ?? 0,
+        expectedPhase,
+        1e-12,
+        `${instrument} harmonic ${ratio} phase must match measured reference waveform`,
+      );
+    }
+  }
+
   const keysVoice = resolveVoiceProfile('instrument:keys');
   approx(keysVoice.partials[1]?.gain ?? 0, amplitudeFromRelativeDb(-8.8), 1e-12, 'Keys second harmonic must match measured spectrum');
   approx(keysVoice.partials[2]?.gain ?? 0, amplitudeFromRelativeDb(-16.8), 1e-12, 'Keys third harmonic must match measured spectrum');
