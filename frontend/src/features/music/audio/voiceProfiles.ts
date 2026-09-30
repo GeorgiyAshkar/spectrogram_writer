@@ -62,68 +62,70 @@ const measuredPartials = (
  * captured on 2026-09-22 from a single drawn note near G4.
  *
  * Attack values are measured from the public reference's 2%→90% RMS rise.
- * For keys/pluck/bell/marimba/chime, decay and sustain are also measured from
- * isolated short-note playback. Remaining decay/sustain/release values stay
- * conservative until their reference envelopes become observable.
+ * Relative phase is measured against the fundamental from steady-state
+ * waveform snapshots. For keys/pluck/bell/marimba/chime, decay and sustain are
+ * also measured from isolated short-note playback. Remaining release values
+ * are conservative because the public loop transport does not expose a stable
+ * note-off tail for every instrument.
  */
 const MEASURED_INSTRUMENT_PARTIALS = {
   keys: measuredPartials([
-    [1, 0],
-    [2, -8.8],
-    [3, -16.8],
+    [1, 0, 0],
+    [2, -8.8, 1.335],
+    [3, -16.8, -2.942],
   ]),
   pluck: measuredPartials([
-    [1, 0],
-    [3, -17.5],
-    [5, -30.2],
-    [7, -43.3],
-    [9, -52.1],
+    [1, 0, 0],
+    [3, -17.5, -0.120],
+    [5, -30.2, -0.920],
+    [7, -43.3, -0.996],
+    [9, -52.1, -0.938],
   ]),
   bell: measuredPartials([
-    [1, 0],
-    [3, -13.1],
-    [5, -26.7],
-    [7, -46.6],
-    [9, -63.8],
+    [1, 0, 0],
+    [3, -13.1, -3.023],
+    [5, -26.7, -0.253],
+    [7, -46.6, 2.887],
+    [9, -63.8, -3.086],
   ]),
   marimba: measuredPartials([
-    [1, 0],
-    [2, -45.7],
-    [3, -45.2],
-    [4, -10.3],
-    [6, -45.5],
+    [1, 0, 0],
+    [2, -45.7, 2.258],
+    [3, -45.2, -2.269],
+    [4, -10.3, -1.778],
+    [6, -45.5, 2.324],
   ]),
   flute: measuredPartials([
-    [1, 0],
-    [2, -20.8],
-    [3, -51.7],
+    [1, 0, 0],
+    [2, -20.8, 1.213],
+    [3, -51.7, -2.722],
   ]),
   strings: measuredPartials([
-    [1, 0],
-    [3, -13.1],
-    [5, -37.8],
-    [7, -36.6],
-    [9, -46.3],
+    [1, 0, 0],
+    [3, -13.1, -0.008],
+    [5, -37.8, -0.555],
+    [7, -36.6, 0.492],
+    [9, -46.3, -2.752],
   ]),
   chime: measuredPartials([
-    [1, 0],
-    [2, -53.3],
-    [3, -49.5],
-    [4, -13.0],
-    [6, -54.1],
+    [1, 0, 0],
+    [2, -53.3, -0.564],
+    [3, -49.5, -1.208],
+    [4, -13.0, 1.863],
+    [6, -54.1, -3.083],
   ]),
   bass: measuredPartials([
-    [1, 0],
-    [2, -13.3],
-    [3, -51.8],
-    [4, -53.3],
+    [1, 0, 0],
+    [2, -13.3, 1.202],
+    [3, -51.8, 2.792],
+    [4, -53.3, -1.113],
   ]),
   '8bit': measuredPartials([
-    [1, 0],
-    [3, -13.6],
-    [5, -28.4],
-    [7, -38.8],
-    [9, -46.2],
+    [1, 0, 0],
+    [3, -13.6, 2.552],
+    [5, -28.4, -0.614],
+    [7, -38.8, 3.043],
+    [9, -46.2, 0.927],
   ]),
 } as const;
 
