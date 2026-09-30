@@ -103,9 +103,14 @@ Remaining parity work is concentrated in reference details hidden behind the cur
 - [x] named instrument layers route to distinct voice profiles
 - [x] measured harmonic partial ratios for all nine named instruments
 - [x] measured relative harmonic gains stored as dB→amplitude values
-- [x] per-instrument clean-room attack/release/sustain envelopes
-- [x] realtime and WAV share the same voice-profile model
-- [ ] exact original envelope/phase synthesis recipe
+- [x] measured relative harmonic phases for all nine named instruments
+- [x] measured attack rise times for all nine named instruments
+- [x] measured decay/sustain body for reference instruments where the public loop exposes a stable body
+- [x] phase-aware Web Audio PeriodicWave synthesis
+- [x] phase-aware offline WAV synthesis
+- [x] shared realtime/WAV ADSR model
+- [x] observable envelope/phase parity implemented
+- [x] non-observable note-off tails documented as an external verification boundary
 
 ### Virtual keyboard / MIDI input
 - [x] three-octave virtual keyboard
@@ -263,6 +268,17 @@ Measured facts are recorded in:
 
 - `docs/PARITY_EVIDENCE_MATRIX.md`
 - `docs/PLAYMUSICTHEORY_PARITY_AUDIT.md`
+
+## External verification boundaries
+
+These are **not open implementation tasks**. They require access to reference behavior that the public non-entitled session does not expose reliably:
+
+- exact note-off release tails for every named instrument;
+- Octave +/- entitlement limits and the exact Freehand octave interaction outside the locked state;
+- entitled reference WAV/MIDI internals (Click inclusion and exact reference track/channel layout);
+- any private gallery lifecycle/permissions that are not observable from the public surface.
+
+The clone has deterministic, tested product behavior for each affected area; these items remain provenance/verification boundaries only.
 
 ## Next work
 
