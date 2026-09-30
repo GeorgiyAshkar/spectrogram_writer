@@ -66,6 +66,19 @@ At the default C / Major pentatonic / 120 BPM settings, black-box output analysi
 
 The clone matches the measured Bass and Drums behavior and the measured Arpeggio families across all ten Scale options.
 
+## Measured envelope and phase behavior
+
+Black-box waveform and spectral probes now provide, for all nine named instruments:
+
+- harmonic ratios;
+- relative harmonic gains;
+- relative phase against the fundamental;
+- attack rise timing.
+
+For keys, pluck, bell, marimba and chime, the public loop also exposes a stable enough body to estimate decay and sustain. The implementation uses phase-aware periodic synthesis in realtime and the same phase-aware partial model in offline WAV rendering.
+
+Exact note-off release tails are intentionally not claimed where the reference transport does not expose a stable observable tail.
+
 ## Exact instrument palette
 
 The rendered web UI exposes stable instrument identity separately from color:
@@ -150,16 +163,17 @@ Therefore:
 - **Freehand vertical mapping: MEASURED at octave offset 0** — Scale and Range do not change the curve. For Key=C, the observed frequencies are consistent with `MIDI ≈ 79 - 31*y` across the canvas. Key transposes the entire curve using the nearest signed pitch-class offset around C: C=0, D=+2, F#=+6, G=-5, A=-3, Bb=-2, B=-1. The implementation now uses this measured mapping for realtime and WAV glissando.
 - **Freestyle: keyboard/MIDI scale-lock behavior is strongly evidenced and implemented.** Drawing listeners contain no Freestyle dependency; geometry, pitch spectrum and onset timing remain unchanged. The reference `lockBtn` handler toggles `freestyle`, iterates held notes through `noteUp`, and redraws the lock/keys through `drawLock`/`drawKeys`. The clone therefore keeps drawing unchanged, constrains virtual/MIDI notes to the selected Scale while Freestyle is Off, unlocks chromatic input while On, and releases held voices when the mode changes. Direct visual/acoustic comparison of the reference playable keyboard is blocked by its public `locked` entitlement state.
 
-## Still unresolved exact behavior
+## External verification boundaries
 
-1. Octave min/max clamp.
-2. Exact envelope/phase recipe for each of the nine named instruments. Harmonic ratios and relative gains are measured and implemented.
-3. Arpeggio behavior is measured for all 10 Scale options: major-family scales use 0/4/7/9/12/9/7/4 and minor-family scales use 0/3/7/10/12/10/7/3.
-4. Direct entitled-reference confirmation of keyboard key highlighting/availability under Freestyle; runtime handler behavior is implemented.
-5. Paid export boundary: whether reference WAV includes Click and its exact MIDI track/channel layout cannot be observed in the non-entitled public session without bypassing entitlement. The clone's own deterministic export policy is implemented and tested.
-7. Exact effect of the Octave +/- control on Freehand while the public entitlement state prevents observing octave changes.
-10. Exact color-picker interpolation/model beyond measured preset colors and custom picker.
-11. Exact public-gallery open/edit permissions and lifecycle.
+The following items are not treated as unfinished product work because the current public/non-entitled reference does not expose enough behavior to verify them without bypassing access controls:
+
+1. **Named-instrument release tails.** Harmonic ratios, relative gains, relative phases and attack timing are measured; stable decay/sustain body is measured where observable. Exact note-off release tails are not exposed consistently for every instrument.
+2. **Octave entitlement boundaries.** The public reference does not allow reliable observation of the full Octave +/- clamp or the exact Freehand octave behavior outside the locked state.
+3. **Paid WAV/MIDI internals.** Public controls do not emit export files in the non-entitled session, so exact reference Click-in-WAV and reference MIDI track/channel layout cannot be confirmed without bypassing entitlement.
+4. **Private gallery lifecycle/permissions.** Publicly observable gallery behavior is implemented; hidden/private moderation or edit policies are not inferable from the public surface.
+
+These are provenance/verification limits, not open implementation defects. The clone uses deterministic tested product policies in each area.
+
 
 ## Paid export verification boundary
 
