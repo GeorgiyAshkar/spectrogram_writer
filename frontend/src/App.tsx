@@ -68,6 +68,50 @@ import './styles/app.css';
 
 const initialState: GenerationFormData = defaults as GenerationFormData;
 
+const MUSIC_INSTRUMENT_LABELS_RU: Record<ParityInstrumentId, string> = {
+  keys: 'Клавиши',
+  pluck: 'Щипок',
+  bell: 'Колокол',
+  marimba: 'Маримба',
+  flute: 'Флейта',
+  strings: 'Струнные',
+  chime: 'Перезвон',
+  bass: 'Бас',
+  '8bit': '8-бит',
+};
+
+const MUSIC_SCALE_LABELS_RU: Record<MusicSettings['scale'], string> = {
+  majorPentatonic: 'Мажорная пентатоника',
+  minorPentatonic: 'Минорная пентатоника',
+  major: 'Мажор',
+  minor: 'Минор',
+  harmonicMinor: 'Гармонический минор',
+  dorian: 'Дорийский',
+  phrygian: 'Фригийский',
+  lydian: 'Лидийский',
+  mixolydian: 'Миксолидийский',
+  blues: 'Блюз',
+};
+
+const MUSIC_PROGRAM_LABELS_RU: Record<1 | 2 | 3, string> = {
+  1: 'Рисование',
+  2: 'Пиксели',
+  3: 'Видео',
+};
+
+const MUSIC_ACCOMPANIMENT_LABELS_RU: Record<string, string> = {
+  bassEnabled: 'Бас',
+  drumsEnabled: 'Барабаны',
+  arpeggioEnabled: 'Арпеджио',
+};
+
+const MUSIC_SWING_LABELS_RU: Record<string, string> = {
+  Off: 'Выкл',
+  Light: 'Лёгкий',
+  Medium: 'Средний',
+  Hard: 'Сильный',
+};
+
 function parseWeights(value: string): number[] | null {
   const weights = value
     .split(/[;,\s]+/)
@@ -1061,6 +1105,7 @@ export default function App() {
           {activePanel === 'music' ? (
             <div className="music-panel">
               <div className="music-panel-switches">
+                <span className="music-group-label">Режим</span>
                 <button
                   type="button"
                   className="button-secondary music-help-button"
@@ -1076,7 +1121,7 @@ export default function App() {
                   aria-expanded={showInstrumentPanel}
                   onClick={() => setShowInstrumentPanel((current) => !current)}
                 >
-                  The instrument
+                  Настройки
                 </button>
                 <button
                   type="button"
@@ -1118,7 +1163,8 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="music-edit-toolbar" aria-label="Drawing tools">
+              <div className="music-edit-toolbar" aria-label="Инструменты рисования">
+                <span className="music-group-label">Рисование</span>
                 <button
                   type="button"
                   className={musicTool === 'pen' ? 'button-secondary is-active' : 'button-secondary'}
@@ -1197,10 +1243,49 @@ export default function App() {
 
               </div>
 
+              <div className="music-quick-settings" aria-label="Время и темп">
+                <label className="music-quick-field">
+                  <span>Длительность</span>
+                  <span className="music-number-with-unit">
+                    <input
+                      type="number"
+                      min={MUSIC_DURATION_LIMITS.minSeconds}
+                      max={MUSIC_DURATION_LIMITS.maxSeconds}
+                      step={MUSIC_DURATION_LIMITS.stepSeconds}
+                      value={Number(musicDurationSeconds.toFixed(1))}
+                      aria-label="Длительность проигрывания в секундах"
+                      onChange={(e) => updateMusicDurationSeconds(Number(e.target.value))}
+                    />
+                    <small>с</small>
+                  </span>
+                </label>
+                <label className="music-quick-field">
+                  <span>Темп</span>
+                  <span className="music-number-with-unit">
+                    <input
+                      type="number"
+                      min={PARITY_BPM.min}
+                      max={PARITY_BPM.max}
+                      step={1}
+                      value={musicSettings.bpm}
+                      aria-label="Темп BPM"
+                      onChange={(e) => updateMusicBpm(Number(e.target.value))}
+                    />
+                    <small>BPM</small>
+                  </span>
+                </label>
+                <button type="button" className="button-secondary music-compact-action" onClick={tapTempo}>
+                  Tap tempo
+                </button>
+                <span className="music-quick-settings__hint">
+                  {musicSettings.loopLengthBeats.toFixed(1)} долей
+                </span>
+              </div>
+
               {showMusicHelp ? (
                 <div className="music-help-panel" role="dialog" aria-label="Справка по музыкальному режиму">
                   <div className="music-help-panel__header">
-                    <strong>play_music_theory — справка</strong>
+                    <strong>Музыкальный режим — справка</strong>
                     <button
                       type="button"
                       className="button-secondary"
@@ -1222,11 +1307,11 @@ export default function App() {
               {showInstrumentPanel ? (
               <div className="music-instrument-panel">
                 <div className="music-instrument-panel__header">
-                  <strong>The instrument</strong>
+                  <strong>Настройки</strong>
                   <button
                     type="button"
                     className="button-secondary"
-                    aria-label="Закрыть The instrument"
+                    aria-label="Закрыть Настройки"
                     onClick={() => setShowInstrumentPanel(false)}
                   >
                     ×
@@ -1234,27 +1319,33 @@ export default function App() {
                 </div>
                 <div className="music-parity-controls">
                 <label className="music-control">
-                  <span>Key</span>
+                  <span>Тональность</span>
                   <select value={musicSettings.key} onChange={(e) => updateMusicSetting('key', e.target.value)}>
                     {PARITY_KEY_OPTIONS.map((key) => <option key={key} value={key}>{key}</option>)}
                   </select>
                 </label>
                 <label className="music-control">
-                  <span>Scale</span>
+                  <span>Лад</span>
                   <select value={musicSettings.scale} onChange={(e) => updateMusicSetting('scale', e.target.value as MusicSettings['scale'])}>
-                    {PARITY_SCALE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    {PARITY_SCALE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {MUSIC_SCALE_LABELS_RU[option.value]}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="music-control">
-                  <span>Range</span>
+                  <span>Диапазон</span>
                   <select value={musicSettings.rangeOctaves} onChange={(e) => updateMusicSetting('rangeOctaves', Number(e.target.value))}>
                     {PARITY_RANGE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                      <option key={option.value} value={option.value}>
+                        {option.value === 1 ? '1 октава' : option.value === 2 ? '2 октавы' : '3 октавы'}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <div className="music-control">
-                  <span>Octave</span>
+                  <span>Октава</span>
                   <div className="music-inline-buttons">
                     <button type="button" onClick={() => updateMusicSetting('octaveOffset', musicSettings.octaveOffset - 1)}>−</button>
                     <strong>{musicSettings.octaveOffset}</strong>
@@ -1285,7 +1376,7 @@ export default function App() {
                   </div>
                 </label>
                 <label className="music-control">
-                  <span>Quantize</span>
+                  <span>Квантизация</span>
                   <select
                     value={
                       PARITY_QUANTIZE_OPTIONS.find(
@@ -1306,26 +1397,28 @@ export default function App() {
                   </select>
                 </label>
                 <label className="music-control">
-                  <span>Swing</span>
+                  <span>Свинг</span>
                   <select value={musicSettings.swing} onChange={(e) => updateMusicSetting('swing', Number(e.target.value))}>
                     {PARITY_SWING_OPTIONS.map((option) => (
-                      <option key={option.label} value={option.value}>{option.label}</option>
+                      <option key={option.label} value={option.value}>
+                        {MUSIC_SWING_LABELS_RU[option.label] ?? option.label}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <div className="music-control">
-                  <span>Click</span>
+                  <span>Метроном</span>
                   <button
                     type="button"
                     className={musicSettings.metronomeEnabled ? 'music-toggle is-active' : 'music-toggle'}
                     aria-pressed={musicSettings.metronomeEnabled}
                     onClick={() => updateMusicSetting('metronomeEnabled', !musicSettings.metronomeEnabled)}
                   >
-                    {musicSettings.metronomeEnabled ? 'On' : 'Off'}
+                    {musicSettings.metronomeEnabled ? 'Вкл' : 'Выкл'}
                   </button>
                 </div>
                 <div className="music-control">
-                  <span>MIDI in</span>
+                  <span>MIDI-вход</span>
                   <button
                     type="button"
                     className={midiEnabled ? 'music-toggle is-active' : 'music-toggle'}
@@ -1340,11 +1433,11 @@ export default function App() {
                       setMidiEnabled((current) => !current);
                     }}
                   >
-                    {midiEnabled ? 'On' : 'Off'}
+                    {midiEnabled ? 'Вкл' : 'Выкл'}
                   </button>
                 </div>
                 <label className="music-control">
-                  <span>Tune</span>
+                  <span>Строй, центы</span>
                   <input
                     type="number"
                     min={PARITY_TUNE_CENTS.min}
@@ -1363,18 +1456,18 @@ export default function App() {
                   />
                 </label>
                 <label className="music-control">
-                  <span>Paper</span>
+                  <span>Фон</span>
                   <select
                     value={musicBackgroundKind}
                     onChange={(e) => setMusicBackgroundKind(e.target.value as 'paper' | 'sky' | 'photo')}
                   >
-                    <option value="paper">Paper</option>
-                    <option value="sky">Sky</option>
-                    <option value="photo" disabled={!musicPhotoUrl}>Photo</option>
+                    <option value="paper">Бумага</option>
+                    <option value="sky">Небо</option>
+                    <option value="photo" disabled={!musicPhotoUrl}>Фото</option>
                   </select>
                 </label>
                 <label className="music-control music-photo-picker">
-                  <span>Photo</span>
+                  <span>Фото</span>
                   <span className="button-secondary music-photo-picker__button">Выбрать</span>
                   <input
                     type="file"
@@ -1384,7 +1477,7 @@ export default function App() {
                 </label>
                 {musicBackgroundKind === 'photo' && musicPhotoUrl ? (
                   <div className="music-control">
-                    <span>Photo fit</span>
+                    <span>Масштаб фото</span>
                     <div className="music-inline-buttons" aria-label="Photo fit">
                       {(['fill', 'fit', 'stretch'] as const).map((fit) => (
                         <button
@@ -1394,14 +1487,14 @@ export default function App() {
                           aria-pressed={musicPhotoFit === fit}
                           onClick={() => setMusicPhotoFit(fit)}
                         >
-                          {fit === 'fill' ? 'Fill' : fit === 'fit' ? 'Fit' : 'Stretch'}
+                          {fit === 'fill' ? 'Заполнить' : fit === 'fit' ? 'Вписать' : 'Растянуть'}
                         </button>
                       ))}
                     </div>
                   </div>
                 ) : null}
                 <div className="music-control music-export-control">
-                  <span>Export</span>
+                  <span>Экспорт</span>
                   <div className="music-inline-buttons">
                     <button
                       type="button"
@@ -1424,7 +1517,9 @@ export default function App() {
               ) : null}
 
               <div className="music-reference-programs">
-                <div className="music-inline-buttons" aria-label="Programs">
+                <div className="music-control-group">
+                  <span className="music-group-label">Отображение</span>
+                  <div className="music-inline-buttons" aria-label="Режим отображения">
                   {PARITY_PROGRAMS.filter((program) => !program.hiddenInReference).map((program) => (
                     <button
                       type="button"
@@ -1435,11 +1530,14 @@ export default function App() {
                       aria-pressed={musicSettings.programMode === program.value}
                       onClick={() => updateMusicSetting('programMode', program.value)}
                     >
-                      {program.label}
+                      {MUSIC_PROGRAM_LABELS_RU[program.value]}
                     </button>
                   ))}
+                  </div>
                 </div>
-                <div className="music-inline-buttons" aria-label="Accompaniment">
+                <div className="music-control-group">
+                  <span className="music-group-label">Сопровождение</span>
+                  <div className="music-inline-buttons" aria-label="Сопровождение">
                   {PARITY_ACCOMPANIMENT_CONTROLS.map((control) => {
                     const active = musicSettings[control.setting];
                     return (
@@ -1457,23 +1555,24 @@ export default function App() {
                           }))
                         }
                       >
-                        {control.label}
+                        {MUSIC_ACCOMPANIMENT_LABELS_RU[control.setting] ?? control.tooltip}
                       </button>
                     );
                   })}
+                  </div>
                 </div>
               </div>
 
-              <div className="music-palette" aria-label="Палитра">
+              <div className="music-palette" aria-label="Инструменты">
+                <span className="music-group-label">Инструмент</span>
                 {PARITY_INSTRUMENT_SWATCHES.map((swatch) => {
                   const color = musicInstrumentColors[swatch.id] ?? swatch.color;
                   return (
                     <button
                       type="button"
                       key={swatch.id}
-                      className={activeMusicInstrumentId === swatch.id ? 'music-color is-active' : 'music-color'}
-                      style={{ background: color }}
-                      title={swatch.label}
+                      className={activeMusicInstrumentId === swatch.id ? 'music-instrument-chip is-active' : 'music-instrument-chip'}
+                      title={MUSIC_INSTRUMENT_LABELS_RU[swatch.id]}
                       aria-label={swatch.label}
                       aria-pressed={activeMusicInstrumentId === swatch.id}
                       onClick={() => {
@@ -1487,7 +1586,10 @@ export default function App() {
                         setMusicColor(color);
                         setMusicCustomColor(color);
                       }}
-                    />
+                    >
+                      <span className="music-instrument-chip__dot" style={{ background: color }} aria-hidden="true" />
+                      <span>{MUSIC_INSTRUMENT_LABELS_RU[swatch.id]}</span>
+                    </button>
                   );
                 })}
                 <input
@@ -1556,7 +1658,7 @@ export default function App() {
                     else void startTakeRecording();
                   }}
                 >
-                  {isTakeRecording ? 'stop' : 'record'}
+                  {isTakeRecording ? 'Стоп' : 'Запись'}
                 </button>
                 {takeUrl ? (
                   <>
@@ -1594,7 +1696,7 @@ export default function App() {
               {showSharePanel ? (
                 <div className="music-share-panel">
                   <label>
-                    <span>title</span>
+                    <span>Название</span>
                     <input
                       type="text"
                       maxLength={48}
@@ -1606,7 +1708,7 @@ export default function App() {
                     />
                   </label>
                   <label>
-                    <span>your name / handle</span>
+                    <span>Имя / ник</span>
                     <input
                       type="text"
                       maxLength={120}
@@ -1638,7 +1740,7 @@ export default function App() {
               {showGallery ? (
                 <div className="music-gallery">
                   <div className="music-gallery__header">
-                    <strong>Gallery</strong>
+                    <strong>Галерея</strong>
                     <button type="button" className="button-secondary" onClick={() => void refreshGallery()}>
                       Обновить
                     </button>
