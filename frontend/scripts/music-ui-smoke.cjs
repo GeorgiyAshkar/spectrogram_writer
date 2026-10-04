@@ -345,9 +345,11 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
 
     await clickByText('Настройки');
     await page.waitForSelector('.music-instrument-panel', { timeout: 5000 });
-    const instrumentSelects = await page.$('.music-instrument-panel select');
-    if (instrumentSelects.length < 4) {
-      throw new Error(`The instrument opened with only ${instrumentSelects.length} selects.`);
+    const instrumentSelectCount = await page.evaluate(
+      () => document.querySelectorAll('.music-instrument-panel select').length,
+    );
+    if (instrumentSelectCount < 4) {
+      throw new Error(`Music settings opened with only ${instrumentSelectCount} selects.`);
     }
 
     const parityDefaults = await page.evaluate(() => {
@@ -409,7 +411,9 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       swatch.click();
     });
     await page.waitForSelector('.music-recolor-picker', { timeout: 5000 });
-    const presetCount = await page.$$eval('.music-recolor-preset:not(.music-recolor-preset--custom)', (nodes) => nodes.length);
+    const presetCount = await page.evaluate(
+      () => document.querySelectorAll('.music-recolor-preset:not(.music-recolor-preset--custom)').length,
+    );
     if (presetCount !== 27) throw new Error(`Expected 27 recolor presets, got ${presetCount}.`);
 
     await clickByText('Случайно');
