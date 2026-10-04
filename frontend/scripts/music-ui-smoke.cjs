@@ -49,6 +49,58 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     await page.waitForSelector('.music-draw-canvas', { timeout: 5000 });
 
     const canvas = await page.$('.music-draw-canvas');
+
+    const initialMusicLayout = await page.evaluate(() => {
+      const canvasRect = document.querySelector('.music-draw-canvas')?.getBoundingClientRect();
+      const buttons = [...document.querySelectorAll('.music-panel > .music-panel-switches button, .music-panel > .music-edit-toolbar button')];
+      return {
+        viewportHeight: window.innerHeight,
+        canvasTop: canvasRect?.top ?? null,
+        canvasBottom: canvasRect?.bottom ?? null,
+        buttonWidths: buttons.map((button) => ({
+          text: button.textContent?.trim() ?? '',
+          width: button.getBoundingClientRect().width,
+        })),
+      };
+    });
+
+    if (initialMusicLayout.canvasTop == null || initialMusicLayout.canvasTop >= initialMusicLayout.viewportHeight - 60) {
+      throw new Error(`Music canvas must be visible without page scrolling: ${JSON.stringify(initialMusicLayout)}`);
+    }
+    const oversizedButton = initialMusicLayout.buttonWidths.find((button) => button.width > 260);
+    if (oversizedButton) {
+      throw new Error(`Music control unexpectedly stretches across the row: ${JSON.stringify(oversizedButton)}`);
+    }
+
+    const durationBefore = await page.$eval('input[aria-label="Длительность проигрывания в секундах"]', (input) => Number(input.value));
+    if (Math.abs(durationBefore - 2) > 0.11) {
+      throw new Error(`Expected default playback duration near 2s, got ${durationBefore}`);
+    }
+
+    await page.$eval('input[aria-label="Длительность проигрывания в секундах"]', (input) => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      nativeSetter?.call(input, '8');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.waitForFunction(
+      () => Math.abs(Number(document.querySelector('input[aria-label="Длительность проигрывания в секундах"]')?.value) - 8) < 0.11,
+      { timeout: 5000 },
+    );
+
+    await page.$eval('input[aria-label="Темп BPM"]', (input) => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      nativeSetter?.call(input, '180');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.waitForFunction(
+      () =>
+        Number(document.querySelector('input[aria-label="Темп BPM"]')?.value) === 180 &&
+        Math.abs(Number(document.querySelector('input[aria-label="Длительность проигрывания в секундах"]')?.value) - 8) < 0.11,
+      { timeout: 5000 },
+    );
+
     await canvas?.evaluate((node) => node.scrollIntoView({ block: 'center', inline: 'center' }));
     await new Promise((resolve) => setTimeout(resolve, 120));
     const box = await canvas?.boundingBox();
@@ -163,7 +215,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     );
     if (!freestyleInitial) throw new Error('Freestyle must start disabled.');
 
-    await clickByText('Key');
+    await clickByText('Клавиши');
     await page.waitForSelector('.music-octaves', { timeout: 5000 });
 
     const cSharpLocked = await page.evaluate(() => {
@@ -255,7 +307,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       if (!active) throw new Error(`${accompaniment} did not become active.`);
     }
 
-    await clickByText('The instrument');
+    await clickByText('Настройки');
     await page.waitForSelector('.music-instrument-panel', { timeout: 5000 });
     const instrumentSelects = await page.$('.music-instrument-panel select');
     if (instrumentSelects.length < 4) {
@@ -278,16 +330,13 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       };
 
       return {
-        key: byCaption('Key'),
-        scale: byCaption('Scale'),
-        range: byCaption('Range'),
-        quantize: byCaption('Quantize'),
-        swing: byCaption('Swing'),
-        tempoInputs: [...document.querySelectorAll('.music-instrument-panel input[aria-label="Tempo BPM"]')]
-          .map((input) => ({
-            value: input.value,
-            readOnly: input.readOnly,
-          })),
+        key: byCaption('Тональность'),
+        scale: byCaption('Лад'),
+        range: byCaption('Диапазон'),
+        quantize: byCaption('Квантизация'),
+        swing: byCaption('Свинг'),
+        duration: document.querySelector('input[aria-label="Длительность проигрывания в секундах"]')?.value ?? null,
+        bpm: document.querySelector('input[aria-label="Темп BPM"]')?.value ?? null,
       };
     });
 
@@ -297,14 +346,25 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     if (parityDefaults.quantize?.options?.join('|') !== '1/4|1/8|1/8 triplet|1/16|1/16 triplet|1/32') {
       throw new Error(`Unexpected Quantize options: ${parityDefaults.quantize?.options?.join('|')}`);
     }
-    if (parityDefaults.swing?.options?.join('|') !== 'Off|Light|Medium|Hard') {
+    if (parityDefaults.swing?.options?.join('|') !== 'Выкл|Лёгкий|Средний|Сильный') {
       throw new Error(`Unexpected Swing options: ${parityDefaults.swing?.options?.join('|')}`);
     }
-    if (!parityDefaults.tempoInputs.some((input) => input.value === '120' && input.readOnly)) {
-      throw new Error(`Readonly Tempo 120 display missing: ${JSON.stringify(parityDefaults.tempoInputs)}`);
+    if (Number(parityDefaults.bpm) !== 180 || Math.abs(Number(parityDefaults.duration) - 8) > 0.11) {
+      throw new Error(`Playback duration/BPM quick controls lost state: ${JSON.stringify(parityDefaults)}`);
     }
 
-    await clickByText('Recolor');
+    const instrumentOverflow = await page.$eval('.music-instrument-chip', (nodes) =>
+      nodes.map((node) => ({
+        text: node.textContent?.trim() ?? '',
+        scrollWidth: node.scrollWidth,
+        clientWidth: node.clientWidth,
+      })).filter((item) => item.scrollWidth > item.clientWidth + 1),
+    );
+    if (instrumentOverflow.length) {
+      throw new Error(`Instrument labels overflow their buttons: ${JSON.stringify(instrumentOverflow)}`);
+    }
+
+    await clickByText('Цвета');
     await page.evaluate(() => {
       const swatch = document.querySelector('button[aria-label="keys"]');
       if (!(swatch instanceof HTMLButtonElement)) throw new Error('keys swatch missing');
@@ -314,7 +374,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     const presetCount = await page.$$eval('.music-recolor-preset:not(.music-recolor-preset--custom)', (nodes) => nodes.length);
     if (presetCount !== 27) throw new Error(`Expected 27 recolor presets, got ${presetCount}.`);
 
-    await clickByText('Shuffle');
+    await clickByText('Случайно');
     await page.waitForFunction(
       () => [...document.querySelectorAll('.music-event-summary span')].some((node) => {
         const match = /Линий:\s*(\d+)/.exec(node.textContent || '');
@@ -369,6 +429,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
         documentWidth: document.documentElement.scrollWidth,
         bodyWidth: document.body.scrollWidth,
         canvasWidth: canvas?.width ?? null,
+        canvasTop: canvas?.top ?? null,
         panelWidth: panel?.width ?? null,
       };
     });
@@ -378,6 +439,9 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     }
     if (mobileLayout.canvasWidth && mobileLayout.canvasWidth > mobileLayout.viewportWidth + 2) {
       throw new Error(`Mobile music canvas exceeds viewport: ${JSON.stringify(mobileLayout)}`);
+    }
+    if (mobileLayout.canvasTop != null && mobileLayout.canvasTop >= 844 - 40) {
+      throw new Error(`Mobile music canvas is pushed below the first screen: ${JSON.stringify(mobileLayout)}`);
     }
 
     for (const label of ['Grid', 'Freestyle', 'Freehand', 'Pen', 'Eraser', 'Undo', 'Redo', 'Restart', 'Shuffle']) {
@@ -390,7 +454,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       if (!exists) throw new Error(`Mobile control missing: ${label}`);
     }
 
-    await mobileClickByText('The instrument');
+    await mobileClickByText('Настройки');
     await mobilePage.waitForSelector('.music-instrument-panel', { timeout: 5000 });
     const instrumentPanelLayout = await mobilePage.$eval('.music-instrument-panel', (node) => {
       const rect = node.getBoundingClientRect();
@@ -405,7 +469,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       throw new Error(`Mobile instrument panel escapes viewport: ${JSON.stringify(instrumentPanelLayout)}`);
     }
 
-    await mobileClickByText('Recolor');
+    await mobileClickByText('Цвета');
     await mobilePage.evaluate(() => {
       const swatch = document.querySelector('button[aria-label="keys"]');
       if (swatch instanceof HTMLButtonElement) swatch.click();
