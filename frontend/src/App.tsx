@@ -16,6 +16,12 @@ import {
   type NoteEvent,
   type Stroke,
 } from './features/music/model';
+import {
+  loopDurationSeconds,
+  MUSIC_DURATION_LIMITS,
+  withBpmPreservingDuration,
+  withPlaybackDuration,
+} from './features/music/model/timing';
 import { MusicCanvas, type MusicCanvasBackground } from './features/music/canvas/MusicCanvas';
 import { renderNoteEventsToWavUrl } from './features/music/audio/renderWav';
 import { useRealtimeMusicTransport } from './features/music/audio/useRealtimeMusicTransport';
@@ -835,6 +841,18 @@ export default function App() {
     setMusicSettings((current) => ({ ...current, [key]: value }));
   };
 
+  const updateMusicBpm = (bpm: number) => {
+    const nextBpm = Math.min(PARITY_BPM.max, Math.max(PARITY_BPM.min, Math.round(bpm)));
+    setMusicSettings((current) => withBpmPreservingDuration(current, nextBpm));
+  };
+
+  const musicDurationSeconds = loopDurationSeconds(musicSettings);
+
+  const updateMusicDurationSeconds = (durationSeconds: number) => {
+    if (!Number.isFinite(durationSeconds)) return;
+    setMusicSettings((current) => withPlaybackDuration(current, durationSeconds));
+  };
+
   const tapTempo = () => {
     const now = performance.now();
     const recent = [...tapTimesRef.current.filter((value) => now - value < 4000), now].slice(-8);
@@ -849,7 +867,7 @@ export default function App() {
         : intervals[middle];
 
     const bpm = Math.round(60000 / Math.max(1, median));
-    updateMusicSetting('bpm', Math.min(PARITY_BPM.max, Math.max(PARITY_BPM.min, bpm)));
+    updateMusicBpm(bpm);
   };
 
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1261,7 +1279,7 @@ export default function App() {
                       step={1}
                       value={musicSettings.bpm}
                       aria-label="Tempo"
-                      onChange={(e) => updateMusicSetting('bpm', Number(e.target.value))}
+                      onChange={(e) => updateMusicBpm(Number(e.target.value))}
                     />
                     <button type="button" onClick={tapTempo}>Tap</button>
                   </div>
