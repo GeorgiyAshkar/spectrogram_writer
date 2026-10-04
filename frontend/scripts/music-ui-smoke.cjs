@@ -148,6 +148,46 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       { timeout: 5000 },
     );
 
+    // Simulate an interrupted pointer gesture (window blur) and verify that
+    // the next gesture still creates a stroke without reloading the app.
+    await canvas?.evaluate((node) => node.scrollIntoView({ block: 'center', inline: 'center' }));
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const recoveryBox = await canvas?.boundingBox();
+    if (!recoveryBox) throw new Error('Music canvas unavailable for pointer recovery test.');
+
+    await page.mouse.move(
+      recoveryBox.x + recoveryBox.width * 0.18,
+      recoveryBox.y + recoveryBox.height * 0.62,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      recoveryBox.x + recoveryBox.width * 0.28,
+      recoveryBox.y + recoveryBox.height * 0.58,
+      { steps: 6 },
+    );
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await page.mouse.up();
+
+    await page.mouse.move(
+      recoveryBox.x + recoveryBox.width * 0.36,
+      recoveryBox.y + recoveryBox.height * 0.66,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      recoveryBox.x + recoveryBox.width * 0.56,
+      recoveryBox.y + recoveryBox.height * 0.56,
+      { steps: 10 },
+    );
+    await page.mouse.up();
+
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('.music-event-summary span')].some((node) => {
+        const match = /Линий:\s*(\d+)/.exec(node.textContent || '');
+        return Boolean(match && Number(match[1]) >= 2);
+      }),
+      { timeout: 5000 },
+    );
+
     await clickByAria('Pixel mode');
     const pixelActive = await page.evaluate(
       () => [...document.querySelectorAll('button')].some(
