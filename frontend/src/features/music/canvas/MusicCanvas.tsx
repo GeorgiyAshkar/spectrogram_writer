@@ -435,10 +435,25 @@ export function MusicCanvas({
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible') reset();
     };
+    const onWindowPointerUp = (event: PointerEvent) => {
+      if (activePointerIdRef.current === event.pointerId) {
+        resetPointerGesture(true);
+      }
+    };
+    const onWindowPointerCancel = (event: PointerEvent) => {
+      if (activePointerIdRef.current === event.pointerId) {
+        resetPointerGesture(false);
+      }
+    };
+
     window.addEventListener('blur', reset);
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerCancel);
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       window.removeEventListener('blur', reset);
+      window.removeEventListener('pointerup', onWindowPointerUp);
+      window.removeEventListener('pointercancel', onWindowPointerCancel);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [tool, strokes]);
