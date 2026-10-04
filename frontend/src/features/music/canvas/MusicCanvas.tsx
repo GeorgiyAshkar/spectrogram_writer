@@ -183,6 +183,7 @@ export function MusicCanvas({
   const erasedStrokeIdsRef = useRef<Set<string>>(new Set());
   const erasingRef = useRef(false);
   const pointerStartedAt = useRef(0);
+  const activePointerIdRef = useRef<number | null>(null);
 
   const pitchRange = useMemo(
     () => buildPitchRange(settings.key, settings.scale, 3 + settings.octaveOffset, settings.rangeOctaves),
@@ -416,6 +417,36 @@ export function MusicCanvas({
     setErasedStrokeIds(new Set());
   };
 
+  const resetPointerGesture = (commitDraft = false) => {
+    if (tool === 'eraser') {
+      finishEraserGesture();
+    } else if (commitDraft && draftRef.current?.points.length) {
+      onChange([...strokes, draftRef.current]);
+    }
+
+    draftRef.current = null;
+    setDraft(null);
+    activePointerIdRef.current = null;
+    erasingRef.current = false;
+  };
+
+  useEffect(() => {
+    const reset = () => resetPointerGesture(false);
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') reset();
+    };
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('blur', reset);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [tool, strokes]);
+
+  useEffect(() => {
+    resetPointerGesture(false);
+  }, [tool, settings.programMode]);
+
   return (
     <canvas
       ref={canvasRef}
@@ -424,7 +455,21 @@ export function MusicCanvas({
       className={tool === 'eraser' ? 'music-draw-canvas is-erasing' : 'music-draw-canvas'}
       aria-label="Музыкальный холст: горизонталь задаёт время, вертикаль — высоту ноты"
       onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
+        if (
+          activePointerIdRef.current !== null &&
+          activePointerIdRef.current !== event.pointerId
+        ) {
+          resetPointerGesture(false);
+        }
+
+        activePointerIdRef.current = event.pointerId;
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          // Pointer capture may be unavailable during browser/OS gesture transitions.
+          // The gesture state is still tracked and will be reset safely.
+        }
+
         pointerStartedAt.current = performance.now();
         const point = pointFromEvent(event);
 
@@ -452,6 +497,13 @@ export function MusicCanvas({
         setDraft(nextDraft);
       }}
       onPointerMove={(event) => {
+        if (activePointerIdRef.current !== event.pointerId) return;
+
+        if (event.pointerType === 'mouse' && event.buttons === 0) {
+          resetPointerGesture(true);
+          return;
+        }
+
         const point = pointFromEvent(event);
         if (tool === 'eraser' && erasingRef.current) {
           eraseAtPoint(point);
@@ -461,38 +513,51 @@ export function MusicCanvas({
         appendPoint(point);
       }}
       onPointerUp={(event) => {
-        if (tool === 'eraser') {
-          eraseAtPoint(pointFromEvent(event));
-          finishEraserGesture();
+        if (activePointerIdRef.current !== event.pointerId) return;
+
+        try {
+          if (tool === 'eraser') {
+            eraseAtPoint(pointFromEvent(event));
+            finishEraserGesture();
+          } else {
+            const current = draftRef.current;
+            if (current) {
+              const finalPoint = pointFromEvent(event);
+              const previous = current.points[current.points.length - 1];
+              const points =
+                previous && previous.x === finalPoint.x && previous.y === finalPoint.y
+                  ? current.points
+                  : [...current.points, finalPoint];
+
+              if (points.length > 0) {
+                onChange([...strokes, { ...current, points }]);
+              }
+            }
+          }
+        } finally {
+          draftRef.current = null;
+          setDraft(null);
+          erasingRef.current = false;
+          activePointerIdRef.current = null;
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
-          return;
         }
-
-        const current = draftRef.current;
-        if (!current) return;
-
-        const finalPoint = pointFromEvent(event);
-        const previous = current.points[current.points.length - 1];
-        const points =
-          previous && previous.x === finalPoint.x && previous.y === finalPoint.y
-            ? current.points
-            : [...current.points, finalPoint];
-
-        if (points.length > 0) {
-          onChange([...strokes, { ...current, points }]);
+      }}
+      onPointerCancel={(event) => {
+        if (
+          activePointerIdRef.current === null ||
+          activePointerIdRef.current === event.pointerId
+        ) {
+          resetPointerGesture(false);
         }
-        draftRef.current = null;
-        setDraft(null);
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
       }}
-      onPointerCancel={() => {
-        if (tool === 'eraser') finishEraserGesture();
-        draftRef.current = null;
-        setDraft(null);
+      onLostPointerCapture={(event) => {
+        if (activePointerIdRef.current !== event.pointerId) return;
+        resetPointerGesture(true);
       }}
     />
   );
