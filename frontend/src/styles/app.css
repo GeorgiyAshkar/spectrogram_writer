@@ -1348,3 +1348,349 @@ button:disabled {
     grid-template-columns: repeat(5, minmax(30px, 1fr));
   }
 }
+
+
+/* Music workspace UX refactor */
+.music-panel {
+  gap: 7px;
+}
+
+.music-panel > .music-panel-switches { order: 1; }
+.music-panel > .music-edit-toolbar { order: 2; }
+.music-panel > .music-quick-settings { order: 3; }
+.music-panel > .music-reference-programs { order: 4; }
+.music-panel > .music-palette { order: 5; }
+.music-panel > .music-draw-canvas { order: 6; }
+.music-panel > .music-event-summary { order: 7; }
+.music-panel > .music-project-actions { order: 8; }
+.music-panel > .music-help-panel,
+.music-panel > .music-instrument-panel,
+.music-panel > .music-share-panel,
+.music-panel > .music-gallery,
+.music-panel > .music-octaves { order: 9; }
+
+.music-panel button,
+.music-panel .button-secondary {
+  width: auto;
+  max-width: none;
+  min-height: 34px;
+  padding: 0.42rem 0.68rem;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.music-panel-switches,
+.music-edit-toolbar,
+.music-reference-programs,
+.music-palette,
+.music-project-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding: 2px 1px 5px;
+}
+
+.music-reference-programs {
+  justify-content: flex-start;
+}
+
+.music-control-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.music-group-label {
+  flex: 0 0 auto;
+  color: #7b6a5b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding-right: 2px;
+}
+
+.music-panel-switches .is-active,
+.music-edit-toolbar .is-active,
+.music-reference-programs .is-active,
+.music-project-actions .is-active {
+  background: #6c4f3d;
+  border-color: #6c4f3d;
+  color: #fff;
+  box-shadow: none;
+}
+
+.music-quick-settings {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 5px 7px;
+  border: 1px solid #ebe4dc;
+  border-radius: 11px;
+  background: #faf8f5;
+}
+
+.music-quick-field {
+  display: grid;
+  gap: 2px;
+  flex: 0 0 auto;
+  color: #6b5c4e;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.music-number-with-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.music-number-with-unit input {
+  width: 82px;
+  min-height: 34px;
+  padding: 0.38rem 0.5rem;
+  border-radius: 8px;
+}
+
+.music-number-with-unit small {
+  color: #81756a;
+  font-weight: 700;
+}
+
+.music-compact-action {
+  align-self: end;
+}
+
+.music-quick-settings__hint {
+  align-self: center;
+  flex: 0 0 auto;
+  color: #8b8174;
+  font-size: 0.75rem;
+}
+
+.music-palette {
+  gap: 5px;
+}
+
+.music-instrument-chip {
+  width: auto;
+  max-width: none;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.38rem 0.58rem;
+  border: 1px solid #d8cfc4;
+  border-radius: 999px;
+  background: #fff;
+  color: #55483e;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.music-instrument-chip__dot {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.14);
+}
+
+.music-instrument-chip.is-active {
+  border-color: #6c4f3d;
+  box-shadow: inset 0 0 0 1px #6c4f3d;
+  background: #faf6f1;
+}
+
+.music-project-actions {
+  padding-top: 2px;
+}
+
+.music-draw-canvas {
+  width: 100%;
+  max-height: min(48vh, 480px);
+  min-height: 300px;
+  border-radius: 12px;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.music-event-summary {
+  min-height: 24px;
+  gap: 8px 14px;
+  padding: 2px 4px;
+  font-size: 0.74rem;
+}
+
+.music-instrument-panel {
+  position: fixed;
+  z-index: 60;
+  top: clamp(84px, 12vh, 132px);
+  right: 22px;
+  width: min(640px, calc(100vw - 44px));
+  max-height: min(72vh, 720px);
+  overflow: auto;
+  box-shadow: 0 18px 50px rgba(46, 36, 27, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.music-help-panel {
+  position: fixed;
+  z-index: 61;
+  top: clamp(84px, 12vh, 132px);
+  right: 22px;
+  width: min(520px, calc(100vw - 44px));
+  max-height: min(70vh, 620px);
+  overflow: auto;
+  box-shadow: 0 18px 50px rgba(46, 36, 27, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.music-instrument-panel__header,
+.music-help-panel__header {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  padding: 8px 0;
+  background: rgba(255,255,255,0.97);
+}
+
+.music-parity-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.music-control {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.music-control > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-control select,
+.music-control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0.42rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.music-inline-buttons {
+  min-height: 36px;
+  gap: 4px;
+}
+
+.music-inline-buttons button {
+  width: auto;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0.38rem 0.55rem;
+}
+
+.music-recolor-picker {
+  position: fixed;
+  z-index: 70;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(430px, calc(100vw - 28px));
+  min-width: 0;
+  box-shadow: 0 18px 50px rgba(46, 36, 27, 0.25);
+}
+
+.header-player--music {
+  min-height: 58px;
+}
+
+.header-player--music .header-player__play {
+  width: 62px;
+  min-height: 58px;
+}
+
+.header-player--music .waveform {
+  height: 58px;
+}
+
+.header-player--music .header-player__play-icon {
+  font-size: 2.4rem;
+}
+
+@media (max-width: 720px) {
+  .music-panel {
+    gap: 5px;
+  }
+
+  .music-panel-switches,
+  .music-edit-toolbar,
+  .music-reference-programs,
+  .music-palette,
+  .music-project-actions {
+    margin-inline: -2px;
+    padding-bottom: 4px;
+  }
+
+  .music-panel button,
+  .music-panel .button-secondary {
+    min-height: 36px;
+    padding: 0.44rem 0.62rem;
+    font-size: 0.8rem;
+  }
+
+  .music-group-label {
+    font-size: 0.67rem;
+  }
+
+  .music-quick-settings {
+    gap: 6px;
+    padding: 5px 6px;
+  }
+
+  .music-number-with-unit input {
+    width: 74px;
+  }
+
+  .music-draw-canvas {
+    min-height: 260px;
+    max-height: 42vh;
+  }
+
+  .music-instrument-panel,
+  .music-help-panel {
+    top: 70px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100dvh - 84px);
+  }
+
+  .music-parity-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .music-instrument-chip {
+    font-size: 0.76rem;
+  }
+}
