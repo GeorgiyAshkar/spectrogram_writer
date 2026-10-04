@@ -171,7 +171,7 @@ export function AudioPlayer({
   };
 
   return (
-    <div className="header-player">
+    <div className={musicModeEnabled ? 'header-player header-player--music' : 'header-player'}>
       <button
         type="button"
         className="button-secondary panel-tab panel-tab--icon header-player__play"
