@@ -389,12 +389,14 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       throw new Error(`Playback duration/BPM quick controls lost state: ${JSON.stringify(parityDefaults)}`);
     }
 
-    const instrumentOverflow = await page.$eval('.music-instrument-chip', (nodes) =>
-      nodes.map((node) => ({
-        text: node.textContent?.trim() ?? '',
-        scrollWidth: node.scrollWidth,
-        clientWidth: node.clientWidth,
-      })).filter((item) => item.scrollWidth > item.clientWidth + 1),
+    const instrumentOverflow = await page.evaluate(() =>
+      [...document.querySelectorAll('.music-instrument-chip')]
+        .map((node) => ({
+          text: node.textContent?.trim() ?? '',
+          scrollWidth: node.scrollWidth,
+          clientWidth: node.clientWidth,
+        }))
+        .filter((item) => item.scrollWidth > item.clientWidth + 1),
     );
     if (instrumentOverflow.length) {
       throw new Error(`Instrument labels overflow their buttons: ${JSON.stringify(instrumentOverflow)}`);
