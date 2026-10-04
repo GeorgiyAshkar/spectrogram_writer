@@ -33,6 +33,12 @@ import {
 import { normalizeMusicDraft } from '../src/features/music/persistence/musicDraft';
 import { buildAccompanimentEvents } from '../src/features/music/audio/accompaniment';
 import {
+  loopDurationSeconds,
+  loopLengthBeatsForDuration,
+  withBpmPreservingDuration,
+  withPlaybackDuration,
+} from '../src/features/music/model/timing';
+import {
   selectTakeMimeType,
   takeFileExtension,
 } from '../src/features/music/recording/takeMedia';
@@ -616,6 +622,19 @@ function testDraftMigration() {
   assert(normalizeMusicDraft({ schemaVersion: 999 }) === null, 'Unknown schema must be rejected');
 }
 
+function testPlaybackDurationModel() {
+  approx(loopDurationSeconds({ loopLengthBeats: 4, bpm: 120 }), 2, 1e-12, '4 beats at 120 BPM must be 2 seconds');
+  approx(loopLengthBeatsForDuration(8, 120), 16, 1e-12, '8 seconds at 120 BPM must be 16 beats');
+
+  const durationSet = withPlaybackDuration(DEFAULT_MUSIC_SETTINGS, 8);
+  approx(loopDurationSeconds(durationSet), 8, 1e-12, 'Explicit duration must drive loop length');
+
+  const tempoChanged = withBpmPreservingDuration(durationSet, 180);
+  approx(tempoChanged.bpm, 180, 1e-12, 'BPM must update');
+  approx(loopDurationSeconds(tempoChanged), 8, 1e-12, 'Changing BPM must preserve explicit playback duration');
+  approx(tempoChanged.loopLengthBeats, 24, 1e-12, '8 seconds at 180 BPM must become 24 beats');
+}
+
 function testTakeMediaPolicy() {
   const allSupported = new Set([
     'video/mp4',
@@ -746,6 +765,7 @@ testReferencePalette();
 testMeasuredPixelGrid();
 testDrawingTools();
 testDraftMigration();
+testPlaybackDurationModel();
 testTakeMediaPolicy();
 testMidiPitchBendExport();
 testExports();
