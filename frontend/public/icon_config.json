@@ -4,5 +4,6 @@
   "text": "icons/Text_pass.svg",
   "info": "icons/info_pass.svg",
   "settings": "icons/Settings_pass.svg",
-  "play": "icons/Start.svg"
+  "play": "icons/Start.svg",
+  "music": "icons/music-note.svg"
 }
