@@ -1193,7 +1193,7 @@ export default function App() {
                   title="Отменить последнее действие"
                   onClick={undoMusic}
                 >
-                  ↶
+                  Отменить
                 </button>
                 <button
                   type="button"
@@ -1203,7 +1203,7 @@ export default function App() {
                   title="Повторить отменённое действие"
                   onClick={redoMusic}
                 >
-                  ↷
+                  Вернуть
                 </button>
                 <button
                   type="button"
@@ -1278,7 +1278,7 @@ export default function App() {
                   Задать темп
                 </button>
                 <span className="music-quick-settings__hint">
-                  {musicSettings.loopLengthBeats.toFixed(1)} долей
+                  Полный цикл: {musicDurationSeconds.toFixed(1)} с
                 </span>
               </div>
 
@@ -1351,7 +1351,7 @@ export default function App() {
                   </div>
                 </div>
                 <label className="music-control">
-                  <span>Квантизация</span>
+                  <span>Квантизация (ритмическая сетка)</span>
                   <select
                     value={
                       PARITY_QUANTIZE_OPTIONS.find(
@@ -1367,7 +1367,19 @@ export default function App() {
                     }}
                   >
                     {PARITY_QUANTIZE_OPTIONS.map((option) => (
-                      <option key={option.referenceValue} value={option.referenceValue}>{option.label}</option>
+                      <option key={option.referenceValue} value={option.referenceValue}>
+                        {option.label === '1/4'
+                          ? '1/4 — четверти'
+                          : option.label === '1/8'
+                            ? '1/8 — восьмые'
+                            : option.label === '1/8 triplet'
+                              ? '1/8 — триоль'
+                              : option.label === '1/16'
+                                ? '1/16 — шестнадцатые'
+                                : option.label === '1/16 triplet'
+                                  ? '1/16 — триоль'
+                                  : '1/32 — тридцать вторые'}
+                      </option>
                     ))}
                   </select>
                 </label>
