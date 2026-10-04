@@ -1129,37 +1129,37 @@ export default function App() {
                   aria-expanded={showVirtualKeyboard}
                   onClick={() => setShowVirtualKeyboard((current) => !current)}
                 >
-                  Key
+                  Клавиши
                 </button>
                 <button
                   type="button"
                   className={showMusicGrid ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={showMusicGrid}
-                  title="The grid: notes and beats under the ink"
+                  title="Сетка нот и долей под рисунком"
                   aria-label="Grid"
                   onClick={() => setShowMusicGrid((current) => !current)}
                 >
-                  Grid
+                  Сетка
                 </button>
                 <button
                   type="button"
                   className={musicSettings.freestyleEnabled ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicSettings.freestyleEnabled}
                   aria-label="Freestyle"
-                  title="Freestyle — unlock all chromatic notes for Key and MIDI input"
+                  title="Свободные ноты — разрешить все хроматические ноты для клавиатуры и MIDI"
                   onClick={() => updateMusicSetting('freestyleEnabled', !musicSettings.freestyleEnabled)}
                 >
-                  Freestyle
+                  Свободные ноты
                 </button>
                 <button
                   type="button"
                   className={musicSettings.freehandEnabled ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicSettings.freehandEnabled}
                   aria-label="Freehand"
-                  title="Freehand — continuous pitch follows the drawn Y position"
+                  title="Плавная высота — высота звука непрерывно следует за линией"
                   onClick={() => updateMusicSetting('freehandEnabled', !musicSettings.freehandEnabled)}
                 >
-                  Freehand
+                  Плавная высота
                 </button>
               </div>
 
@@ -1170,27 +1170,27 @@ export default function App() {
                   className={musicTool === 'pen' ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicTool === 'pen'}
                   aria-label="Pen"
-                  title="Pen — Draw. Every line is a sound."
+                  title="Карандаш — рисуйте линию, каждая линия звучит"
                   onClick={() => setMusicTool('pen')}
                 >
-                  Pen
+                  Карандаш
                 </button>
                 <button
                   type="button"
                   className={musicTool === 'eraser' ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={musicTool === 'eraser'}
                   aria-label="Eraser"
-                  title="Eraser — drag across a line"
+                  title="Ластик — проведите по линии, чтобы удалить её"
                   onClick={() => setMusicTool('eraser')}
                 >
-                  Eraser
+                  Ластик
                 </button>
                 <button
                   type="button"
                   className="button-secondary"
                   disabled={musicUndoHistory.length === 0}
                   aria-label="Undo"
-                  title="Undo the last drawing action"
+                  title="Отменить последнее действие"
                   onClick={undoMusic}
                 >
                   ↶
@@ -1200,7 +1200,7 @@ export default function App() {
                   className="button-secondary"
                   disabled={musicRedoHistory.length === 0}
                   aria-label="Redo"
-                  title="Redo a drawing action"
+                  title="Повторить отменённое действие"
                   onClick={redoMusic}
                 >
                   ↷
@@ -1210,26 +1210,26 @@ export default function App() {
                   className="button-secondary"
                   disabled={musicStrokes.length === 0}
                   aria-label="Restart"
-                  title="Restart — clear the drawing; the beat keeps going"
+                  title="Очистить рисунок, не останавливая воспроизведение"
                   onClick={restartMusicDrawing}
                 >
-                  Restart
+                  Очистить
                 </button>
                 <button
                   type="button"
                   className="button-secondary"
                   aria-label="Shuffle"
-                  title="Shuffle — a new drawing, at random"
+                  title="Создать случайный рисунок"
                   onClick={shuffleMusicDrawing}
                 >
-                  Shuffle
+                  Случайно
                 </button>
                 <button
                   type="button"
                   className={recolorMode ? 'button-secondary is-active' : 'button-secondary'}
                   aria-pressed={recolorMode}
                   aria-label="Change the colors"
-                  title="Change the colors — tap this, then any instrument color"
+                  title="Изменить цвета инструментов"
                   onClick={() => {
                     setRecolorMode((current) => {
                       const next = !current;
@@ -1238,7 +1238,7 @@ export default function App() {
                     });
                   }}
                 >
-                  Recolor
+                  Цвета
                 </button>
 
               </div>
@@ -1275,7 +1275,7 @@ export default function App() {
                   </span>
                 </label>
                 <button type="button" className="button-secondary music-compact-action" onClick={tapTempo}>
-                  Tap tempo
+                  Задать темп
                 </button>
                 <span className="music-quick-settings__hint">
                   {musicSettings.loopLengthBeats.toFixed(1)} долей
@@ -1295,12 +1295,10 @@ export default function App() {
                       ×
                     </button>
                   </div>
-                  <p>Рисуйте на холсте: по горизонтали идёт время, по вертикали — высота ноты. Каждая линия звучит.</p>
-                  <p>Палитра — это 9 инструментов: keys, pluck, bell, marimba, flute, strings, chime, bass и 8bit. Recolor меняет их цвет, но не сам инструмент.</p>
-                  <p>1 — Drawing mode, 2 — Pixel mode. • / •• / ••• независимо включают Bass, Drums и Arpeggio и могут работать одновременно.</p>
-                  <p>Key, Scale, Range и Octave задают набор нот. Quantize, Swing, Tempo/Tap и Click управляют ритмом; swing применяется только к прямым сеткам, не к triplet.</p>
-                  <p>Grid показывает ноты и доли под рисунком. Freestyle снимает scale-lock с экранной клавиатуры и MIDI-входа; Freehand оставляет ту же линию, но ведёт pitch плавно между нотами. Pen рисует, Eraser удаляет линии, Restart очищает рисунок без остановки beat, Shuffle создаёт новый случайный рисунок.</p>
-                  <p>Paper/Sky/Photo меняют фон; для Photo доступны Fill, Fit и Stretch. WAV/MIDI экспортируют loop, Record создаёт take, а Share/Gallery публикуют проект.</p>
+                  <p><strong>Главное:</strong> по горизонтали идёт время, по вертикали — высота звука. Нарисуйте линию и нажмите ▶.</p>
+                  <p><strong>Длительность</strong> задаёт полное время проигрывания рисунка. <strong>Темп</strong> меняет ритм, но выбранная длительность сохраняется.</p>
+                  <p><strong>Карандаш / Ластик</strong> — рисование и удаление. <strong>Пиксели</strong> — дискретный режим. <strong>Плавная высота</strong> — непрерывное изменение pitch.</p>
+                  <p><strong>Бас / Барабаны / Арпеджио</strong> добавляют сопровождение. Остальные параметры находятся в «Настройки».</p>
                 </div>
               ) : null}
 
@@ -1352,29 +1350,6 @@ export default function App() {
                     <button type="button" onClick={() => updateMusicSetting('octaveOffset', musicSettings.octaveOffset + 1)}>+</button>
                   </div>
                 </div>
-                <label className="music-control">
-                  <span>Tempo</span>
-                  <div className="music-tempo">
-                    <input
-                      type="number"
-                      min={PARITY_BPM.min}
-                      max={PARITY_BPM.max}
-                      value={musicSettings.bpm}
-                      aria-label="Tempo BPM"
-                      readOnly
-                    />
-                    <input
-                      type="range"
-                      min={PARITY_BPM.min}
-                      max={PARITY_BPM.max}
-                      step={1}
-                      value={musicSettings.bpm}
-                      aria-label="Tempo"
-                      onChange={(e) => updateMusicBpm(Number(e.target.value))}
-                    />
-                    <button type="button" onClick={tapTempo}>Tap</button>
-                  </div>
-                </label>
                 <label className="music-control">
                   <span>Квантизация</span>
                   <select
@@ -1646,10 +1621,14 @@ export default function App() {
                       className="button-secondary"
                       onClick={resetInstrumentColors}
                     >
-                      The original colors
+                      Исходные цвета
                     </button>
                   </div>
                 ) : null}
+              </div>
+
+              <div className="music-project-actions" aria-label="Проект и запись">
+                <span className="music-group-label">Проект</span>
                 <button
                   type="button"
                   className={isTakeRecording ? 'button-secondary music-record is-active' : 'button-secondary music-record'}
@@ -1663,10 +1642,10 @@ export default function App() {
                 {takeUrl ? (
                   <>
                     <button type="button" className="button-secondary" onClick={() => void shareTake()}>
-                      share take
+                      Поделиться записью
                     </button>
                     <button type="button" className="button-secondary" onClick={downloadTake}>
-                      Скачать take
+                      Скачать запись
                     </button>
                   </>
                 ) : null}
@@ -1679,7 +1658,7 @@ export default function App() {
                     setShareError(null);
                   }}
                 >
-                  share
+                  Поделиться
                 </button>
                 <button
                   type="button"
@@ -1689,8 +1668,9 @@ export default function App() {
                     if (!showGallery) void refreshGallery();
                   }}
                 >
-                  gallery
+                  Галерея
                 </button>
+
               </div>
 
               {showSharePanel ? (
