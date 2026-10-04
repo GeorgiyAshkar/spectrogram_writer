@@ -132,9 +132,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       throw new Error(`Drawing did not create a stroke: ${JSON.stringify(diagnostics)}; ${error}`);
     }
 
-    const undoButton = await page.$('button[title="Undo the last drawing action"]');
-    if (!undoButton) throw new Error('Undo button not found.');
-    await undoButton.click();
+    await clickByAria('Undo');
     await page.waitForFunction(
       () => [...document.querySelectorAll('.music-event-summary span')].some(
         (node) => /Линий:\s*0/.test(node.textContent || ''),
@@ -142,9 +140,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
       { timeout: 5000 },
     );
 
-    const redoButton = await page.$('button[title="Redo a drawing action"]');
-    if (!redoButton) throw new Error('Redo button not found.');
-    await redoButton.click();
+    await clickByAria('Redo');
     await page.waitForFunction(
       () => [...document.querySelectorAll('.music-event-summary span')].some(
         (node) => /Линий:\s*1/.test(node.textContent || ''),
