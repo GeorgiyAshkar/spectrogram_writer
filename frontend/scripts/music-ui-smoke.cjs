@@ -369,7 +369,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
         key: byCaption('Тональность'),
         scale: byCaption('Лад'),
         range: byCaption('Диапазон'),
-        quantize: byCaption('Квантизация'),
+        quantize: byCaption('Квантизация (ритмическая сетка)'),
         swing: byCaption('Свинг'),
         duration: document.querySelector('input[aria-label="Длительность проигрывания в секундах"]')?.value ?? null,
         bpm: document.querySelector('input[aria-label="Темп BPM"]')?.value ?? null,
@@ -379,7 +379,7 @@ const puppeteer = require('/tmp/music-ui-smoke/node_modules/puppeteer-core');
     if (parityDefaults.key?.value !== 'C') throw new Error(`Unexpected default Key: ${parityDefaults.key?.value}`);
     if (parityDefaults.scale?.value !== 'majorPentatonic') throw new Error(`Unexpected default Scale: ${parityDefaults.scale?.value}`);
     if (parityDefaults.range?.value !== '3') throw new Error(`Unexpected default Range: ${parityDefaults.range?.value}`);
-    if (parityDefaults.quantize?.options?.join('|') !== '1/4|1/8|1/8 triplet|1/16|1/16 triplet|1/32') {
+    if (parityDefaults.quantize?.options?.join('|') !== '1/4 — четверти|1/8 — восьмые|1/8 — триоль|1/16 — шестнадцатые|1/16 — триоль|1/32 — тридцать вторые') {
       throw new Error(`Unexpected Quantize options: ${parityDefaults.quantize?.options?.join('|')}`);
     }
     if (parityDefaults.swing?.options?.join('|') !== 'Выкл|Лёгкий|Средний|Сильный') {
